@@ -4,6 +4,7 @@ struct ExpandedView: View {
     @ObservedObject var state: IslandState
     @EnvironmentObject private var battery: BatteryMonitor
     @EnvironmentObject private var volume: VolumeMonitor
+    @EnvironmentObject private var brightness: BrightnessMonitor
     @EnvironmentObject private var herdr: HerdrMonitor
 
     var body: some View {
@@ -12,6 +13,9 @@ struct ExpandedView: View {
             HStack(spacing: 16) {
                 StatusCard(title: "Battery") { batteryRow }
                 StatusCard(title: "Volume") { volumeRow }
+                if brightness.available {
+                    StatusCard(title: "Brightness") { brightnessRow }
+                }
             }
             if herdr.available {
                 HerdrSection(herdr: herdr)
@@ -42,13 +46,14 @@ struct ExpandedView: View {
     }
 
     private var volumeRow: some View {
-        HStack(spacing: 8) {
-            Image(systemName: volume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-            Slider(
-                value: Binding(get: { Double(volume.level) }, set: { volume.set(Float($0)) }),
-                in: 0...1
-            )
-            .controlSize(.small)
-        }
+        LevelSlider(
+            symbol: volume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
+            value: volume.level,
+            onChange: volume.set
+        )
+    }
+
+    private var brightnessRow: some View {
+        LevelSlider(symbol: "sun.max.fill", value: brightness.level, onChange: brightness.set)
     }
 }

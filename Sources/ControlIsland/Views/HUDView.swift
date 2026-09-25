@@ -5,6 +5,7 @@ struct HUDView: View {
     let notchHeight: CGFloat
     @EnvironmentObject private var battery: BatteryMonitor
     @EnvironmentObject private var volume: VolumeMonitor
+    @EnvironmentObject private var brightness: BrightnessMonitor
 
     var body: some View {
         VStack(spacing: 6) {
@@ -24,6 +25,11 @@ struct HUDView: View {
             HStack(spacing: 10) {
                 Image(systemName: volume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
                 LevelBar(value: volume.isMuted ? 0 : Double(volume.level))
+            }
+        case .brightness:
+            HStack(spacing: 10) {
+                Image(systemName: "sun.max.fill")
+                LevelBar(value: Double(brightness.level))
             }
         case .battery:
             HStack(spacing: 10) {

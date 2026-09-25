@@ -5,9 +5,11 @@ import Combine
 final class IslandState: ObservableObject {
     @Published var mode: IslandMode = .closed
     @Published var geometry: NotchGeometry?
+    @Published var cursor: CGPoint = .zero
 
     let battery = BatteryMonitor()
     let volume = VolumeMonitor()
+    let brightness = BrightnessMonitor()
     let herdr = HerdrMonitor()
 
     let wingWidth: CGFloat = 70
@@ -28,6 +30,7 @@ final class IslandState: ObservableObject {
     var islandSize: CGSize {
         switch mode {
         case .closed: CGSize(width: notchWidth + wingWidth * 2, height: notchHeight)
+        case .peek: CGSize(width: notchWidth + wingWidth * 2 + 18, height: notchHeight + 7)
         case .hud: CGSize(width: notchWidth + wingWidth * 2 + 60, height: hudHeight)
         case .expanded: expandedSize
         }
@@ -36,11 +39,17 @@ final class IslandState: ObservableObject {
     func start() {
         battery.start()
         volume.start()
+        brightness.start()
         herdr.start()
 
         volume.changes
             .receive(on: RunLoop.main)
             .sink { [weak self] in self?.showHUD(.volume) }
+            .store(in: &cancellables)
+
+        brightness.changes
+            .receive(on: RunLoop.main)
+            .sink { [weak self] in self?.showHUD(.brightness) }
             .store(in: &cancellables)
 
         battery.chargerChanges
@@ -52,13 +61,35 @@ final class IslandState: ObservableObject {
     func hoverChanged(_ inside: Bool) {
         collapseTimer?.invalidate()
         if inside {
-            hudTimer?.invalidate()
-            mode = .expanded
-        } else {
-            collapseTimer = .scheduledTimer(withTimeInterval: 0.35, repeats: false) { [weak self] _ in
-                Task { @MainActor in self?.mode = .closed }
+            if mode == .closed {
+                mode = .peek
+                Haptics.peek()
             }
+        } else if mode == .expanded {
+            collapseTimer = .scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] _ in
+                Task { @MainActor in
+                    self?.mode = .closed
+                    Haptics.collapse()
+                }
+            }
+        } else {
+            cursor = .zero
+            if mode == .peek { mode = .closed }
         }
+    }
+
+    func cursorMoved(to location: CGPoint, in size: CGSize) {
+        cursor = CGPoint(
+            x: min(max(location.x / size.width * 2 - 1, -1), 1),
+            y: min(max(location.y / size.height, 0), 1)
+        )
+    }
+
+    func tapped() {
+        guard mode != .expanded else { return }
+        hudTimer?.invalidate()
+        mode = .expanded
+        Haptics.expand()
     }
 
     private func showHUD(_ kind: HUDKind) {
