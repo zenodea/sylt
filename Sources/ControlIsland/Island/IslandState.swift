@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import SwiftUI
 
 @MainActor
 final class IslandState: ObservableObject {
@@ -7,6 +8,7 @@ final class IslandState: ObservableObject {
     @Published var cursor: CGPoint = .zero
     @Published private(set) var layout = IslandLayout()
 
+    let preferences: Preferences
     let battery = BatteryMonitor()
     let volume = VolumeMonitor()
     let brightness = BrightnessMonitor()
@@ -16,6 +18,10 @@ final class IslandState: ObservableObject {
     private var hudTimer: Timer?
     private var collapseTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
+
+    init(preferences: Preferences) {
+        self.preferences = preferences
+    }
 
     var notchHeight: CGFloat { layout.notchHeight }
     var notchWidth: CGFloat { layout.notchWidth }
@@ -33,32 +39,47 @@ final class IslandState: ObservableObject {
     }
 
     func start() {
-        battery.start()
-        volume.start()
-        brightness.start()
-        herdr.start()
-        nowPlaying.start()
         bindAlerts()
         bindLayout()
+        preferences.$enabledPlugins
+            .sink { [weak self] in self?.applyPlugins($0) }
+            .store(in: &cancellables)
+    }
+
+    private func applyPlugins(_ enabled: Set<Plugin>) {
+        for plugin in Plugin.allCases {
+            enabled.contains(plugin) ? monitor(for: plugin).start() : monitor(for: plugin).stop()
+        }
+        if case .hud = mode { transition(to: .closed) }
+    }
+
+    private func monitor(for plugin: Plugin) -> any Monitor {
+        switch plugin {
+        case .battery: battery
+        case .volume: volume
+        case .brightness: brightness
+        case .nowPlaying: nowPlaying
+        case .herdr: herdr
+        }
     }
 
     func hoverChanged(_ inside: Bool) {
         collapseTimer?.invalidate()
         if inside {
             if mode == .closed {
-                mode = .peek
+                transition(to: .peek)
                 Haptics.peek()
             }
         } else if mode == .expanded {
             collapseTimer = .scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] _ in
                 Task { @MainActor in
-                    self?.mode = .closed
+                    self?.transition(to: .closed)
                     Haptics.collapse()
                 }
             }
         } else {
             cursor = .zero
-            if mode == .peek { mode = .closed }
+            if mode == .peek { transition(to: .closed) }
         }
     }
 
@@ -77,7 +98,7 @@ final class IslandState: ObservableObject {
     func released() {
         guard mode != .expanded else { return }
         hudTimer?.invalidate()
-        mode = .expanded
+        transition(to: .expanded)
         Haptics.expand()
     }
 
@@ -111,13 +132,17 @@ final class IslandState: ObservableObject {
             .store(in: &cancellables)
     }
 
+    private func transition(to next: IslandMode) {
+        withAnimation(IslandAnimation.transition(to: next)) { mode = next }
+    }
+
     private func showHUD(_ kind: HUDKind, duration: TimeInterval = 1.6) {
         guard mode != .expanded else { return }
-        mode = .hud(kind)
+        transition(to: .hud(kind))
         hudTimer?.invalidate()
         hudTimer = .scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
             Task { @MainActor in
-                if case .hud = self?.mode { self?.mode = .closed }
+                if case .hud = self?.mode { self?.transition(to: .closed) }
             }
         }
     }

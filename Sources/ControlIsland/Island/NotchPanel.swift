@@ -6,7 +6,7 @@ final class NotchPanel: NSPanel {
     private let state: IslandState
     private var geometry: NotchGeometry
 
-    init(screen: NSScreen, state: IslandState) {
+    init(screen: NSScreen, state: IslandState, openSettings: @escaping () -> Void) {
         self.state = state
         self.geometry = NotchGeometry(screen: screen)
         super.init(
@@ -25,7 +25,7 @@ final class NotchPanel: NSPanel {
         isReleasedWhenClosed = false
 
         state.apply(geometry)
-        let host = IslandHostingView(rootView: IslandView(state: state))
+        let host = IslandHostingView(rootView: IslandView(state: state, openSettings: openSettings))
         host.state = state
         contentView = host
         applyFrame()

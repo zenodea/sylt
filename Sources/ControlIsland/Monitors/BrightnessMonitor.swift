@@ -9,7 +9,7 @@ final class BrightnessMonitor: ObservableObject {
     let changes = PassthroughSubject<Void, Never>()
 
     private let display = CGMainDisplayID()
-    private var suppressNext = false
+    private var observing = false
     private static weak var active: BrightnessMonitor?
 
     func start() {
@@ -17,22 +17,30 @@ final class BrightnessMonitor: ObservableObject {
         available = true
         Self.active = self
         read(notify: false)
-        DisplayServices.observeBrightness(of: display) { _, _, _, _, _ in
+        guard !observing else { return }
+        observing = DisplayServices.observeBrightness(of: display) { _, _, _, _, _ in
             Task { @MainActor in BrightnessMonitor.active?.read(notify: true) }
         }
     }
 
+    func stop() {
+        available = false
+        Self.active = nil
+    }
+
     func set(_ value: Float) {
         let clamped = min(max(value, 0), 1)
-        suppressNext = true
         DisplayServices.setBrightness(clamped, of: display)
         level = clamped
+    }
+
+    func step(_ delta: Float) {
+        set(level + delta)
     }
 
     private func read(notify: Bool) {
         guard let value = DisplayServices.brightness(of: display) else { return }
         level = value
-        guard notify else { return }
-        if suppressNext { suppressNext = false } else { changes.send() }
+        if notify { changes.send() }
     }
 }

@@ -7,6 +7,7 @@ struct ExpandedView: View {
     @EnvironmentObject private var brightness: BrightnessMonitor
     @EnvironmentObject private var herdr: HerdrMonitor
     @EnvironmentObject private var nowPlaying: NowPlayingMonitor
+    @EnvironmentObject private var preferences: Preferences
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -15,9 +16,13 @@ struct ExpandedView: View {
                 MediaCard(nowPlaying: nowPlaying)
             }
             HStack(spacing: 16) {
-                StatusCard(title: "Battery") { batteryRow }
-                StatusCard(title: "Volume") { volumeRow }
-                if brightness.available {
+                if preferences.isEnabled(.battery), battery.snapshot.hasBattery {
+                    StatusCard(title: "Battery") { batteryRow }
+                }
+                if preferences.isEnabled(.volume) {
+                    StatusCard(title: "Volume") { volumeRow }
+                }
+                if preferences.isEnabled(.brightness), brightness.available {
                     StatusCard(title: "Brightness") { brightnessRow }
                 }
             }

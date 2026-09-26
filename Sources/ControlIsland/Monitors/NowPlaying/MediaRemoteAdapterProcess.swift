@@ -17,7 +17,7 @@ final class MediaRemoteAdapterProcess {
     }
 
     func start(onPayload: @escaping (NowPlayingPayload) -> Void) {
-        guard let library = Self.libraryURL else { return }
+        guard process == nil, let library = Self.libraryURL else { return }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/perl")
         process.arguments = [
@@ -58,8 +58,10 @@ final class MediaRemoteAdapterProcess {
     }
 
     func stop() {
+        (process?.standardOutput as? Pipe)?.fileHandleForReading.readabilityHandler = nil
         process?.terminate()
         process = nil
         input = nil
+        buffer.removeAll()
     }
 }

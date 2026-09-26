@@ -2,6 +2,7 @@ import SwiftUI
 
 struct IslandView: View {
     @ObservedObject var state: IslandState
+    let openSettings: () -> Void
     @State private var isPressed = false
 
     var body: some View {
@@ -14,6 +15,7 @@ struct IslandView: View {
             ZStack(alignment: .top) {
                 shape.fill(.black)
                 content
+                    .frame(width: size.width, height: size.height, alignment: .top)
                     .id(state.mode.showsClosedContent ? IslandMode.closed : state.mode)
                     .transition(.blurReplace.combined(with: .opacity))
             }
@@ -27,7 +29,11 @@ struct IslandView: View {
                 if case .active(let location) = phase { state.cursorMoved(to: location, in: size) }
             }
             .gesture(pressGesture, including: state.mode == .expanded ? .subviews : .all)
-            .animation(IslandAnimation.transition(to: state.mode), value: state.mode)
+            .contextMenu {
+                Button("Settings…", action: openSettings)
+                Divider()
+                Button("Quit Control Island") { NSApp.terminate(nil) }
+            }
         }
         .frame(width: state.canvasSize.width, height: state.canvasSize.height, alignment: .top)
         .environmentObject(state.battery)
@@ -35,6 +41,7 @@ struct IslandView: View {
         .environmentObject(state.brightness)
         .environmentObject(state.herdr)
         .environmentObject(state.nowPlaying)
+        .environmentObject(state.preferences)
     }
 
     private var pressGesture: some Gesture {
@@ -68,8 +75,8 @@ private struct CursorPull: ViewModifier {
     func body(content: Content) -> some View {
         let pull = enabled ? cursor : .zero
         content
-            .scaleEffect(x: 1 + abs(pull.x) * 0.02, y: 1 + pull.y * 0.04, anchor: .top)
-            .offset(x: pull.x * 5)
+            .scaleEffect(x: 1 + abs(pull.x) * 0.015, y: 1 + pull.y * 0.06, anchor: .top)
             .animation(IslandAnimation.cursor, value: pull)
     }
 }
+

@@ -21,11 +21,18 @@ final class HerdrMonitor: ObservableObject {
     var idleCount: Int { agents.count - workingCount }
 
     func start() {
-        guard binary != nil else { return }
+        guard binary != nil, timer == nil else { return }
         poll()
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.poll() }
         }
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
+        agents = []
+        available = false
     }
 
     func focus(_ agent: HerdrAgent) {

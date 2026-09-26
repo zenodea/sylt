@@ -8,11 +8,12 @@ struct NowPlayingTrack: Equatable {
     var bundleIdentifier: String?
     var artworkHash: UInt
     var artwork: NSImage?
+    var hasResolvedArtwork = false
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.title == rhs.title && lhs.artist == rhs.artist && lhs.album == rhs.album
             && lhs.duration == rhs.duration && lhs.bundleIdentifier == rhs.bundleIdentifier
-            && lhs.artworkHash == rhs.artworkHash
+            && lhs.artworkHash == rhs.artworkHash && lhs.hasResolvedArtwork == rhs.hasResolvedArtwork
     }
 
     var isSameSong: (NowPlayingTrack) -> Bool {
