@@ -1,26 +1,11 @@
 import Foundation
 import Combine
 
-struct HerdrAgent: Identifiable, Equatable, Decodable {
-    var id: String { pane_id }
-    let agent: String
-    let agent_status: String
-    let pane_id: String
-    let cwd: String
-    let focused: Bool
-    let terminal_title_stripped: String?
-
-    var title: String {
-        if let t = terminal_title_stripped, !t.isEmpty { return t }
-        return URL(fileURLWithPath: cwd).lastPathComponent
-    }
-    var isWorking: Bool { agent_status == "working" }
-}
-
 @MainActor
 final class HerdrMonitor: ObservableObject {
     @Published private(set) var agents: [HerdrAgent] = []
     @Published private(set) var available = false
+    let finishedAgents = PassthroughSubject<HerdrAgent, Never>()
 
     private var timer: Timer?
     private let binary: String? = {
@@ -59,11 +44,20 @@ final class HerdrMonitor: ObservableObject {
                 guard let self else { return }
                 if let decoded {
                     self.available = true
-                    if decoded.result.agents != self.agents { self.agents = decoded.result.agents }
+                    self.update(decoded.result.agents)
                 } else {
                     self.available = false
                 }
             }
+        }
+    }
+
+    private func update(_ next: [HerdrAgent]) {
+        guard next != agents else { return }
+        let wasWorking = Set(agents.filter(\.isWorking).map(\.id))
+        agents = next
+        for agent in next where !agent.isWorking && wasWorking.contains(agent.id) {
+            finishedAgents.send(agent)
         }
     }
 

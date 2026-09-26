@@ -4,36 +4,32 @@ import Combine
 @MainActor
 final class IslandState: ObservableObject {
     @Published var mode: IslandMode = .closed
-    @Published var geometry: NotchGeometry?
     @Published var cursor: CGPoint = .zero
+    @Published private(set) var layout = IslandLayout()
 
     let battery = BatteryMonitor()
     let volume = VolumeMonitor()
     let brightness = BrightnessMonitor()
     let herdr = HerdrMonitor()
-
-    let wingWidth: CGFloat = 70
-    let expandedSize = CGSize(width: 520, height: 230)
-    let hudHeight: CGFloat = 76
+    let nowPlaying = NowPlayingMonitor()
 
     private var hudTimer: Timer?
     private var collapseTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
 
-    var notchWidth: CGFloat { geometry?.notchWidth ?? 180 }
-    var notchHeight: CGFloat { geometry?.notchHeight ?? 32 }
-
-    var canvasSize: CGSize {
-        CGSize(width: expandedSize.width + 160, height: expandedSize.height + 80)
-    }
+    var notchHeight: CGFloat { layout.notchHeight }
+    var notchWidth: CGFloat { layout.notchWidth }
+    var canvasSize: CGSize { layout.canvasSize }
 
     var islandSize: CGSize {
-        switch mode {
-        case .closed: CGSize(width: notchWidth + wingWidth * 2, height: notchHeight)
-        case .peek: CGSize(width: notchWidth + wingWidth * 2 + 18, height: notchHeight + 7)
-        case .hud: CGSize(width: notchWidth + wingWidth * 2 + 60, height: hudHeight)
-        case .expanded: expandedSize
-        }
+        let expandedHeight = IslandLayout.expandedBaseHeight
+            + (nowPlaying.track == nil ? 0 : IslandLayout.mediaCardHeight)
+        return layout.size(for: mode, expandedHeight: expandedHeight)
+    }
+
+    func apply(_ geometry: NotchGeometry) {
+        layout.notchWidth = geometry.notchWidth
+        layout.notchHeight = geometry.notchHeight
     }
 
     func start() {
@@ -41,21 +37,9 @@ final class IslandState: ObservableObject {
         volume.start()
         brightness.start()
         herdr.start()
-
-        volume.changes
-            .receive(on: RunLoop.main)
-            .sink { [weak self] in self?.showHUD(.volume) }
-            .store(in: &cancellables)
-
-        brightness.changes
-            .receive(on: RunLoop.main)
-            .sink { [weak self] in self?.showHUD(.brightness) }
-            .store(in: &cancellables)
-
-        battery.chargerChanges
-            .receive(on: RunLoop.main)
-            .sink { [weak self] in self?.showHUD(.battery) }
-            .store(in: &cancellables)
+        nowPlaying.start()
+        bindAlerts()
+        bindLayout()
     }
 
     func hoverChanged(_ inside: Bool) {
@@ -85,18 +69,53 @@ final class IslandState: ObservableObject {
         )
     }
 
-    func tapped() {
+    func pressed() {
+        guard mode != .expanded else { return }
+        Haptics.press()
+    }
+
+    func released() {
         guard mode != .expanded else { return }
         hudTimer?.invalidate()
         mode = .expanded
         Haptics.expand()
     }
 
-    private func showHUD(_ kind: HUDKind) {
+    private func bindAlerts() {
+        volume.changes
+            .sink { [weak self] in self?.showHUD(.volume) }
+            .store(in: &cancellables)
+        brightness.changes
+            .sink { [weak self] in self?.showHUD(.brightness) }
+            .store(in: &cancellables)
+        battery.alerts
+            .sink { [weak self] in self?.showHUD(.battery($0), duration: 2.5) }
+            .store(in: &cancellables)
+        herdr.finishedAgents
+            .sink { [weak self] in self?.showHUD(.agentFinished($0), duration: 4) }
+            .store(in: &cancellables)
+        nowPlaying.trackChanges
+            .sink { [weak self] in self?.showHUD(.nowPlaying, duration: 2.8) }
+            .store(in: &cancellables)
+    }
+
+    private func bindLayout() {
+        nowPlaying.$track
+            .combineLatest(nowPlaying.$isPlaying, herdr.$available)
+            .sink { [weak self] track, _, agents in
+                guard let self else { return }
+                layout.showsArtwork = track != nil
+                layout.showsAudioBars = track != nil
+                layout.showsAgents = agents
+            }
+            .store(in: &cancellables)
+    }
+
+    private func showHUD(_ kind: HUDKind, duration: TimeInterval = 1.6) {
         guard mode != .expanded else { return }
         mode = .hud(kind)
         hudTimer?.invalidate()
-        hudTimer = .scheduledTimer(withTimeInterval: 1.6, repeats: false) { [weak self] _ in
+        hudTimer = .scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
             Task { @MainActor in
                 if case .hud = self?.mode { self?.mode = .closed }
             }

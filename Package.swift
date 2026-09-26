@@ -4,7 +4,15 @@ import PackageDescription
 let package = Package(
     name: "ControlIsland",
     platforms: [.macOS(.v14)],
+    products: [
+        .library(name: "MediaRemoteAdapter", type: .dynamic, targets: ["MediaRemoteAdapter"]),
+    ],
     targets: [
+        .target(
+            name: "MediaRemoteAdapter",
+            path: "Sources/MediaRemoteAdapter",
+            linkerSettings: [.linkedFramework("Foundation")]
+        ),
         .executableTarget(
             name: "ControlIsland",
             path: "Sources/ControlIsland",

@@ -2,6 +2,7 @@ import AppKit
 
 enum Haptics {
     static func peek() { perform(.alignment) }
+    static func press() { perform(.generic) }
     static func expand() { perform(.levelChange) }
     static func collapse() { perform(.generic) }
 

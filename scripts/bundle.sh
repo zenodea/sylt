@@ -5,8 +5,9 @@ cd "$(dirname "$0")/.."
 swift build -c release 2>&1 | tail -3
 APP=build/ControlIsland.app
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 cp .build/release/ControlIsland "$APP/Contents/MacOS/"
+cp .build/release/libMediaRemoteAdapter.dylib "$APP/Contents/Frameworks/"
 cp Resources/Info.plist "$APP/Contents/"
 codesign --force --deep --sign - "$APP"
 echo "Built $APP"

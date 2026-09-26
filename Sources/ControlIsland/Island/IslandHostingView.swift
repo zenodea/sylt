@@ -5,6 +5,8 @@ import SwiftUI
 final class IslandHostingView: NSHostingView<IslandView> {
     weak var state: IslandState?
 
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard let state else { return nil }
         let island = state.islandSize

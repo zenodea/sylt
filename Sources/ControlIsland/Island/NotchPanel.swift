@@ -21,9 +21,10 @@ final class NotchPanel: NSPanel {
         level = .statusBar + 1
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         hidesOnDeactivate = false
+        acceptsMouseMovedEvents = true
         isReleasedWhenClosed = false
 
-        state.geometry = geometry
+        state.apply(geometry)
         let host = IslandHostingView(rootView: IslandView(state: state))
         host.state = state
         contentView = host
@@ -35,7 +36,7 @@ final class NotchPanel: NSPanel {
 
     func relayout(on screen: NSScreen) {
         geometry = NotchGeometry(screen: screen)
-        state.geometry = geometry
+        state.apply(geometry)
         applyFrame()
     }
 

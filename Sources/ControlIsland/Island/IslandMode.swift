@@ -15,5 +15,14 @@ enum IslandMode: Hashable {
 enum HUDKind: Hashable {
     case volume
     case brightness
-    case battery
+    case battery(BatteryAlert)
+    case nowPlaying
+    case agentFinished(HerdrAgent)
+
+    var isWide: Bool {
+        switch self {
+        case .nowPlaying, .agentFinished: true
+        default: false
+        }
+    }
 }

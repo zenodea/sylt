@@ -6,10 +6,14 @@ struct ExpandedView: View {
     @EnvironmentObject private var volume: VolumeMonitor
     @EnvironmentObject private var brightness: BrightnessMonitor
     @EnvironmentObject private var herdr: HerdrMonitor
+    @EnvironmentObject private var nowPlaying: NowPlayingMonitor
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Spacer().frame(height: state.notchHeight - 6)
+            if nowPlaying.track != nil {
+                MediaCard(nowPlaying: nowPlaying)
+            }
             HStack(spacing: 16) {
                 StatusCard(title: "Battery") { batteryRow }
                 StatusCard(title: "Volume") { volumeRow }
