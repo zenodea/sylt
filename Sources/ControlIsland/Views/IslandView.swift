@@ -7,11 +7,14 @@ struct IslandView: View {
 
     var body: some View {
         let size = state.islandSize
-        let shape = IslandShape(notchHeight: state.notchHeight)
+        let canvas = state.canvasSize
+        let shape = IslandShape(size: size, notchHeight: state.notchHeight)
 
         ZStack(alignment: .top) {
+            IslandShape(size: CGSize(width: state.notchWidth, height: state.notchHeight), notchHeight: state.notchHeight)
+                .fill(.black)
             shape.fill(.black)
-                .frame(width: state.notchWidth, height: state.notchHeight)
+                .shadow(color: .black.opacity(0.45), radius: 6 + (size.height - state.notchHeight) * 0.05, y: 3)
             ZStack(alignment: .top) {
                 shape.fill(.black)
                 content
@@ -19,14 +22,20 @@ struct IslandView: View {
                     .id(state.mode.showsClosedContent ? IslandMode.closed : state.mode)
                     .transition(.blurReplace.combined(with: .opacity))
             }
-            .frame(width: size.width, height: size.height)
+            .frame(width: canvas.width, height: canvas.height, alignment: .top)
             .clipShape(shape)
             .contentShape(shape)
             .modifier(CursorPull(cursor: state.cursor, enabled: state.mode == .peek))
             .scaleEffect(isPressed ? 0.97 : 1, anchor: .top)
-            .onHover { state.hoverChanged($0) }
             .onContinuousHover { phase in
-                if case .active(let location) = phase { state.cursorMoved(to: location, in: size) }
+                guard case .active(let location) = phase else { return state.hoverChanged(false) }
+                let hitFrame = state.layout.hitFrame(for: state.mode)
+                let inside = hitFrame.contains(location)
+                state.hoverChanged(inside)
+                if inside {
+                    let origin = CGPoint(x: location.x - (canvas.width - size.width) / 2, y: location.y)
+                    state.cursorMoved(to: origin, in: size)
+                }
             }
             .gesture(pressGesture, including: state.mode == .expanded ? .subviews : .all)
             .contextMenu {
@@ -35,7 +44,7 @@ struct IslandView: View {
                 Button("Quit Control Island") { NSApp.terminate(nil) }
             }
         }
-        .frame(width: state.canvasSize.width, height: state.canvasSize.height, alignment: .top)
+        .frame(width: canvas.width, height: canvas.height, alignment: .top)
         .environmentObject(state.battery)
         .environmentObject(state.volume)
         .environmentObject(state.brightness)
@@ -61,9 +70,9 @@ struct IslandView: View {
     @ViewBuilder
     private var content: some View {
         switch state.mode {
-        case .closed, .peek: ClosedView(state: state)
-        case .hud(let kind): HUDView(kind: kind, notchHeight: state.notchHeight)
-        case .expanded: ExpandedView(state: state)
+        case .closed, .peek: ClosedView(layout: state.layout)
+        case .hud(let kind): HUDView(kind: kind, layout: state.layout)
+        case .expanded: ExpandedView(notchHeight: state.notchHeight)
         }
     }
 }
@@ -79,4 +88,3 @@ private struct CursorPull: ViewModifier {
             .animation(IslandAnimation.cursor, value: pull)
     }
 }
-

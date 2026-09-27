@@ -19,10 +19,10 @@ enum HUDKind: Hashable {
     case nowPlaying
     case agentFinished(HerdrAgent)
 
-    var isWide: Bool {
+    var isCompact: Bool {
         switch self {
-        case .nowPlaying, .agentFinished: true
-        default: false
+        case .volume, .brightness, .battery: true
+        case .nowPlaying, .agentFinished: false
         }
     }
 }

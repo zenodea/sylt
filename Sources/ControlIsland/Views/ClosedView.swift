@@ -1,23 +1,23 @@
 import SwiftUI
 
 struct ClosedView: View {
-    @ObservedObject var state: IslandState
+    let layout: IslandLayout
     @EnvironmentObject private var herdr: HerdrMonitor
     @EnvironmentObject private var nowPlaying: NowPlayingMonitor
 
     var body: some View {
         HStack(spacing: 0) {
-            leftWing.frame(width: state.layout.wingWidth)
-            Spacer().frame(width: state.notchWidth)
-            rightWing.frame(width: state.layout.wingWidth)
+            leftWing.frame(width: layout.wingWidth)
+            Spacer().frame(width: layout.notchWidth)
+            rightWing.frame(width: layout.wingWidth)
         }
-        .frame(height: state.notchHeight)
+        .frame(height: layout.notchHeight)
     }
 
     private var leftWing: some View {
         HStack(spacing: 8) {
             if let track = nowPlaying.track {
-                ArtworkView(image: track.artwork, size: state.layout.artworkSize)
+                ArtworkView(image: track.artwork, size: layout.artworkSize)
             }
             if herdr.available {
                 HStack(spacing: 5) {

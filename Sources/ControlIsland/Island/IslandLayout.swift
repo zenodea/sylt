@@ -6,14 +6,22 @@ struct IslandLayout: Equatable {
     var showsArtwork = false
     var showsAgents = false
     var showsAudioBars = false
+    var showsMediaCard = false
+    var agentRows = 0
 
-    static let expandedWidth: CGFloat = 520
-    static let expandedBaseHeight: CGFloat = 230
-    static let mediaCardHeight: CGFloat = 100
+    static let expandedWidth: CGFloat = 560
+    static let expandedBaseHeight: CGFloat = 150
+    static let mediaCardHeight: CGFloat = 112
+    static let agentRowHeight: CGFloat = 30
+    static let agentHeaderHeight: CGFloat = 30
+    static let maxAgentRows = 3
     static let hudHeight: CGFloat = 76
+    static let compactHUDWing: CGFloat = 96
     static let wingPadding: CGFloat = 10
+    static let hitMargin: CGFloat = 6
 
     var artworkSize: CGFloat { notchHeight - 12 }
+    var compactWingWidth: CGFloat { Self.compactHUDWing - 14 }
 
     var wingWidth: CGFloat {
         let left: [CGFloat] = [showsArtwork ? artworkSize : 0, showsAgents ? 26 : 0]
@@ -24,24 +32,47 @@ struct IslandLayout: Equatable {
 
     var closedWidth: CGFloat { notchWidth + wingWidth * 2 }
 
+    var expandedHeight: CGFloat {
+        var height = Self.expandedBaseHeight
+        if showsMediaCard { height += Self.mediaCardHeight }
+        if agentRows > 0 {
+            height += Self.agentHeaderHeight + CGFloat(min(agentRows, Self.maxAgentRows)) * Self.agentRowHeight
+        }
+        return height
+    }
+
     var canvasSize: CGSize {
         CGSize(
             width: Self.expandedWidth + 160,
-            height: Self.expandedBaseHeight + Self.mediaCardHeight + 80
+            height: Self.expandedBaseHeight + Self.mediaCardHeight
+                + Self.agentHeaderHeight + CGFloat(Self.maxAgentRows) * Self.agentRowHeight + 80
         )
     }
 
-    func size(for mode: IslandMode, expandedHeight: CGFloat) -> CGSize {
+    func size(for mode: IslandMode) -> CGSize {
         switch mode {
         case .closed:
             CGSize(width: closedWidth, height: notchHeight)
         case .peek:
             CGSize(width: closedWidth + 18, height: notchHeight + 7)
-        case .hud(let kind):
-            CGSize(width: closedWidth + (kind.isWide ? 180 : 110), height: Self.hudHeight)
+        case .hud(let kind) where kind.isCompact:
+            CGSize(width: notchWidth + Self.compactHUDWing * 2, height: notchHeight + 2)
+        case .hud:
+            CGSize(width: closedWidth + 180, height: Self.hudHeight)
         case .expanded:
             CGSize(width: Self.expandedWidth, height: expandedHeight)
         }
+    }
+
+    /// Island frame in canvas coordinates (top-left origin), grown by the hit margin.
+    func hitFrame(for mode: IslandMode) -> CGRect {
+        let island = size(for: mode)
+        return CGRect(
+            x: (canvasSize.width - island.width) / 2 - Self.hitMargin,
+            y: 0,
+            width: island.width + Self.hitMargin * 2,
+            height: island.height + Self.hitMargin
+        )
     }
 
     private static func contentWidth(_ items: [CGFloat]) -> CGFloat {

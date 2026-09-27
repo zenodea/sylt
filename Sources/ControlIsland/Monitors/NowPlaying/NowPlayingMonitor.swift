@@ -11,7 +11,7 @@ final class NowPlayingMonitor: ObservableObject {
     private let adapter = MediaRemoteAdapterProcess()
     private var artworkCache: (hash: UInt, image: NSImage)?
     private var appIcons: [String: NSImage] = [:]
-    private let browserArtwork = BrowserArtworkResolver()
+    private let artworkResolver = ArtworkResolver()
 
     var available: Bool { MediaRemoteAdapterProcess.libraryURL != nil }
 
@@ -22,7 +22,7 @@ final class NowPlayingMonitor: ObservableObject {
     }
 
     func stop() {
-        browserArtwork.cancel()
+        artworkResolver.cancel()
         adapter.stop()
         track = nil
         isPlaying = false
@@ -58,13 +58,13 @@ final class NowPlayingMonitor: ObservableObject {
         let changedSong = track.map { !$0.isSameSong(next) } ?? false
         if next != track { track = next }
         if changedSong { trackChanges.send() }
-        if payload.artworkHash == 0, track?.hasResolvedArtwork != true {
-            resolveBrowserArtwork(for: next)
+        if payload.artworkHash == 0, changedSong || track?.hasResolvedArtwork != true {
+            resolveArtwork(for: next)
         }
     }
 
-    private func resolveBrowserArtwork(for target: NowPlayingTrack) {
-        browserArtwork.resolve(title: target.title, bundleIdentifier: target.bundleIdentifier) { [weak self] image in
+    private func resolveArtwork(for target: NowPlayingTrack) {
+        artworkResolver.resolve(target) { [weak self] image in
             guard let self, var current = track, current.isSameSong(target) else { return }
             current.artwork = image
             current.hasResolvedArtwork = true

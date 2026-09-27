@@ -9,13 +9,8 @@ final class IslandHostingView: NSHostingView<IslandView> {
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard let state else { return nil }
-        let island = state.islandSize
-        let rect = CGRect(
-            x: bounds.midX - island.width / 2,
-            y: bounds.maxY - island.height,
-            width: island.width,
-            height: island.height
-        )
+        let hit = state.layout.hitFrame(for: state.mode)
+        let rect = CGRect(x: hit.minX, y: bounds.maxY - hit.maxY, width: hit.width, height: hit.height)
         return rect.contains(point) ? super.hitTest(point) : nil
     }
 }

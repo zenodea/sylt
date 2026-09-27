@@ -17,9 +17,11 @@ struct HerdrSection: View {
                 VStack(spacing: 4) {
                     ForEach(herdr.agents) { agent in
                         AgentRow(agent: agent) { herdr.focus(agent) }
+                            .frame(height: IslandLayout.agentRowHeight - 4)
                     }
                 }
             }
+            .frame(height: CGFloat(min(herdr.agents.count, IslandLayout.maxAgentRows)) * IslandLayout.agentRowHeight)
         }
     }
 }

@@ -54,15 +54,25 @@ static void publish(NSDictionary *info, Boolean playing, NSString *bundle) {
     emit(out);
 }
 
+static NSUInteger generation;
+
 static void refresh(void) {
     refreshPending = NO;
+    NSUInteger current = ++generation;
     dispatch_queue_t queue = dispatch_get_main_queue();
-    getInfo(queue, ^(NSDictionary *info) {
-        getIsPlaying(queue, ^(Boolean playing) {
-            getClient(queue, ^(id client) {
-                publish(info ?: @{}, playing, client ? clientBundle(client) : nil);
-            });
-        });
+    dispatch_group_t group = dispatch_group_create();
+    __block NSDictionary *info = nil;
+    __block Boolean playing = NO;
+    __block NSString *bundle = nil;
+    dispatch_group_enter(group);
+    getInfo(queue, ^(NSDictionary *result) { info = result; dispatch_group_leave(group); });
+    dispatch_group_enter(group);
+    getIsPlaying(queue, ^(Boolean result) { playing = result; dispatch_group_leave(group); });
+    dispatch_group_enter(group);
+    getClient(queue, ^(id client) { bundle = client ? clientBundle(client) : nil; dispatch_group_leave(group); });
+
+    dispatch_group_notify(group, queue, ^{
+        if (current == generation) publish(info ?: @{}, playing, bundle);
     });
 }
 
@@ -133,5 +143,5 @@ static void start(void) {
         [NSThread detachNewThreadWithBlock:^{ readCommands(); }];
         refresh();
     }
-    [NSRunLoop.mainRunLoop run];
+    dispatch_main();
 }

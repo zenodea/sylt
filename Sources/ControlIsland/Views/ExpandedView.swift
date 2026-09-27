@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ExpandedView: View {
-    @ObservedObject var state: IslandState
+    let notchHeight: CGFloat
     @EnvironmentObject private var battery: BatteryMonitor
     @EnvironmentObject private var volume: VolumeMonitor
     @EnvironmentObject private var brightness: BrightnessMonitor
@@ -11,7 +11,7 @@ struct ExpandedView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Spacer().frame(height: state.notchHeight - 6)
+            Spacer().frame(height: notchHeight - 6)
             if nowPlaying.track != nil {
                 MediaCard(nowPlaying: nowPlaying)
             }
@@ -41,7 +41,7 @@ struct ExpandedView: View {
         HStack {
             BatteryGlyph(snapshot: battery.snapshot, compact: false)
             Spacer()
-            Text(batteryDetail).foregroundStyle(.white.opacity(0.6))
+            Text(batteryDetail).lineLimit(1).foregroundStyle(.white.opacity(0.6))
         }
     }
 

@@ -12,6 +12,7 @@ struct BatteryGlyph: View {
             Image(systemName: symbol)
                 .font(.system(size: compact ? 12 : 15))
         }
+        .fixedSize()
         .foregroundStyle(color)
     }
 

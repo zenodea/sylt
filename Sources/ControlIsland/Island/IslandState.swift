@@ -6,6 +6,7 @@ import SwiftUI
 final class IslandState: ObservableObject {
     @Published var mode: IslandMode = .closed
     @Published var cursor: CGPoint = .zero
+    private var isHovering = false
     @Published private(set) var layout = IslandLayout()
 
     let preferences: Preferences
@@ -27,11 +28,7 @@ final class IslandState: ObservableObject {
     var notchWidth: CGFloat { layout.notchWidth }
     var canvasSize: CGSize { layout.canvasSize }
 
-    var islandSize: CGSize {
-        let expandedHeight = IslandLayout.expandedBaseHeight
-            + (nowPlaying.track == nil ? 0 : IslandLayout.mediaCardHeight)
-        return layout.size(for: mode, expandedHeight: expandedHeight)
-    }
+    var islandSize: CGSize { layout.size(for: mode) }
 
     func apply(_ geometry: NotchGeometry) {
         layout.notchWidth = geometry.notchWidth
@@ -64,6 +61,8 @@ final class IslandState: ObservableObject {
     }
 
     func hoverChanged(_ inside: Bool) {
+        guard inside != isHovering else { return }
+        isHovering = inside
         collapseTimer?.invalidate()
         if inside {
             if mode == .closed {
@@ -122,12 +121,14 @@ final class IslandState: ObservableObject {
 
     private func bindLayout() {
         nowPlaying.$track
-            .combineLatest(nowPlaying.$isPlaying, herdr.$available)
-            .sink { [weak self] track, _, agents in
+            .combineLatest(herdr.$available, herdr.$agents)
+            .sink { [weak self] track, agentsAvailable, agents in
                 guard let self else { return }
                 layout.showsArtwork = track != nil
                 layout.showsAudioBars = track != nil
-                layout.showsAgents = agents
+                layout.showsMediaCard = track != nil
+                layout.showsAgents = agentsAvailable
+                layout.agentRows = agentsAvailable ? agents.count : 0
             }
             .store(in: &cancellables)
     }
