@@ -11,7 +11,7 @@ let package = Package(
         .target(
             name: "MediaRemoteAdapter",
             path: "Sources/MediaRemoteAdapter",
-            linkerSettings: [.linkedFramework("Foundation")]
+            linkerSettings: [.linkedFramework("Foundation"), .linkedFramework("QuartzCore")]
         ),
         .executableTarget(
             name: "ControlIsland",

@@ -21,9 +21,12 @@ final class FirefoxArtworkProvider: ArtworkProvider {
 
     private func lookup(title: String) async -> NSImage? {
         let tabs = await Task.detached(priority: .utility) { FirefoxTabs.openTabs() }.value
-        guard let tab = tabs.first(where: { $0.title.localizedCaseInsensitiveContains(title) }),
-              let thumbnail = YouTubeThumbnail.url(for: tab.url)
-        else { return nil }
+        let match = tabs.first(where: { $0.title.localizedCaseInsensitiveContains(title) })
+        if ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil {
+            let youtube = tabs.filter { $0.url.host?.contains("youtube") == true }.count
+            FileHandle.standardError.write(Data("firefox tabs=\(tabs.count) youtube=\(youtube) matched=\(match != nil) thumb=\(match.flatMap(\.url).flatMap(YouTubeThumbnail.url) != nil) title=\(title.prefix(20))\n".utf8))
+        }
+        guard let tab = match, let thumbnail = YouTubeThumbnail.url(for: tab.url) else { return nil }
         if let cached = cache[thumbnail] { return cached }
         guard let (data, _) = try? await URLSession.shared.data(from: thumbnail), let image = NSImage(data: data) else {
             return nil

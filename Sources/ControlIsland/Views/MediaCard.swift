@@ -22,7 +22,21 @@ struct MediaCard: View {
                 }
             }
             .padding(12)
-            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+            .background(
+                LinearGradient(
+                    colors: [track.tint.opacity(0.22), track.tint.opacity(0.08)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            )
+            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(colors: track.barColors, startPoint: .leading, endPoint: .trailing).opacity(0.75),
+                        lineWidth: 1
+                    )
+            )
         }
     }
 

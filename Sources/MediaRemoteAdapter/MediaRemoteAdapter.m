@@ -1,26 +1,38 @@
 #import <Foundation/Foundation.h>
+#import <QuartzCore/QuartzCore.h>
+#import <mach-o/dyld.h>
 #import <dlfcn.h>
+#import <crt_externs.h>
+#import <unistd.h>
 
 typedef void (*MRGetInfoFn)(dispatch_queue_t, void (^)(NSDictionary *));
 typedef void (*MRGetIsPlayingFn)(dispatch_queue_t, void (^)(Boolean));
 typedef void (*MRGetClientFn)(dispatch_queue_t, void (^)(id));
 typedef NSString *(*MRClientBundleFn)(id);
 typedef void (*MRRegisterFn)(dispatch_queue_t);
-typedef Boolean (*MRSendCommandFn)(unsigned int, NSDictionary *);
-typedef void (*MRSetElapsedFn)(double);
 
 static MRGetInfoFn getInfo;
 static MRGetIsPlayingFn getIsPlaying;
 static MRGetClientFn getClient;
 static MRClientBundleFn clientBundle;
 static MRRegisterFn registerForNotifications;
-static MRSendCommandFn sendCommand;
-static MRSetElapsedFn setElapsed;
 
 static NSUInteger lastArtworkHash;
 static BOOL refreshPending;
 
 static id valueOrNull(id value) { return value ?: NSNull.null; }
+
+static void trace(NSString *format, ...) {
+    static BOOL enabled;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ enabled = getenv("ADAPTER_TRACE") != NULL; });
+    if (!enabled) return;
+    va_list args;
+    va_start(args, format);
+    NSString *message = [[NSString alloc] initWithFormat:format arguments:args];
+    va_end(args);
+    fprintf(stderr, "[adapter %d] %s\n", getpid(), message.UTF8String);
+}
 
 static void emit(NSDictionary *payload) {
     NSData *json = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
@@ -54,36 +66,64 @@ static void publish(NSDictionary *info, Boolean playing, NSString *bundle) {
     emit(out);
 }
 
-static NSUInteger generation;
+static NSDictionary *latestInfo;
+static Boolean latestPlaying;
+static NSString *latestBundle;
+static BOOL emitPending;
+
+static void emitSoon(void) {
+    if (emitPending) return;
+    emitPending = YES;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 50 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
+        emitPending = NO;
+        publish(latestInfo ?: @{}, latestPlaying, latestBundle);
+    });
+}
 
 static void refresh(void) {
+    trace(@"refresh");
     refreshPending = NO;
-    NSUInteger current = ++generation;
     dispatch_queue_t queue = dispatch_get_main_queue();
-    dispatch_group_t group = dispatch_group_create();
-    __block NSDictionary *info = nil;
-    __block Boolean playing = NO;
-    __block NSString *bundle = nil;
-    dispatch_group_enter(group);
-    getInfo(queue, ^(NSDictionary *result) { info = result; dispatch_group_leave(group); });
-    dispatch_group_enter(group);
-    getIsPlaying(queue, ^(Boolean result) { playing = result; dispatch_group_leave(group); });
-    dispatch_group_enter(group);
-    getClient(queue, ^(id client) { bundle = client ? clientBundle(client) : nil; dispatch_group_leave(group); });
-
-    __block BOOL published = NO;
-    void (^publishOnce)(void) = ^{
-        if (published || current != generation) return;
-        published = YES;
-        publish(info ?: @{}, playing, bundle);
-    };
-    dispatch_group_notify(group, queue, publishOnce);
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), queue, ^{
-        if (!published) publishOnce();
-        dispatch_group_notify(group, queue, ^{
-            if (current == generation) publish(info ?: @{}, playing, bundle);
-        });
+    getInfo(queue, ^(NSDictionary *info) {
+        trace(@"info: %lu keys", (unsigned long)info.count);
+        latestInfo = info;
+        emitSoon();
     });
+    getIsPlaying(queue, ^(Boolean playing) {
+        latestPlaying = playing;
+        emitSoon();
+    });
+    getClient(queue, ^(id client) {
+        NSString *bundle = client ? clientBundle(client) : nil;
+        trace(@"client: %@", bundle);
+        if (!bundle && latestBundle) latestInfo = nil;
+        latestBundle = bundle;
+        emitSoon();
+    });
+}
+
+/// MediaRemote answers the metadata request only once per process when hosted
+/// this way, so a change means replacing the process in place: same pid, same
+/// pipes, fresh answer.
+static BOOL relaunchPending;
+static CFTimeInterval lastRelaunch;
+
+static CFTimeInterval launchedAt;
+static double relaunchInterval = 3;
+
+static void relaunch(void) {
+    trace(@"relaunch");
+    relaunchPending = NO;
+    lastRelaunch = CACurrentMediaTime();
+    fflush(stdout);
+    execv(_dyld_get_image_name(0), *_NSGetArgv());
+}
+
+static void scheduleRelaunch(void) {
+    if (relaunchPending || CACurrentMediaTime() - launchedAt < 1.0) return;
+    relaunchPending = YES;
+    CFTimeInterval wait = MAX(0.15, 1.0 - (CACurrentMediaTime() - lastRelaunch));
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(wait * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ relaunch(); });
 }
 
 static void scheduleRefresh(void) {
@@ -94,16 +134,13 @@ static void scheduleRefresh(void) {
     });
 }
 
+/// Only "refresh" is accepted. Playback commands are deliberately not routed
+/// through MediaRemote: hosted this way they never get a reply and deadlock
+/// the framework's notification queue.
 static void handleCommand(NSString *line) {
     NSArray<NSString *> *parts = [line componentsSeparatedByString:@" "];
-    NSString *name = parts.firstObject;
-    if ([name isEqualToString:@"play"]) sendCommand(0, nil);
-    else if ([name isEqualToString:@"pause"]) sendCommand(1, nil);
-    else if ([name isEqualToString:@"toggle"]) sendCommand(2, nil);
-    else if ([name isEqualToString:@"next"]) sendCommand(4, nil);
-    else if ([name isEqualToString:@"previous"]) sendCommand(5, nil);
-    else if ([name isEqualToString:@"seek"] && parts.count > 1) setElapsed(parts[1].doubleValue);
-    else if ([name isEqualToString:@"refresh"]) scheduleRefresh();
+    if ([parts.firstObject isEqualToString:@"refresh"]) scheduleRefresh();
+    else if ([parts.firstObject isEqualToString:@"interval"] && parts.count > 1) relaunchInterval = MAX(1, parts[1].doubleValue);
 }
 
 static void readCommands(void) {
@@ -128,18 +165,18 @@ static BOOL loadMediaRemote(void) {
     getClient = dlsym(handle, "MRMediaRemoteGetNowPlayingClient");
     clientBundle = dlsym(handle, "MRNowPlayingClientGetBundleIdentifier");
     registerForNotifications = dlsym(handle, "MRMediaRemoteRegisterForNowPlayingNotifications");
-    sendCommand = dlsym(handle, "MRMediaRemoteSendCommand");
-    setElapsed = dlsym(handle, "MRMediaRemoteSetElapsedTime");
-    return getInfo && getIsPlaying && getClient && clientBundle && registerForNotifications && sendCommand && setElapsed;
+    return getInfo && getIsPlaying && getClient && clientBundle && registerForNotifications;
 }
 
 __attribute__((constructor))
 static void start(void) {
+    launchedAt = CACurrentMediaTime();
     @autoreleasepool {
         if (!loadMediaRemote()) {
             emit(@{@"error": @"MediaRemote unavailable"});
             exit(1);
         }
+        trace(@"start");
         registerForNotifications(dispatch_get_main_queue());
         NSArray *names = @[
             @"kMRMediaRemoteNowPlayingInfoDidChangeNotification",
@@ -148,10 +185,20 @@ static void start(void) {
         ];
         for (NSString *name in names) {
             [NSNotificationCenter.defaultCenter addObserverForName:name object:nil queue:NSOperationQueue.mainQueue
-                                                        usingBlock:^(NSNotification *note) { scheduleRefresh(); }];
+                                                        usingBlock:^(NSNotification *note) {
+                trace(@"notification: %@", name);
+                scheduleRefresh();
+                scheduleRelaunch();
+            }];
         }
         [NSThread detachNewThreadWithBlock:^{ readCommands(); }];
+        [NSTimer scheduledTimerWithTimeInterval:1 repeats:YES block:^(NSTimer *timer) {
+            if (CACurrentMediaTime() - launchedAt >= relaunchInterval) relaunch();
+            else scheduleRefresh();
+        }];
         refresh();
     }
-    dispatch_main();
+    while (YES) {
+        CFRunLoopRun();
+    }
 }

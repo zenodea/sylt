@@ -39,6 +39,11 @@ struct NowPlayingTrack: Equatable {
         accents.isEmpty ? [.white] : accents.map(Color.init)
     }
 
+    var tint: Color {
+        guard let accent = accents.isEmpty ? nil : accents[accents.count / 2] else { return .white }
+        return Color(accent)
+    }
+
     var isSameSong: (NowPlayingTrack) -> Bool {
         { $0.title == title && $0.artist == artist }
     }

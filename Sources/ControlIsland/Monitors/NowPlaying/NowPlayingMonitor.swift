@@ -32,17 +32,35 @@ final class NowPlayingMonitor: ObservableObject {
         position = .idle
     }
 
-    func togglePlayPause() { adapter.send("toggle") }
-    func next() { adapter.send("next") }
-    func previous() { adapter.send("previous") }
-    func seek(to seconds: TimeInterval) { adapter.send("seek \(seconds)") }
+    func togglePlayPause() { perform(.playPause, key: .playPause) }
+    func next() { perform(.next, key: .next) }
+    func previous() { perform(.previous, key: .previous) }
+
+    func seek(to seconds: TimeInterval) {
+        guard let player = scripted.player else { return }
+        Task { _ = await AppleScript.string(player.script(for: .seek(seconds))); scripted.poll() }
+    }
+
+    private func perform(_ command: ScriptedPlayer.Command, key: MediaKeySimulator.Key) {
+        if let player = scripted.player {
+            Task { _ = await AppleScript.string(player.script(for: command)); scripted.poll() }
+        } else {
+            MediaKeySimulator.press(key)
+            adapter.send("refresh")
+        }
+    }
 
     private func apply(_ payload: NowPlayingPayload) {
+        if ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil {
+            FileHandle.standardError.write(Data("payload bundle=\(payload.bundle ?? "-") title=\(payload.title?.prefix(20) ?? "-") playing=\(payload.playing) hash=\(payload.artworkHash)\n".utf8))
+        }
         if let player = payload.bundle.flatMap(ScriptedPlayer.init(rawValue:)) {
+            adapter.setRefreshInterval(20)
             scripted.start(player)
             scripted.poll()
             return
         }
+        adapter.setRefreshInterval(3)
         scripted.stop()
         isPlaying = payload.playing
         position = PlaybackPosition(
@@ -51,7 +69,10 @@ final class NowPlayingMonitor: ObservableObject {
             timestamp: payload.timestamp.map { Date(timeIntervalSince1970: $0) } ?? .now
         )
 
-        guard let title = payload.title, !title.isEmpty else { return clear() }
+        guard let title = payload.title, !title.isEmpty else {
+            if payload.bundle == nil || payload.bundle != track?.bundleIdentifier { clear() }
+            return
+        }
         let next = NowPlayingTrack(
             title: title,
             artist: payload.artist ?? "",

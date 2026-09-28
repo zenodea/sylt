@@ -1,8 +1,9 @@
 import Foundation
 
 enum AppleScript {
+    @discardableResult
     static func string(_ source: String) async -> String? {
-        await run(source) { $0.stringValue }
+        await run(source) { $0.stringValue ?? "" }
     }
 
     static func data(_ source: String) async -> Data? {
