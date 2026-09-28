@@ -12,10 +12,12 @@ final class NowPlayingMonitor: ObservableObject {
     private var artworkCache: (hash: UInt, image: NSImage)?
     private var appIcons: [String: NSImage] = [:]
     private let artworkResolver = ArtworkResolver()
+    private let scripted = ScriptedPlayerPoller()
 
     var available: Bool { MediaRemoteAdapterProcess.libraryURL != nil }
 
     func start() {
+        scripted.onSnapshot = { [weak self] player, snapshot in self?.apply(snapshot, from: player) }
         adapter.start { [weak self] payload in
             Task { @MainActor in self?.apply(payload) }
         }
@@ -23,6 +25,7 @@ final class NowPlayingMonitor: ObservableObject {
 
     func stop() {
         artworkResolver.cancel()
+        scripted.stop()
         adapter.stop()
         track = nil
         isPlaying = false
@@ -35,6 +38,12 @@ final class NowPlayingMonitor: ObservableObject {
     func seek(to seconds: TimeInterval) { adapter.send("seek \(seconds)") }
 
     private func apply(_ payload: NowPlayingPayload) {
+        if let player = payload.bundle.flatMap(ScriptedPlayer.init(rawValue:)) {
+            scripted.start(player)
+            scripted.poll()
+            return
+        }
+        scripted.stop()
         isPlaying = payload.playing
         position = PlaybackPosition(
             elapsed: payload.elapsed ?? 0,
@@ -42,10 +51,7 @@ final class NowPlayingMonitor: ObservableObject {
             timestamp: payload.timestamp.map { Date(timeIntervalSince1970: $0) } ?? .now
         )
 
-        guard let title = payload.title, !title.isEmpty else {
-            track = nil
-            return
-        }
+        guard let title = payload.title, !title.isEmpty else { return clear() }
         let next = NowPlayingTrack(
             title: title,
             artist: payload.artist ?? "",
@@ -61,6 +67,31 @@ final class NowPlayingMonitor: ObservableObject {
         if payload.artworkHash == 0, changedSong || track?.hasResolvedArtwork != true {
             resolveArtwork(for: next)
         }
+    }
+
+    private func apply(_ snapshot: PlayerSnapshot?, from player: ScriptedPlayer) {
+        guard let snapshot else { return clear() }
+        isPlaying = snapshot.isPlaying
+        position = PlaybackPosition(elapsed: snapshot.position, rate: snapshot.isPlaying ? 1 : 0, timestamp: .now)
+
+        var next = NowPlayingTrack(snapshot: snapshot, player: player)
+        if let current = track, current.isSameSong(next) {
+            next.artwork = current.artwork
+            next.hasResolvedArtwork = current.hasResolvedArtwork
+            if next != current { track = next }
+            return
+        }
+        let hadTrack = track != nil
+        next.artwork = appIcon(for: player.rawValue)
+        track = next
+        if hadTrack { trackChanges.send() }
+        resolveArtwork(for: next)
+    }
+
+    private func clear() {
+        track = nil
+        isPlaying = false
+        position = .idle
     }
 
     private func resolveArtwork(for target: NowPlayingTrack) {

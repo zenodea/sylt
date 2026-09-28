@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import Combine
 
 @MainActor
@@ -36,6 +36,7 @@ final class HerdrMonitor: ObservableObject {
     }
 
     func focus(_ agent: HerdrAgent) {
+        ProcessTree.hostApplication(ofProcessNamed: "herdr")?.activate(options: .activateIgnoringOtherApps)
         run(["agent", "focus", agent.pane_id]) { _ in }
     }
 

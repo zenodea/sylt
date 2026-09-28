@@ -71,8 +71,18 @@ static void refresh(void) {
     dispatch_group_enter(group);
     getClient(queue, ^(id client) { bundle = client ? clientBundle(client) : nil; dispatch_group_leave(group); });
 
-    dispatch_group_notify(group, queue, ^{
-        if (current == generation) publish(info ?: @{}, playing, bundle);
+    __block BOOL published = NO;
+    void (^publishOnce)(void) = ^{
+        if (published || current != generation) return;
+        published = YES;
+        publish(info ?: @{}, playing, bundle);
+    };
+    dispatch_group_notify(group, queue, publishOnce);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), queue, ^{
+        if (!published) publishOnce();
+        dispatch_group_notify(group, queue, ^{
+            if (current == generation) publish(info ?: @{}, playing, bundle);
+        });
     });
 }
 

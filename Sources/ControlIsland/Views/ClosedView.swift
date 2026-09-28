@@ -15,17 +15,9 @@ struct ClosedView: View {
     }
 
     private var leftWing: some View {
-        HStack(spacing: 8) {
-            if let track = nowPlaying.track {
-                ArtworkView(image: track.artwork, size: layout.artworkSize)
-            }
+        HStack(spacing: 4) {
             if herdr.available {
-                HStack(spacing: 5) {
-                    StatusDot(active: herdr.workingCount > 0)
-                    Text("\(herdr.workingCount)")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.85))
-                }
+                SheepBadge(workingCount: herdr.workingCount)
             }
         }
         .padding(.leading, IslandLayout.wingPadding)
@@ -34,8 +26,9 @@ struct ClosedView: View {
 
     private var rightWing: some View {
         HStack(spacing: 8) {
-            if nowPlaying.track != nil {
-                AudioBars(isPlaying: nowPlaying.isPlaying)
+            if let track = nowPlaying.track {
+                ArtworkView(image: track.artwork, size: layout.artworkSize)
+                AudioBars(isPlaying: nowPlaying.isPlaying, colors: track.barColors)
             }
         }
         .padding(.trailing, IslandLayout.wingPadding)

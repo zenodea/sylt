@@ -5,10 +5,11 @@ struct HerdrSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
+            HStack(spacing: 6) {
+                Text("🐑")
                 Text("Herdr")
                 Spacer()
-                Text("\(herdr.workingCount) working · \(herdr.idleCount) idle")
+                Text("\(herdr.workingCount) grazing · \(herdr.idleCount) resting")
             }
             .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(.white.opacity(0.5))
@@ -33,12 +34,12 @@ private struct AgentRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                StatusDot(active: agent.isWorking)
+                HarnessIcon(harness: agent.harness, size: 16)
                 Text(agent.title).lineLimit(1)
                 Spacer()
-                Text(agent.agent)
+                Text(agent.isWorking ? "grazing" : "resting")
                     .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(agent.isWorking ? Color.green.opacity(0.9) : .white.opacity(0.4))
                 if agent.focused {
                     Image(systemName: "eye.fill")
                         .font(.system(size: 9))

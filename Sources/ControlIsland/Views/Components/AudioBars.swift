@@ -1,17 +1,19 @@
 import SwiftUI
 
 struct AudioBars: View {
+    static let barCount = 4
+
     let isPlaying: Bool
-    var barCount = 4
+    var colors: [Color] = [.white]
     var height: CGFloat = 14
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1 / 30, paused: !isPlaying)) { context in
             let time = context.date.timeIntervalSinceReferenceDate
             HStack(alignment: .center, spacing: 2) {
-                ForEach(0..<barCount, id: \.self) { index in
+                ForEach(0..<Self.barCount, id: \.self) { index in
                     Capsule()
-                        .fill(.white)
+                        .fill(colors[index % colors.count])
                         .frame(width: 2.5, height: barHeight(index: index, time: time))
                 }
             }

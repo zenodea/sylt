@@ -10,7 +10,8 @@ struct IslandLayout: Equatable {
     var agentRows = 0
 
     static let expandedWidth: CGFloat = 560
-    static let expandedBaseHeight: CGFloat = 150
+    static let expandedBaseHeight: CGFloat = 52
+    static let emptyExpandedHeight: CGFloat = 36
     static let mediaCardHeight: CGFloat = 112
     static let agentRowHeight: CGFloat = 30
     static let agentHeaderHeight: CGFloat = 30
@@ -24,8 +25,8 @@ struct IslandLayout: Equatable {
     var compactWingWidth: CGFloat { Self.compactHUDWing - 14 }
 
     var wingWidth: CGFloat {
-        let left: [CGFloat] = [showsArtwork ? artworkSize : 0, showsAgents ? 26 : 0]
-        let right: [CGFloat] = [showsAudioBars ? 16 : 0]
+        let left: [CGFloat] = [showsAgents ? 34 : 0]
+        let right: [CGFloat] = [showsArtwork ? artworkSize : 0, showsAudioBars ? 16 : 0]
         let widest = max(Self.contentWidth(left), Self.contentWidth(right))
         return widest == 0 ? 0 : widest + Self.wingPadding * 2
     }
@@ -35,9 +36,11 @@ struct IslandLayout: Equatable {
     var expandedHeight: CGFloat {
         var height = Self.expandedBaseHeight
         if showsMediaCard { height += Self.mediaCardHeight }
-        if agentRows > 0 {
-            height += Self.agentHeaderHeight + CGFloat(min(agentRows, Self.maxAgentRows)) * Self.agentRowHeight
+        if showsAgents {
+            height += Self.agentHeaderHeight + CGFloat(min(max(agentRows, 1), Self.maxAgentRows)) * Self.agentRowHeight
         }
+        if showsMediaCard, showsAgents { height += 12 }
+        if !showsMediaCard, !showsAgents { height += Self.emptyExpandedHeight }
         return height
     }
 

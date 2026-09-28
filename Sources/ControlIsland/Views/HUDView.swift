@@ -71,14 +71,15 @@ struct HUDView: View {
     private func agentRow(_ agent: HerdrAgent) -> some View {
         Button { herdr.focus(agent) } label: {
             HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                HarnessIcon(harness: agent.harness, size: 28)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(agent.title).lineLimit(1)
-                    Text("\(agent.agent) finished · click to focus").lineLimit(1)
+                    Text("\(agent.harness.title) finished grazing · click to open").lineLimit(1)
                         .font(.system(size: 11))
                         .foregroundStyle(.white.opacity(0.6))
                 }
                 Spacer(minLength: 0)
+                Text("🐑").font(.system(size: 18))
             }
             .contentShape(Rectangle())
         }
@@ -97,7 +98,7 @@ struct HUDView: View {
                         .foregroundStyle(.white.opacity(0.6))
                 }
                 Spacer(minLength: 0)
-                AudioBars(isPlaying: nowPlaying.isPlaying)
+                AudioBars(isPlaying: nowPlaying.isPlaying, colors: track.barColors)
             }
         }
     }

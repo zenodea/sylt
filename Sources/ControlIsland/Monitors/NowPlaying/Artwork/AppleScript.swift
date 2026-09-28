@@ -9,7 +9,7 @@ enum AppleScript {
         await run(source) { $0.data }
     }
 
-    private static func run<T: Sendable>(_ source: String, _ extract: @escaping @Sendable (NSAppleEventDescriptor) -> T?) async -> T? {
+    static func run<T: Sendable>(_ source: String, _ extract: @escaping @Sendable (NSAppleEventDescriptor) -> T?) async -> T? {
         await Task.detached(priority: .utility) {
             var error: NSDictionary?
             guard let result = NSAppleScript(source: source)?.executeAndReturnError(&error), error == nil else { return nil }

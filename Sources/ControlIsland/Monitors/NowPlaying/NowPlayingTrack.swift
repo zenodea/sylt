@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 struct NowPlayingTrack: Equatable {
     var title: String
@@ -7,13 +8,35 @@ struct NowPlayingTrack: Equatable {
     var duration: TimeInterval?
     var bundleIdentifier: String?
     var artworkHash: UInt
-    var artwork: NSImage?
+    var artwork: NSImage? { didSet { accents = artwork?.sliceAccents(count: AudioBars.barCount) ?? [] } }
+    private(set) var accents: [NSColor] = []
     var hasResolvedArtwork = false
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.title == rhs.title && lhs.artist == rhs.artist && lhs.album == rhs.album
             && lhs.duration == rhs.duration && lhs.bundleIdentifier == rhs.bundleIdentifier
             && lhs.artworkHash == rhs.artworkHash && lhs.hasResolvedArtwork == rhs.hasResolvedArtwork
+    }
+
+    init(title: String, artist: String, album: String, duration: TimeInterval?, bundleIdentifier: String?,
+         artworkHash: UInt, artwork: NSImage?) {
+        self.title = title
+        self.artist = artist
+        self.album = album
+        self.duration = duration
+        self.bundleIdentifier = bundleIdentifier
+        self.artworkHash = artworkHash
+        self.artwork = artwork
+        accents = artwork?.sliceAccents(count: AudioBars.barCount) ?? []
+    }
+
+    init(snapshot: PlayerSnapshot, player: ScriptedPlayer) {
+        self.init(title: snapshot.title, artist: snapshot.artist, album: snapshot.album, duration: snapshot.duration,
+                  bundleIdentifier: player.rawValue, artworkHash: 0, artwork: nil)
+    }
+
+    var barColors: [Color] {
+        accents.isEmpty ? [.white] : accents.map(Color.init)
     }
 
     var isSameSong: (NowPlayingTrack) -> Bool {
