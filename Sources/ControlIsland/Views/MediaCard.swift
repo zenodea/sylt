@@ -5,8 +5,8 @@ struct MediaCard: View {
 
     var body: some View {
         if let track = nowPlaying.track {
-            HStack(spacing: 14) {
-                ArtworkView(image: track.artwork, size: 64)
+            HStack(spacing: 12) {
+                ArtworkView(image: track.artwork, size: 60)
                 VStack(alignment: .leading, spacing: 6) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(track.title)
@@ -21,7 +21,7 @@ struct MediaCard: View {
                     controls
                 }
             }
-            .padding(12)
+            .padding(10)
             .background(
                 LinearGradient(
                     colors: [track.tint.opacity(0.22), track.tint.opacity(0.08)],

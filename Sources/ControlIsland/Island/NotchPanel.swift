@@ -31,6 +31,8 @@ final class NotchPanel: NSPanel {
         applyFrame()
     }
 
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
+
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 

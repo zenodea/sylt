@@ -18,7 +18,7 @@ struct HerdrSection: View {
                 VStack(spacing: 4) {
                     ForEach(herdr.agents) { agent in
                         AgentRow(agent: agent) { herdr.focus(agent) }
-                            .frame(height: IslandLayout.agentRowHeight - 4)
+                            .frame(height: IslandLayout.agentRowHeight - 3)
                     }
                 }
             }
@@ -46,7 +46,7 @@ private struct AgentRow: View {
                         .foregroundStyle(.white.opacity(0.5))
                 }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 3)
             .padding(.horizontal, 8)
             .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
         }

@@ -11,37 +11,55 @@ struct HUDView: View {
 
     var body: some View {
         Group {
-            if kind.isCompact { compact } else { card }
+            switch kind.style {
+            case .compact(let leading, let trailing): wings(leading: leading, trailing: trailing)
+            case .twoRow(let wing): VStack(spacing: 0) { wings(leading: wing, trailing: wing); row }
+            case .card: card
+            }
         }
         .font(.system(size: 13, weight: .medium, design: .rounded))
         .foregroundStyle(.white)
     }
 
-    private var compact: some View {
+    private func wings(leading leadingWidth: Double, trailing trailingWidth: Double) -> some View {
         HStack(spacing: 0) {
-            compactLeading
-                .frame(width: layout.compactWingWidth, alignment: .leading)
-                .padding(.leading, 14)
+            leading
+                .frame(width: max(0, leadingWidth - 8), alignment: .leading)
+                .padding(.leading, leadingWidth > 0 ? 8 : 0)
             Spacer().frame(width: layout.notchWidth)
-            compactTrailing
-                .frame(width: layout.compactWingWidth, alignment: .trailing)
-                .padding(.trailing, 14)
+            trailing
+                .frame(width: max(0, trailingWidth - 8), alignment: .trailing)
+                .padding(.trailing, trailingWidth > 0 ? 8 : 0)
         }
         .frame(height: layout.notchHeight + 2)
+        .contentShape(Rectangle())
+        .onTapGesture { tapped() }
     }
 
     @ViewBuilder
-    private var compactLeading: some View {
+    private var leading: some View {
         switch kind {
         case .volume: Image(systemName: volume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
         case .brightness: Image(systemName: "sun.max.fill")
         case .battery: BatteryGlyph(snapshot: battery.snapshot, compact: true)
-        default: EmptyView()
+        case .agentFinished(let agent):
+            HStack(spacing: 6) {
+                Text("🐑").font(.system(size: 13))
+                HarnessIcon(harness: agent.harness, size: 16)
+                Text(agent.title)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        case .unlocked: Image(systemName: "lock.open.fill").foregroundStyle(.green)
+        case .nowPlaying:
+            if let track = nowPlaying.track { ArtworkView(image: track.artwork, size: layout.artworkSize) }
+        case .notification: EmptyView()
         }
     }
 
     @ViewBuilder
-    private var compactTrailing: some View {
+    private var trailing: some View {
         switch kind {
         case .volume: LevelBar(value: volume.isMuted ? 0 : Double(volume.level))
         case .brightness: LevelBar(value: Double(brightness.level))
@@ -50,7 +68,25 @@ struct HUDView: View {
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(batteryColor(alert))
                 .lineLimit(1)
-        default: EmptyView()
+        case .agentFinished: EmptyView()
+        case .unlocked:
+            Text("Welcome back, \(NSFullUserName().split(separator: " ").first.map(String.init) ?? NSUserName())")
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+        case .nowPlaying:
+            if let track = nowPlaying.track { AudioBars(isPlaying: nowPlaying.isPlaying, colors: track.barColors) }
+        case .notification: EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private var row: some View {
+        if let track = nowPlaying.track {
+            MarqueeText(text: track.artist.isEmpty ? track.title : "\(track.title)  ·  \(track.artist)")
+                .foregroundStyle(.white.opacity(0.85))
+                .frame(height: IslandLayout.hudRowHeight)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 4)
         }
     }
 
@@ -58,49 +94,29 @@ struct HUDView: View {
     private var card: some View {
         VStack(spacing: 6) {
             Spacer().frame(height: layout.notchHeight - 4)
-            switch kind {
-            case .agentFinished(let agent): agentRow(agent)
-            case .nowPlaying: nowPlayingRow
-            default: EmptyView()
+            if case .notification(let notification) = kind {
+                HStack(spacing: 10) {
+                    if let icon = notification.icon {
+                        Image(nsImage: icon).resizable().frame(width: 28, height: 28)
+                    } else {
+                        Image(systemName: "bell.fill").frame(width: 28, height: 28)
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(notification.title).lineLimit(1)
+                        Text(notification.body).lineLimit(1)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
+                    Spacer(minLength: 0)
+                }
             }
         }
-        .padding(.horizontal, 22)
-        .padding(.bottom, 10)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
     }
 
-    private func agentRow(_ agent: HerdrAgent) -> some View {
-        Button { herdr.focus(agent) } label: {
-            HStack(spacing: 10) {
-                HarnessIcon(harness: agent.harness, size: 28)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(agent.title).lineLimit(1)
-                    Text("\(agent.harness.title) finished grazing · click to open").lineLimit(1)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-                Spacer(minLength: 0)
-                Text("🐑").font(.system(size: 18))
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private var nowPlayingRow: some View {
-        if let track = nowPlaying.track {
-            HStack(spacing: 10) {
-                ArtworkView(image: track.artwork, size: 30)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(track.title).lineLimit(1)
-                    Text(track.artist).lineLimit(1)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-                Spacer(minLength: 0)
-                AudioBars(isPlaying: nowPlaying.isPlaying, colors: track.barColors)
-            }
-        }
+    private func tapped() {
+        if case .agentFinished(let agent) = kind { herdr.focus(agent) }
     }
 
     private func batteryMessage(_ alert: BatteryAlert) -> String {

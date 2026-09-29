@@ -9,3 +9,4 @@ extension VolumeMonitor: Monitor {}
 extension BrightnessMonitor: Monitor {}
 extension NowPlayingMonitor: Monitor {}
 extension HerdrMonitor: Monitor {}
+extension SystemNotificationMonitor: Monitor {}

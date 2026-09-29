@@ -1,18 +1,19 @@
 import SwiftUI
 
-/// The island outline, drawn at `size` hugging the top centre of its rect so it
-/// can animate without ever moving the content laid out behind it.
+/// The island outline, hugging the top of its rect, centred on the notch plus
+/// an offset. Animates size and offset without moving the content behind it.
 struct IslandShape: Shape {
-    var size: CGSize
+    var frame: IslandFrame
     var notchHeight: CGFloat
 
-    var animatableData: AnimatablePair<CGFloat, CGFloat> {
-        get { AnimatablePair(size.width, size.height) }
-        set { size = CGSize(width: newValue.first, height: newValue.second) }
+    var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, CGFloat> {
+        get { AnimatablePair(AnimatablePair(frame.size.width, frame.size.height), frame.centerOffset) }
+        set { frame = IslandFrame(size: CGSize(width: newValue.first.first, height: newValue.first.second), centerOffset: newValue.second) }
     }
 
     func path(in rect: CGRect) -> Path {
-        let frame = CGRect(x: rect.midX - size.width / 2, y: rect.minY, width: size.width, height: size.height)
+        let size = frame.size
+        let origin = CGPoint(x: rect.midX - size.width / 2 + frame.centerOffset, y: rect.minY)
         let opened = max(0, size.height - notchHeight)
         let radius = min(10 + opened * 0.35, 28, size.height / 2)
         return UnevenRoundedRectangle(
@@ -21,6 +22,6 @@ struct IslandShape: Shape {
             bottomTrailingRadius: radius,
             topTrailingRadius: 0,
             style: .continuous
-        ).path(in: frame)
+        ).path(in: CGRect(origin: origin, size: size))
     }
 }

@@ -6,19 +6,25 @@ struct IslandView: View {
     @State private var isPressed = false
 
     var body: some View {
-        let size = state.islandSize
+        let frame = state.islandFrame
+        let size = frame.size
         let canvas = state.canvasSize
-        let shape = IslandShape(size: size, notchHeight: state.notchHeight)
+        let shape = IslandShape(frame: frame, notchHeight: state.notchHeight)
+        let notch = IslandFrame(size: CGSize(width: state.notchWidth, height: state.notchHeight), centerOffset: 0)
 
         ZStack(alignment: .top) {
-            IslandShape(size: CGSize(width: state.notchWidth, height: state.notchHeight), notchHeight: state.notchHeight)
+            IslandShape(frame: notch, notchHeight: state.notchHeight)
                 .fill(.black)
             shape.fill(.black)
-                .shadow(color: .black.opacity(0.45), radius: 6 + (size.height - state.notchHeight) * 0.05, y: 3)
+                .shadow(
+                    color: .black.opacity(state.layout.isFullscreen ? 0 : 0.45),
+                    radius: 6 + (size.height - state.notchHeight) * 0.05, y: 3
+                )
             ZStack(alignment: .top) {
                 shape.fill(.black)
                 content
                     .frame(width: size.width, height: size.height, alignment: .top)
+                    .offset(x: frame.centerOffset)
                     .id(state.mode.showsClosedContent ? IslandMode.closed : state.mode)
                     .transition(.blurReplace.combined(with: .opacity))
             }
@@ -33,7 +39,7 @@ struct IslandView: View {
                 let inside = hitFrame.contains(location)
                 state.hoverChanged(inside)
                 if inside {
-                    let origin = CGPoint(x: location.x - (canvas.width - size.width) / 2, y: location.y)
+                    let origin = CGPoint(x: location.x - (canvas.width - size.width) / 2 - frame.centerOffset, y: location.y)
                     state.cursorMoved(to: origin, in: size)
                 }
             }

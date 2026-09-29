@@ -23,6 +23,21 @@ struct SettingsView: View {
                 }
             }
 
+            Section("HUDs") {
+                ForEach(HUDCategory.allCases) { category in
+                    Toggle(category.title, isOn: preferences.binding(for: category))
+                }
+                HStack {
+                    Text("Duration")
+                    Slider(value: $preferences.hudDurationScale, in: 0.6...2.5)
+                    Text(String(format: "%.1f×", preferences.hudDurationScale))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, alignment: .trailing)
+                }
+                Toggle("Play a sound when the Mac unlocks", isOn: $preferences.playsUnlockSound)
+            }
+
             Section {
                 Toggle("Replace macOS volume and brightness overlays", isOn: $preferences.replacesSystemOverlays)
                     .disabled(!preferences.isEnabled(.volume) && !preferences.isEnabled(.brightness))

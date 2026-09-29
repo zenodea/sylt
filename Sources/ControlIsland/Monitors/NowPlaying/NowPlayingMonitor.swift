@@ -7,6 +7,7 @@ final class NowPlayingMonitor: ObservableObject {
     @Published private(set) var isPlaying = false
     @Published private(set) var position = PlaybackPosition.idle
     let trackChanges = PassthroughSubject<Void, Never>()
+    let playbackResumed = PassthroughSubject<Void, Never>()
 
     private let adapter = MediaRemoteAdapterProcess()
     private var artworkCache: (hash: UInt, image: NSImage)?
@@ -62,6 +63,7 @@ final class NowPlayingMonitor: ObservableObject {
         }
         adapter.setRefreshInterval(3)
         scripted.stop()
+        if payload.playing, !isPlaying, track != nil { playbackResumed.send() }
         isPlaying = payload.playing
         position = PlaybackPosition(
             elapsed: payload.elapsed ?? 0,
@@ -92,6 +94,7 @@ final class NowPlayingMonitor: ObservableObject {
 
     private func apply(_ snapshot: PlayerSnapshot?, from player: ScriptedPlayer) {
         guard let snapshot else { return clear() }
+        if snapshot.isPlaying, !isPlaying, track != nil { playbackResumed.send() }
         isPlaying = snapshot.isPlaying
         position = PlaybackPosition(elapsed: snapshot.position, rate: snapshot.isPlaying ? 1 : 0, timestamp: .now)
 

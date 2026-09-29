@@ -15,6 +15,9 @@ final class IslandState: ObservableObject {
     let brightness = BrightnessMonitor()
     let herdr = HerdrMonitor()
     let nowPlaying = NowPlayingMonitor()
+    let notifications = SystemNotificationMonitor()
+    let lock = LockMonitor()
+    let fullscreen = FullscreenMonitor()
 
     private var hudTimer: Timer?
     private var collapseTimer: Timer?
@@ -29,6 +32,7 @@ final class IslandState: ObservableObject {
     var canvasSize: CGSize { layout.canvasSize }
 
     var islandSize: CGSize { layout.size(for: mode) }
+    var islandFrame: IslandFrame { layout.frame(for: mode) }
 
     func apply(_ geometry: NotchGeometry) {
         layout.notchWidth = geometry.notchWidth
@@ -36,6 +40,8 @@ final class IslandState: ObservableObject {
     }
 
     func start() {
+        lock.start()
+        fullscreen.start()
         bindAlerts()
         bindLayout()
         preferences.$enabledPlugins
@@ -57,6 +63,7 @@ final class IslandState: ObservableObject {
         case .brightness: brightness
         case .nowPlaying: nowPlaying
         case .herdr: herdr
+        case .notifications: notifications
         }
     }
 
@@ -109,17 +116,53 @@ final class IslandState: ObservableObject {
             .sink { [weak self] in self?.showHUD(.brightness) }
             .store(in: &cancellables)
         battery.alerts
-            .sink { [weak self] in self?.showHUD(.battery($0), duration: 2.5) }
+            .sink { [weak self] in self?.showHUD(.battery($0)) }
             .store(in: &cancellables)
         herdr.finishedAgents
-            .sink { [weak self] in self?.showHUD(.agentFinished($0), duration: 4) }
+            .sink { [weak self] in self?.showHUD(.agentFinished($0)) }
             .store(in: &cancellables)
         nowPlaying.trackChanges
-            .sink { [weak self] in self?.showHUD(.nowPlaying, duration: 2.8) }
+            .merge(with: nowPlaying.playbackResumed)
+            .sink { [weak self] in self?.showHUD(.nowPlaying) }
+            .store(in: &cancellables)
+        notifications.notifications
+            .sink { [weak self] in self?.showHUD(.notification($0)) }
+            .store(in: &cancellables)
+        lock.unlocked
+            .sink { [weak self] in self?.unlocked() }
             .store(in: &cancellables)
     }
 
+    private func unlocked() {
+        if preferences.playsUnlockSound { Sounds.unlock() }
+        showHUD(.unlocked)
+    }
+
+    func swiped(_ direction: SwipeDirection) {
+        switch direction {
+        case .down where mode != .expanded:
+            hudTimer?.invalidate()
+            transition(to: .expanded)
+            Haptics.expand()
+        case .up where mode == .expanded:
+            transition(to: .closed)
+            Haptics.collapse()
+        case .left where nowPlaying.track != nil:
+            nowPlaying.next()
+            Haptics.press()
+        case .right where nowPlaying.track != nil:
+            nowPlaying.previous()
+            Haptics.press()
+        default:
+            break
+        }
+    }
+
     private func bindLayout() {
+        fullscreen.$isFullscreen
+            .sink { [weak self] in self?.layout.isFullscreen = $0 }
+            .store(in: &cancellables)
+
         nowPlaying.$track
             .combineLatest(herdr.$available, herdr.$agents)
             .sink { [weak self] track, agentsAvailable, agents in
@@ -137,14 +180,16 @@ final class IslandState: ObservableObject {
         withAnimation(IslandAnimation.transition(to: next)) { mode = next }
     }
 
-    private func showHUD(_ kind: HUDKind, duration: TimeInterval = 1.6) {
-        guard mode != .expanded else { return }
+    private func showHUD(_ kind: HUDKind) {
+        guard mode != .expanded, preferences.enabledHUDs.contains(kind.category) else { return }
         transition(to: .hud(kind))
         hudTimer?.invalidate()
+        let duration = kind.duration * preferences.hudDurationScale
         hudTimer = .scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
             Task { @MainActor in
                 if case .hud = self?.mode { self?.transition(to: .closed) }
             }
         }
     }
+
 }

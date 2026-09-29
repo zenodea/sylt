@@ -6,8 +6,8 @@ struct ExpandedView: View {
     @EnvironmentObject private var nowPlaying: NowPlayingMonitor
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Spacer().frame(height: notchHeight - 6)
+        VStack(alignment: .leading, spacing: 10) {
+            Spacer().frame(height: notchHeight - 8)
             if nowPlaying.track != nil {
                 MediaCard(nowPlaying: nowPlaying)
             }
@@ -24,7 +24,7 @@ struct ExpandedView: View {
         }
         .font(.system(size: 12, weight: .medium, design: .rounded))
         .foregroundStyle(.white)
-        .padding(.horizontal, 18)
-        .padding(.bottom, 14)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 12)
     }
 }

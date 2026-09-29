@@ -9,8 +9,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var settingsWindow = SettingsWindow(preferences: preferences, mediaKeys: mediaKeys)
     private var panel: NotchPanel?
     private var cancellables = Set<AnyCancellable>()
+    private var activity: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        activity = ProcessInfo.processInfo.beginActivity(
+            options: [.userInitiatedAllowingIdleSystemSleep], reason: "Island must react while the screen is locked")
         guard let screen = NotchGeometry.preferredScreen() else { return }
         let panel = NotchPanel(screen: screen, state: state) { [weak self] in self?.settingsWindow.show() }
         panel.orderFrontRegardless()

@@ -4,6 +4,7 @@ enum Plugin: String, CaseIterable, Identifiable, Codable {
     case brightness
     case nowPlaying
     case herdr
+    case notifications
 
     var id: String { rawValue }
 
@@ -14,6 +15,7 @@ enum Plugin: String, CaseIterable, Identifiable, Codable {
         case .brightness: "Brightness"
         case .nowPlaying: "Now Playing"
         case .herdr: "Herdr"
+        case .notifications: "Notifications"
         }
     }
 
@@ -24,6 +26,7 @@ enum Plugin: String, CaseIterable, Identifiable, Codable {
         case .brightness: "Brightness overlay and slider."
         case .nowPlaying: "Artwork, playback controls and track changes."
         case .herdr: "Agent status for the Herdr terminal workspace manager."
+        case .notifications: "Mirror Notification Center banners in the island. Experimental, needs Accessibility."
         }
     }
 
@@ -34,6 +37,7 @@ enum Plugin: String, CaseIterable, Identifiable, Codable {
         case .brightness: "sun.max.fill"
         case .nowPlaying: "music.note"
         case .herdr: "terminal.fill"
+        case .notifications: "bell.badge.fill"
         }
     }
 
