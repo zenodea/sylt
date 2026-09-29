@@ -10,9 +10,11 @@ struct ExpandedView: View {
             Spacer().frame(height: notchHeight - 8)
             if nowPlaying.track != nil {
                 MediaCard(nowPlaying: nowPlaying)
+                    .modifier(Staggered(index: 0))
             }
             if herdr.available {
                 HerdrSection(herdr: herdr)
+                    .modifier(Staggered(index: 1))
             }
             if nowPlaying.track == nil, !herdr.available {
                 Text("Nothing playing")
@@ -26,5 +28,17 @@ struct ExpandedView: View {
         .foregroundStyle(.white)
         .padding(.horizontal, 14)
         .padding(.bottom, 12)
+    }
+}
+
+private struct Staggered: ViewModifier {
+    let index: Int
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown ? 0 : -6)
+            .onAppear { withAnimation(IslandAnimation.stagger(index)) { shown = true } }
     }
 }

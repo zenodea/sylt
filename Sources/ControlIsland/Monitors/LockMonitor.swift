@@ -3,6 +3,7 @@ import Combine
 
 @MainActor
 final class LockMonitor: ObservableObject {
+    @Published private(set) var isLocked = false
     let unlocked = PassthroughSubject<Void, Never>()
 
     private var observers: [NSObjectProtocol] = []
@@ -11,8 +12,14 @@ final class LockMonitor: ObservableObject {
         guard observers.isEmpty else { return }
         let center = DistributedNotificationCenter.default()
         observers = [
+            center.addObserver(forName: .init("com.apple.screenIsLocked"), object: nil, queue: .main) { [weak self] _ in
+                Task { @MainActor in self?.isLocked = true }
+            },
             center.addObserver(forName: .init("com.apple.screenIsUnlocked"), object: nil, queue: .main) { [weak self] _ in
-                Task { @MainActor in self?.unlocked.send() }
+                Task { @MainActor in
+                    self?.isLocked = false
+                    self?.unlocked.send()
+                }
             },
         ]
     }

@@ -53,14 +53,31 @@ struct MediaCard: View {
 private struct PlaybackProgress: View {
     @ObservedObject var nowPlaying: NowPlayingMonitor
     let duration: TimeInterval?
+    @State private var scrubbing: Double?
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: nowPlaying.isPlaying ? 0.5 : 60)) { context in
-            let elapsed = nowPlaying.position.elapsed(at: context.date)
             let total = duration ?? 0
+            let elapsed = scrubbing.map { $0 * total } ?? nowPlaying.position.elapsed(at: context.date)
             HStack(spacing: 8) {
                 Text(timestamp(elapsed))
-                LevelBar(value: total > 0 ? min(elapsed / total, 1) : 0)
+                GeometryReader { geo in
+                    LevelBar(value: total > 0 ? min(elapsed / total, 1) : 0)
+                        .frame(height: 6)
+                        .frame(maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { scrubbing = min(max($0.location.x / geo.size.width, 0), 1) }
+                                .onEnded { value in
+                                    let fraction = min(max(value.location.x / geo.size.width, 0), 1)
+                                    scrubbing = nil
+                                    if total > 0 { nowPlaying.seek(to: fraction * total) }
+                                    Haptics.press()
+                                }
+                        )
+                }
+                .frame(height: 14)
                 Text(timestamp(total))
             }
             .font(.system(size: 10, weight: .medium, design: .rounded).monospacedDigit())
@@ -78,15 +95,27 @@ private struct TransportButton: View {
     let symbol: String
     var size: CGFloat = 14
     let action: () -> Void
+    @State private var pressed = false
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: size, weight: .bold))
-                .frame(width: 28, height: 28)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.white)
+        Image(systemName: symbol)
+            .font(.system(size: size, weight: .bold))
+            .frame(width: 30, height: 30)
+            .background(.white.opacity(pressed ? 0.14 : 0), in: Circle())
+            .scaleEffect(pressed ? 0.88 : 1)
+            .contentShape(Circle())
+            .foregroundStyle(.white)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        guard !pressed else { return }
+                        withAnimation(IslandAnimation.press) { pressed = true }
+                        Haptics.press()
+                    }
+                    .onEnded { _ in
+                        withAnimation(IslandAnimation.press) { pressed = false }
+                        action()
+                    }
+            )
     }
 }

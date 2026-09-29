@@ -20,6 +20,8 @@ struct IslandLayout: Equatable {
     static let hudRowHeight: CGFloat = 18
     static let wingPadding: CGFloat = 6
     static let hitMargin: CGFloat = 6
+    static let lockWings = (leading: 34.0, trailing: 68.0)
+    static let hoverGrowth = CGSize(width: 14, height: 6)
 
     var artworkSize: CGFloat { notchHeight - 12 }
     var isFullscreen = false
@@ -52,29 +54,9 @@ struct IslandLayout: Equatable {
         )
     }
 
-    func size(for mode: IslandMode) -> CGSize {
-        switch mode {
-        case .closed:
-            CGSize(width: closedWidth, height: notchHeight)
-        case .peek:
-            CGSize(width: closedWidth + 18, height: notchHeight + 7)
-        case .hud(let kind):
-            switch kind.style {
-            case .compact(let leading, let trailing):
-                CGSize(width: notchWidth + leading + trailing, height: notchHeight + 2)
-            case .twoRow(let wing):
-                CGSize(width: notchWidth + wing * 2, height: notchHeight + Self.hudRowHeight + 6)
-            case .card(let width):
-                CGSize(width: closedWidth + width, height: Self.hudHeight)
-            }
-        case .expanded:
-            CGSize(width: Self.expandedWidth, height: expandedHeight)
-        }
-    }
-
     /// Island frame in canvas coordinates (top-left origin), grown by the hit margin.
-    func hitFrame(for mode: IslandMode) -> CGRect {
-        let island = frame(for: mode)
+    func hitFrame(for mode: IslandMode, hovering: Bool) -> CGRect {
+        let island = frame(for: mode, hovering: hovering)
         return CGRect(
             x: (canvasSize.width - island.size.width) / 2 + island.centerOffset - Self.hitMargin,
             y: 0,
@@ -83,14 +65,45 @@ struct IslandLayout: Equatable {
         )
     }
 
-    func frame(for mode: IslandMode) -> IslandFrame {
-        if case .hud(let kind) = mode, case .compact(let leading, let trailing) = kind.style {
-            return IslandFrame(
-                size: CGSize(width: notchWidth + leading + trailing, height: notchHeight + 2),
-                centerOffset: (trailing - leading) / 2
-            )
+    /// Hovering swells every mode except the expanded panel by the same amount.
+    func frame(for mode: IslandMode, hovering: Bool) -> IslandFrame {
+        var frame = restingFrame(for: mode)
+        if hovering, mode != .expanded {
+            frame.size.width += Self.hoverGrowth.width
+            frame.size.height += Self.hoverGrowth.height
         }
-        return IslandFrame(size: size(for: mode), centerOffset: 0)
+        return frame
+    }
+
+    private func restingFrame(for mode: IslandMode) -> IslandFrame {
+        switch mode {
+        case .closed:
+            centred(CGSize(width: closedWidth, height: notchHeight))
+        case .locked:
+            compact(leading: Self.lockWings.leading, trailing: Self.lockWings.trailing)
+        case .hud(let kind):
+            switch kind.style {
+            case .compact(let leading, let trailing):
+                compact(leading: leading, trailing: trailing)
+            case .twoRow(let wing):
+                centred(CGSize(width: notchWidth + wing * 2, height: notchHeight + Self.hudRowHeight + 6))
+            case .card(let width):
+                centred(CGSize(width: closedWidth + width, height: Self.hudHeight))
+            }
+        case .expanded:
+            centred(CGSize(width: Self.expandedWidth, height: expandedHeight))
+        }
+    }
+
+    private func centred(_ size: CGSize) -> IslandFrame {
+        IslandFrame(size: size, centerOffset: 0)
+    }
+
+    private func compact(leading: CGFloat, trailing: CGFloat) -> IslandFrame {
+        IslandFrame(
+            size: CGSize(width: notchWidth + leading + trailing, height: notchHeight + 2),
+            centerOffset: (trailing - leading) / 2
+        )
     }
 
     private static func contentWidth(_ items: [CGFloat]) -> CGFloat {

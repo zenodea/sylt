@@ -6,7 +6,8 @@ import SwiftUI
 final class IslandState: ObservableObject {
     @Published var mode: IslandMode = .closed
     @Published var cursor: CGPoint = .zero
-    private var isHovering = false
+    @Published var swipePull: CGVector = .zero
+    @Published private(set) var isHovering = false
     @Published private(set) var layout = IslandLayout()
 
     let preferences: Preferences
@@ -31,8 +32,11 @@ final class IslandState: ObservableObject {
     var notchWidth: CGFloat { layout.notchWidth }
     var canvasSize: CGSize { layout.canvasSize }
 
-    var islandSize: CGSize { layout.size(for: mode) }
-    var islandFrame: IslandFrame { layout.frame(for: mode) }
+    var islandFrame: IslandFrame { layout.frame(for: mode, hovering: isHovering) }
+    var hitFrame: CGRect { layout.hitFrame(for: mode, hovering: isHovering) }
+
+    /// Where the island settles when nothing is showing.
+    private var restingMode: IslandMode { lock.isLocked ? .locked : .closed }
 
     func apply(_ geometry: NotchGeometry) {
         layout.notchWidth = geometry.notchWidth
@@ -53,7 +57,7 @@ final class IslandState: ObservableObject {
         for plugin in Plugin.allCases {
             enabled.contains(plugin) ? monitor(for: plugin).start() : monitor(for: plugin).stop()
         }
-        if case .hud = mode { transition(to: .closed) }
+        if case .hud = mode { transition(to: restingMode) }
     }
 
     private func monitor(for plugin: Plugin) -> any Monitor {
@@ -69,15 +73,22 @@ final class IslandState: ObservableObject {
 
     func hoverChanged(_ inside: Bool) {
         guard inside != isHovering else { return }
-        isHovering = inside
+        withAnimation(IslandAnimation.peek) { isHovering = inside }
         collapseTimer?.invalidate()
         if inside {
-            if mode == .closed {
-                transition(to: .peek)
+            switch mode {
+            case .closed, .locked:
                 Haptics.peek()
+            case .hud:
+                hudTimer?.invalidate()
+                Haptics.peek()
+            case .expanded:
+                break
             }
+        } else if case .hud = mode {
+            scheduleHUDDismissal(after: 0.8)
         } else if mode == .expanded {
-            collapseTimer = .scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] _ in
+            collapseTimer = .scheduledTimer(withTimeInterval: 0.3, repeats: false) { [weak self] _ in
                 Task { @MainActor in
                     self?.transition(to: .closed)
                     Haptics.collapse()
@@ -85,14 +96,18 @@ final class IslandState: ObservableObject {
             }
         } else {
             cursor = .zero
-            if mode == .peek { transition(to: .closed) }
         }
     }
 
-    func cursorMoved(to location: CGPoint, in size: CGSize) {
+    /// Drives hover from the cursor in canvas coordinates (top-left origin).
+    func cursorMoved(to point: CGPoint) {
+        guard hitFrame.contains(point) else { return hoverChanged(false) }
+        hoverChanged(true)
+        let frame = islandFrame
+        let x = point.x - (layout.canvasSize.width - frame.size.width) / 2 - frame.centerOffset
         cursor = CGPoint(
-            x: min(max(location.x / size.width * 2 - 1, -1), 1),
-            y: min(max(location.y / size.height, 0), 1)
+            x: min(max(x / frame.size.width * 2 - 1, -1), 1),
+            y: min(max(point.y / frame.size.height, 0), 1)
         )
     }
 
@@ -128,14 +143,33 @@ final class IslandState: ObservableObject {
         notifications.notifications
             .sink { [weak self] in self?.showHUD(.notification($0)) }
             .store(in: &cancellables)
-        lock.unlocked
-            .sink { [weak self] in self?.unlocked() }
+        lock.$isLocked
+            .dropFirst()
+            .sink { [weak self] in $0 ? self?.locked() : self?.unlocked() }
             .store(in: &cancellables)
+    }
+
+    private func locked() {
+        hudTimer?.invalidate()
+        collapseTimer?.invalidate()
+        transition(to: .locked)
     }
 
     private func unlocked() {
         if preferences.playsUnlockSound { Sounds.unlock() }
+        transition(to: .closed)
         showHUD(.unlocked)
+    }
+
+    /// Normalised -1...1 pull in each axis; the island stretches that way and stays anchored to the notch.
+    func swipeMoved(_ vector: CGVector) {
+        withAnimation(IslandAnimation.swipeFollow) {
+            swipePull = CGVector(dx: min(max(vector.dx / 60, -1), 1), dy: min(max(vector.dy / 60, -1), 1))
+        }
+    }
+
+    func swipeEnded() {
+        withAnimation(IslandAnimation.swipeRebound) { swipePull = .zero }
     }
 
     func swiped(_ direction: SwipeDirection) {
@@ -183,11 +217,15 @@ final class IslandState: ObservableObject {
     private func showHUD(_ kind: HUDKind) {
         guard mode != .expanded, preferences.enabledHUDs.contains(kind.category) else { return }
         transition(to: .hud(kind))
+        scheduleHUDDismissal(after: kind.duration * preferences.hudDurationScale)
+    }
+
+    private func scheduleHUDDismissal(after duration: TimeInterval) {
         hudTimer?.invalidate()
-        let duration = kind.duration * preferences.hudDurationScale
         hudTimer = .scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
             Task { @MainActor in
-                if case .hud = self?.mode { self?.transition(to: .closed) }
+                guard let self, case .hud = self.mode, !self.isHovering else { return }
+                self.transition(to: self.restingMode)
             }
         }
     }

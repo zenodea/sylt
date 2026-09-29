@@ -51,10 +51,9 @@ struct HUDView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
-        case .unlocked: Image(systemName: "lock.open.fill").foregroundStyle(.green)
         case .nowPlaying:
             if let track = nowPlaying.track { ArtworkView(image: track.artwork, size: layout.artworkSize) }
-        case .notification: EmptyView()
+        case .notification, .unlocked: EmptyView()
         }
     }
 
@@ -68,14 +67,9 @@ struct HUDView: View {
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(batteryColor(alert))
                 .lineLimit(1)
-        case .agentFinished: EmptyView()
-        case .unlocked:
-            Text("Welcome back, \(NSFullUserName().split(separator: " ").first.map(String.init) ?? NSUserName())")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .lineLimit(1)
         case .nowPlaying:
             if let track = nowPlaying.track { AudioBars(isPlaying: nowPlaying.isPlaying, colors: track.barColors) }
-        case .notification: EmptyView()
+        case .agentFinished, .notification, .unlocked: EmptyView()
         }
     }
 

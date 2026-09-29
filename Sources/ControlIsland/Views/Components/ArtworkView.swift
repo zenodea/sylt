@@ -5,11 +5,13 @@ struct ArtworkView: View {
     let size: CGFloat
 
     var body: some View {
-        Group {
+        ZStack {
             if let image {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
+                    .id(ObjectIdentifier(image))
+                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
             } else {
                 ZStack {
                     Color.white.opacity(0.12)
@@ -21,5 +23,6 @@ struct ArtworkView: View {
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
+        .animation(IslandAnimation.value, value: image.map(ObjectIdentifier.init))
     }
 }

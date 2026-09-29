@@ -1,14 +1,12 @@
 enum IslandMode: Hashable {
     case closed
-    case peek
+    case locked
     case hud(HUDKind)
     case expanded
 
-    var showsClosedContent: Bool {
-        switch self {
-        case .closed, .peek: true
-        default: false
-        }
+    /// The unlock HUD morphs out of the locked island instead of replacing it.
+    var contentIdentity: IslandMode {
+        self == .hud(.unlocked) ? .locked : self
     }
 }
 
