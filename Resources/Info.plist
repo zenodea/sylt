@@ -13,6 +13,10 @@
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Control Island shows your next event and reminds you before it starts.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Control Island only checks whether the camera is in use, to show an indicator.</string>
     <key>NSBluetoothAlwaysUsageDescription</key>
     <string>Control Island shows which Bluetooth devices connect and how much battery they have.</string>
     <key>NSAppleEventsUsageDescription</key>

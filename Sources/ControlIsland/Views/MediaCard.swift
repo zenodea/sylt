@@ -2,24 +2,31 @@ import SwiftUI
 
 struct MediaCard: View {
     @ObservedObject var nowPlaying: NowPlayingMonitor
+    @EnvironmentObject private var volume: VolumeMonitor
 
     var body: some View {
         if let track = nowPlaying.track {
-            HStack(spacing: 12) {
-                ArtworkView(image: track.artwork, size: 60)
-                VStack(alignment: .leading, spacing: 6) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(track.title)
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            .lineLimit(1)
-                        Text(track.artist)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .lineLimit(1)
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    ArtworkView(image: track.artwork, size: 60)
+                        .overlay(alignment: .bottomTrailing) {
+                            SourceBadge(bundleIdentifier: track.bundleIdentifier).offset(x: 5, y: 5)
+                        }
+                    VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(track.title)
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .lineLimit(1)
+                            Text(track.artist)
+                                .font(.system(size: 12))
+                                .foregroundStyle(.white.opacity(0.6))
+                                .lineLimit(1)
+                        }
+                        PlaybackProgress(nowPlaying: nowPlaying, duration: track.duration)
+                        controls
                     }
-                    PlaybackProgress(nowPlaying: nowPlaying, duration: track.duration)
-                    controls
                 }
+                output
             }
             .padding(10)
             .background(
@@ -38,6 +45,21 @@ struct MediaCard: View {
                     )
             )
         }
+    }
+
+    /// Where the sound goes, and how loud.
+    private var output: some View {
+        HStack(spacing: 8) {
+            LevelSlider(symbol: volume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill", value: volume.isMuted ? 0 : volume.level) {
+                volume.set($0)
+            }
+            Text(volume.outputName)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.5))
+                .lineLimit(1)
+                .frame(maxWidth: 120, alignment: .trailing)
+        }
+        .padding(.horizontal, 2)
     }
 
     private var controls: some View {

@@ -5,7 +5,6 @@ final class MediaRemoteAdapterProcess {
     private var process: Process?
     private var input: FileHandle?
     private var buffer = Data()
-    private var refreshInterval = 3
     private let decoder = JSONDecoder()
 
     static var libraryURL: URL? {
@@ -56,13 +55,6 @@ final class MediaRemoteAdapterProcess {
 
     func send(_ command: String) {
         input?.write(Data((command + "\n").utf8))
-    }
-
-    /// How often the adapter replaces itself to obtain fresh metadata.
-    func setRefreshInterval(_ seconds: Int) {
-        guard seconds != refreshInterval else { return }
-        refreshInterval = seconds
-        send("interval \(seconds)")
     }
 
     func stop() {

@@ -19,6 +19,16 @@ final class IslandState: ObservableObject {
     let notifications = SystemNotificationMonitor()
     let bluetooth = BluetoothMonitor()
     let network = NetworkMonitor()
+    let calendar = CalendarMonitor()
+    let timer = TimerMonitor()
+    let keyboard = KeyboardMonitor()
+    let focus = FocusMonitor()
+    let privacy = PrivacyMonitor()
+    let downloads = DownloadsMonitor()
+    let weather = WeatherMonitor()
+    let thermal = ThermalMonitor()
+    let shelf = ShelfMonitor()
+    let clipboard = ClipboardMonitor()
     let lock = LockMonitor()
     let fullscreen = FullscreenMonitor()
 
@@ -72,7 +82,30 @@ final class IslandState: ObservableObject {
         case .notifications: notifications
         case .bluetooth: bluetooth
         case .network: network
+        case .calendar: calendar
+        case .timer: timer
+        case .keyboard: keyboard
+        case .focus: focus
+        case .privacy: privacy
+        case .downloads: downloads
+        case .weather: weather
+        case .thermals: thermal
+        case .shelf: shelf
+        case .clipboard: clipboard
         }
+    }
+
+    /// Files dragged onto the island land on the shelf; the island opens to show them.
+    func dragEntered() {
+        guard mode != .expanded, !lock.isLocked else { return }
+        hudTimer?.invalidate()
+        transition(to: .expanded)
+    }
+
+    func dropped(_ urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        shelf.add(urls)
+        Haptics.expand()
     }
 
     func hoverChanged(_ inside: Bool) {
@@ -139,6 +172,33 @@ final class IslandState: ObservableObject {
             .store(in: &cancellables)
         network.changes
             .sink { [weak self] in self?.showHUD(.network($0)) }
+            .store(in: &cancellables)
+        bluetooth.lowBattery
+            .sink { [weak self] in self?.showHUD(.peripheralBattery($0)) }
+            .store(in: &cancellables)
+        calendar.reminders
+            .sink { [weak self] in self?.showHUD(.calendar($0)) }
+            .store(in: &cancellables)
+        timer.finished
+            .sink { [weak self] in self?.showHUD(.timerDone($0)) }
+            .store(in: &cancellables)
+        keyboard.capsLock
+            .sink { [weak self] in self?.showHUD(.capsLock($0)) }
+            .store(in: &cancellables)
+        keyboard.inputSource
+            .sink { [weak self] in self?.showHUD(.inputSource($0)) }
+            .store(in: &cancellables)
+        focus.changes
+            .sink { [weak self] in self?.showHUD(.focus($0)) }
+            .store(in: &cancellables)
+        privacy.changes
+            .sink { [weak self] in self?.showHUD(.privacy($0)) }
+            .store(in: &cancellables)
+        downloads.events
+            .sink { [weak self] in self?.showHUD(.download($0)) }
+            .store(in: &cancellables)
+        thermal.changes
+            .sink { [weak self] in self?.showHUD(.thermal($0)) }
             .store(in: &cancellables)
         brightness.changes
             .sink { [weak self] in self?.showHUD(.brightness) }
@@ -218,6 +278,36 @@ final class IslandState: ObservableObject {
                 layout.showsMediaCard = track != nil
                 layout.showsAgents = agentsAvailable
                 layout.agentRows = agentsAvailable ? agents.count : 0
+            }
+            .store(in: &cancellables)
+
+        calendar.$next
+            .combineLatest(calendar.$imminent, timer.$end, preferences.$enabledPlugins)
+            .sink { [weak self] next, imminent, end, plugins in
+                guard let self else { return }
+                layout.showsNextEvent = next != nil
+                layout.showsCalendar = imminent
+                layout.showsTimer = end != nil
+                layout.showsTimerControls = plugins.contains(.timer)
+            }
+            .store(in: &cancellables)
+
+        privacy.$use
+            .combineLatest(focus.$mode, bluetooth.$connected, weather.$report)
+            .sink { [weak self] use, focus, connected, report in
+                guard let self else { return }
+                layout.privacyDots = (use.microphone ? 1 : 0) + (use.camera ? 1 : 0)
+                layout.showsFocus = focus != nil
+                layout.showsHeadphones = connected.contains { $0.isAudio && $0.battery != nil }
+                layout.showsWeather = report != nil
+            }
+            .store(in: &cancellables)
+
+        shelf.$files
+            .combineLatest(clipboard.$items)
+            .sink { [weak self] files, items in
+                self?.layout.shelfFiles = files.count
+                self?.layout.clipboardRows = items.count
             }
             .store(in: &cancellables)
     }

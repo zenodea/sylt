@@ -7,6 +7,7 @@ import Combine
 final class VolumeMonitor: ObservableObject {
     @Published private(set) var level: Float = 0   // 0...1
     @Published private(set) var isMuted = false
+    @Published private(set) var outputName = ""
     let changes = PassthroughSubject<Void, Never>()
     let muteChanges = PassthroughSubject<Bool, Never>()
     private var reportedMute = false
@@ -25,6 +26,10 @@ final class VolumeMonitor: ObservableObject {
         mElement: kAudioObjectPropertyElementMain)
     private var defaultDeviceAddress = AudioObjectPropertyAddress(
         mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+        mScope: kAudioObjectPropertyScopeGlobal,
+        mElement: kAudioObjectPropertyElementMain)
+    private var nameAddress = AudioObjectPropertyAddress(
+        mSelector: kAudioObjectPropertyName,
         mScope: kAudioObjectPropertyScopeGlobal,
         mElement: kAudioObjectPropertyElementMain)
 
@@ -62,6 +67,11 @@ final class VolumeMonitor: ObservableObject {
         AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &defaultDeviceAddress, 0, nil, &size, &id)
         deviceID = id
         guard id != kAudioObjectUnknown else { return }
+        var name = "" as CFString
+        var nameSize = UInt32(MemoryLayout<CFString>.size)
+        if AudioObjectGetPropertyData(id, &nameAddress, 0, nil, &nameSize, &name) == noErr {
+            outputName = name as String
+        }
 
         let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
             Task { @MainActor in self?.read(notify: true) }

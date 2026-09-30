@@ -8,6 +8,8 @@ struct DeviceBattery: View {
 
     private static let gaugeWidth: CGFloat = 20
     private static let gaugeHeight: CGFloat = 10
+    /// "100%" plus the gauge, for wing sizing.
+    static let width: CGFloat = TextWidth.of("100%", size: 11) + 6 + gaugeWidth + 2.5
 
     var body: some View {
         HStack(spacing: 6) {

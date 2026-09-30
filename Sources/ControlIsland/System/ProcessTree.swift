@@ -28,14 +28,21 @@ enum ProcessTree {
     static func hostApplication(ofProcessNamed name: String) -> NSRunningApplication? {
         let entries = all()
         let parents = Dictionary(entries.map { ($0.pid, $0.parent) }, uniquingKeysWith: { first, _ in first })
-        for entry in entries where entry.name == name {
-            var pid = entry.parent
-            while pid > 1 {
-                if let application = NSRunningApplication(processIdentifier: pid), application.bundleIdentifier != nil {
-                    return application
-                }
-                pid = parents[pid] ?? 0
+        return entries.lazy.filter { $0.name == name }.compactMap { hostApplication(above: $0.pid, parents: parents) }.first
+    }
+
+    static func hostApplication(ofProcess pid: pid_t) -> NSRunningApplication? {
+        let parents = Dictionary(all().map { ($0.pid, $0.parent) }, uniquingKeysWith: { first, _ in first })
+        return hostApplication(above: pid, parents: parents)
+    }
+
+    private static func hostApplication(above pid: pid_t, parents: [pid_t: pid_t]) -> NSRunningApplication? {
+        var current = parents[pid] ?? 0
+        while current > 1 {
+            if let application = NSRunningApplication(processIdentifier: current), application.bundleIdentifier != nil {
+                return application
             }
+            current = parents[current] ?? 0
         }
         return nil
     }

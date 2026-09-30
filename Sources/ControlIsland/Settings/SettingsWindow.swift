@@ -8,11 +8,14 @@ final class SettingsWindow {
     init(preferences: Preferences, mediaKeys: MediaKeyInterceptor) {
         window = NSWindow(
             contentRect: .zero,
-            styleMask: [.titled, .closable],
+            styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.title = "Control Island"
+        window.titlebarAppearsTransparent = true
+        window.toolbarStyle = .unified
+        window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
         window.contentViewController = NSHostingController(
             rootView: SettingsView(preferences: preferences, mediaKeys: mediaKeys))

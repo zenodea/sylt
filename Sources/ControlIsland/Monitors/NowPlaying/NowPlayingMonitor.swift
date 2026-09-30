@@ -56,12 +56,10 @@ final class NowPlayingMonitor: ObservableObject {
             FileHandle.standardError.write(Data("payload bundle=\(payload.bundle ?? "-") title=\(payload.title?.prefix(20) ?? "-") playing=\(payload.playing) hash=\(payload.artworkHash)\n".utf8))
         }
         if let player = payload.bundle.flatMap(ScriptedPlayer.init(rawValue:)) {
-            adapter.setRefreshInterval(20)
             scripted.start(player)
             scripted.poll()
             return
         }
-        adapter.setRefreshInterval(3)
         scripted.stop()
         if payload.playing, !isPlaying, track != nil { playbackResumed.send() }
         isPlaying = payload.playing
@@ -82,7 +80,7 @@ final class NowPlayingMonitor: ObservableObject {
             duration: payload.duration,
             bundleIdentifier: payload.bundle,
             artworkHash: payload.artworkHash,
-            artwork: artwork(for: payload) ?? appIcon(for: payload.bundle)
+            artwork: artwork(for: payload) ?? track?.artwork ?? appIcon(for: payload.bundle)
         )
         let changedSong = track.map { !$0.isSameSong(next) } ?? false
         if next != track { track = next }
@@ -106,7 +104,7 @@ final class NowPlayingMonitor: ObservableObject {
             return
         }
         let hadTrack = track != nil
-        next.artwork = appIcon(for: player.rawValue)
+        next.artwork = track?.artwork ?? appIcon(for: player.rawValue)
         track = next
         if hadTrack { trackChanges.send() }
         resolveArtwork(for: next)
@@ -121,7 +119,7 @@ final class NowPlayingMonitor: ObservableObject {
     private func resolveArtwork(for target: NowPlayingTrack) {
         artworkResolver.resolve(target) { [weak self] image in
             guard let self, var current = track, current.isSameSong(target) else { return }
-            current.artwork = image
+            current.artwork = image ?? appIcon(for: current.bundleIdentifier)
             current.hasResolvedArtwork = true
             track = current
         }

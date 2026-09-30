@@ -9,6 +9,12 @@ struct LockedView: View {
 
     static let greeting = "Welcome back, \(NSFullUserName().split(separator: " ").first.map(String.init) ?? NSUserName())"
     static let leadingWing = HUDKind.wing(13)
+    /// Fits the widest clock this locale can show; the island only widens on unlock.
+    static let timeWing: CGFloat = {
+        let twelveHour = Date().formatted(.dateTime.hour().minute()).rangeOfCharacter(from: .letters) != nil
+        return HUDKind.wing(TextWidth.of(twelveHour ? "88:88 PM" : "88:88", size: 12))
+    }()
+    static let greetingWing = HUDKind.wing(TextWidth.of(greeting, size: 11))
 
     var body: some View {
         let gap = IslandLayout.notchGap
@@ -20,10 +26,14 @@ struct LockedView: View {
             trailing
                 .font(.system(size: unlocked ? 11 : 12, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.85))
-                .frame(width: IslandLayout.hudWings - Self.leadingWing - gap, alignment: .leading)
+                .frame(width: trailingWing - gap, alignment: .leading)
                 .padding(.leading, gap)
         }
         .frame(height: layout.notchHeight + 2)
+    }
+
+    private var trailingWing: CGFloat {
+        unlocked ? Self.greetingWing : Self.timeWing
     }
 
     @ViewBuilder

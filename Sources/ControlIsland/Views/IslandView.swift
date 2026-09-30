@@ -1,9 +1,11 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct IslandView: View {
     @ObservedObject var state: IslandState
     let openSettings: () -> Void
     @State private var isPressed = false
+    @State private var dropTargeted = false
 
     var body: some View {
         let frame = state.islandFrame
@@ -38,6 +40,11 @@ struct IslandView: View {
             .scaleEffect(y: isPressed ? 0.95 : 1, anchor: .top)
             .modifier(SwipeStretch(pull: state.swipePull))
             .gesture(pressGesture, including: state.mode == .expanded ? .subviews : .all)
+            .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
+                Task { state.dropped(await Self.urls(from: providers)) }
+                return true
+            }
+            .onChange(of: dropTargeted) { _, targeted in if targeted { state.dragEntered() } }
             .contextMenu {
                 Button("Settings…", action: openSettings)
                 Divider()
@@ -51,6 +58,24 @@ struct IslandView: View {
         .environmentObject(state.herdr)
         .environmentObject(state.nowPlaying)
         .environmentObject(state.preferences)
+        .environmentObject(state.calendar)
+        .environmentObject(state.timer)
+        .environmentObject(state.privacy)
+        .environmentObject(state.focus)
+        .environmentObject(state.bluetooth)
+        .environmentObject(state.weather)
+        .environmentObject(state.shelf)
+        .environmentObject(state.clipboard)
+    }
+
+    private static func urls(from providers: [NSItemProvider]) async -> [URL] {
+        var urls: [URL] = []
+        for provider in providers where provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+            let item = try? await provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier)
+            if let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) { urls.append(url) }
+            else if let url = item as? URL { urls.append(url) }
+        }
+        return urls
     }
 
     private var pressGesture: some Gesture {
@@ -70,10 +95,15 @@ struct IslandView: View {
     @ViewBuilder
     private var content: some View {
         switch state.mode {
-        case .closed: ClosedView(layout: state.layout)
         case .locked, .hud(.unlocked): LockedView(layout: state.layout, unlocked: state.mode != .locked)
-        case .hud(let kind): HUDView(kind: kind, layout: state.layout)
-        case .expanded: ExpandedView(notchHeight: state.notchHeight)
+        case .closed, .hud:
+            // One branch for closed and wing-based HUDs, so the wings keep their identity between them.
+            if case .hud(let kind) = state.mode, !kind.style.keepsWings {
+                HUDView(kind: kind, layout: state.layout)
+            } else {
+                WingsView(mode: state.mode, layout: state.layout)
+            }
+        case .expanded: ExpandedView(notchHeight: state.notchHeight, layout: state.layout)
         }
     }
 }

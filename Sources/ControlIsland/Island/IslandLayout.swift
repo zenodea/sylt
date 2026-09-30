@@ -8,17 +8,34 @@ struct IslandLayout: Equatable {
     var showsAudioBars = false
     var showsMediaCard = false
     var agentRows = 0
+    var showsCalendar = false
+    var showsNextEvent = false
+    var showsTimer = false
+    var privacyDots = 0
+    var showsFocus = false
+    var showsHeadphones = false
+    var showsWeather = false
+    var shelfFiles = 0
+    var clipboardRows = 0
+    var showsTimerControls = false
 
     static let expandedWidth: CGFloat = 440
     static let expandedBaseHeight: CGFloat = 46
     static let emptyExpandedHeight: CGFloat = 36
-    static let mediaCardHeight: CGFloat = 104
+    static let mediaCardHeight: CGFloat = 138
     static let agentRowHeight: CGFloat = 26
     static let agentHeaderHeight: CGFloat = 26
     static let maxAgentRows = 3
     static let hudHeight: CGFloat = 76
-    /// Total wing width every HUD adds to the notch, so they all share one island size.
-    static let hudWings: CGFloat = 196
+    static let eventRowHeight: CGFloat = 34
+    static let timerRowHeight: CGFloat = 36
+    static let shelfHeight: CGFloat = 64
+    static let clipboardRowHeight: CGFloat = 24
+    static let maxClipboardRows = 4
+    static let weatherRowHeight: CGFloat = 34
+    static let sectionGap: CGFloat = 10
+    /// The notification card's extra width.
+    static let cardWings: CGFloat = 196
     static let hudRowHeight: CGFloat = 18
     static let wingPadding: CGFloat = 6
     static let hitMargin: CGFloat = 6
@@ -30,32 +47,52 @@ struct IslandLayout: Equatable {
     var artworkSize: CGFloat { notchHeight - 12 }
     var isFullscreen = false
 
-    var wingWidth: CGFloat {
-        let left: [CGFloat] = [showsAgents ? AgentStack.width(for: agentRows) : 0]
-        let right: [CGFloat] = [showsArtwork ? artworkSize : 0, showsAudioBars ? 14 : 0]
-        let widest = max(Self.contentWidth(left), Self.contentWidth(right))
-        return widest == 0 ? 0 : widest + Self.wingPadding * 2
+    /// Each closed wing fits its own content; an empty wing is zero.
+    var leftWing: CGFloat {
+        Self.wing([showsAgents ? AgentStack.width(for: agentRows) : 0, showsCalendar ? 52 : 0, showsTimer ? 50 : 0])
     }
 
-    var closedWidth: CGFloat { notchWidth + wingWidth * 2 }
+    var rightWing: CGFloat {
+        Self.wing([
+            CGFloat(privacyDots) * 10, showsFocus ? 14 : 0, showsHeadphones ? 40 : 0, showsWeather ? 44 : 0,
+            showsArtwork ? artworkSize : 0, showsAudioBars ? 14 : 0,
+        ])
+    }
+
+    var closedWidth: CGFloat { notchWidth + leftWing + rightWing }
+
+    private static func wing(_ items: [CGFloat]) -> CGFloat {
+        let content = contentWidth(items)
+        return content == 0 ? 0 : content + wingPadding * 2
+    }
+
+    /// Heights of the expanded sections that currently have something to show.
+    var expandedSections: [CGFloat] {
+        var sections: [CGFloat] = []
+        if showsMediaCard { sections.append(Self.mediaCardHeight) }
+        if showsNextEvent { sections.append(Self.eventRowHeight) }
+        if showsTimerControls { sections.append(Self.timerRowHeight) }
+        if showsAgents {
+            sections.append(Self.agentHeaderHeight + CGFloat(min(max(agentRows, 1), Self.maxAgentRows)) * Self.agentRowHeight)
+        }
+        if shelfFiles > 0 { sections.append(Self.shelfHeight) }
+        if clipboardRows > 0 { sections.append(Self.agentHeaderHeight + CGFloat(min(clipboardRows, Self.maxClipboardRows)) * Self.clipboardRowHeight) }
+        if showsWeather { sections.append(Self.weatherRowHeight) }
+        return sections
+    }
 
     var expandedHeight: CGFloat {
-        var height = Self.expandedBaseHeight
-        if showsMediaCard { height += Self.mediaCardHeight }
-        if showsAgents {
-            height += Self.agentHeaderHeight + CGFloat(min(max(agentRows, 1), Self.maxAgentRows)) * Self.agentRowHeight
-        }
-        if showsMediaCard, showsAgents { height += 12 }
-        if !showsMediaCard, !showsAgents { height += Self.emptyExpandedHeight }
-        return height
+        let sections = expandedSections
+        guard !sections.isEmpty else { return Self.expandedBaseHeight + Self.emptyExpandedHeight }
+        return Self.expandedBaseHeight + sections.reduce(0, +) + CGFloat(sections.count - 1) * Self.sectionGap
     }
 
     var canvasSize: CGSize {
-        CGSize(
-            width: Self.expandedWidth + 160,
-            height: Self.expandedBaseHeight + Self.mediaCardHeight
-                + Self.agentHeaderHeight + CGFloat(Self.maxAgentRows) * Self.agentRowHeight + 80
-        )
+        let tallest = Self.mediaCardHeight + Self.eventRowHeight + Self.timerRowHeight
+            + Self.agentHeaderHeight + CGFloat(Self.maxAgentRows) * Self.agentRowHeight + Self.shelfHeight
+            + Self.agentHeaderHeight + CGFloat(Self.maxClipboardRows) * Self.clipboardRowHeight + Self.weatherRowHeight
+            + 6 * Self.sectionGap
+        return CGSize(width: Self.expandedWidth + 160, height: Self.expandedBaseHeight + tallest + 80)
     }
 
     /// Island frame in canvas coordinates (top-left origin), grown by the hit margin.
@@ -82,21 +119,29 @@ struct IslandLayout: Equatable {
     private func restingFrame(for mode: IslandMode) -> IslandFrame {
         switch mode {
         case .closed:
-            centred(CGSize(width: closedWidth, height: notchHeight))
+            IslandFrame(size: CGSize(width: closedWidth, height: notchHeight), centerOffset: (rightWing - leftWing) / 2)
         case .locked:
-            compact(leading: LockedView.leadingWing, trailing: Self.hudWings - LockedView.leadingWing)
+            compact(leading: LockedView.leadingWing, trailing: LockedView.timeWing)
         case .hud(let kind):
             switch kind.style {
-            case .compact(let leading, let trailing):
-                compact(leading: leading, trailing: trailing)
-            case .twoRow(let wing):
-                centred(CGSize(width: notchWidth + wing * 2, height: notchHeight + Self.hudRowHeight + 6))
+            case .compact:
+                compact(leading: wingWidths(for: mode).leading, trailing: wingWidths(for: mode).trailing)
+            case .twoRow:
+                IslandFrame(size: CGSize(width: closedWidth, height: notchHeight + Self.hudRowHeight + 6), centerOffset: (rightWing - leftWing) / 2)
             case .card:
-                centred(CGSize(width: notchWidth + Self.hudWings, height: Self.hudHeight))
+                centred(CGSize(width: notchWidth + Self.cardWings, height: Self.hudHeight))
             }
         case .expanded:
             centred(CGSize(width: Self.expandedWidth, height: expandedHeight))
         }
+    }
+
+    /// A wing a HUD doesn't claim keeps its closed width.
+    func wingWidths(for mode: IslandMode) -> (leading: CGFloat, trailing: CGFloat) {
+        if case .hud(let kind) = mode, case .compact(let leading, let trailing) = kind.style {
+            return (leading ?? leftWing, trailing ?? rightWing)
+        }
+        return (leftWing, rightWing)
     }
 
     private func centred(_ size: CGSize) -> IslandFrame {

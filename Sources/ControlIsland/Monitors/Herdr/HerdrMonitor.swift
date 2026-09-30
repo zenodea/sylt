@@ -22,8 +22,11 @@ final class HerdrMonitor: ObservableObject {
     var workingCount: Int { agents.filter(\.isWorking).count }
     var waitingCount: Int { agents.count - workingCount }
 
+    /// Without the Herdr CLI, agent processes are found and watched directly.
+    private let processes = ProcessAgents()
+
     func start() {
-        guard binary != nil, timer == nil else { return }
+        guard timer == nil else { return }
         poll()
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.poll() }
@@ -39,6 +42,7 @@ final class HerdrMonitor: ObservableObject {
 
     /// Switches Herdr to the agent's pane and brings its terminal window to the front.
     func focus(_ agent: HerdrAgent) {
+        guard binary != nil else { return processes.focus(agent) }
         let host = ProcessTree.hostApplication(ofProcessNamed: "herdr")
         if let host {
             NSApp.yieldActivation(to: host)
@@ -53,6 +57,12 @@ final class HerdrMonitor: ObservableObject {
     }
 
     private func poll() {
+        guard binary != nil else {
+            let agents = processes.scan()
+            available = !agents.isEmpty
+            update(agents)
+            return
+        }
         run(["agent", "list"]) { [weak self] data in
             guard let data else { return }
             struct Envelope: Decodable {

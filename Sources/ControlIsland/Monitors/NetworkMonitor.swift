@@ -5,7 +5,7 @@ import Network
 /// Which link carries the default route, reported when it changes.
 @MainActor
 final class NetworkMonitor: ObservableObject {
-    enum Link: Hashable {
+    enum Link: Hashable, CaseIterable {
         case wifi, ethernet, other, offline
     }
 
