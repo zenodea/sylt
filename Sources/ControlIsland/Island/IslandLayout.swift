@@ -17,17 +17,21 @@ struct IslandLayout: Equatable {
     static let agentHeaderHeight: CGFloat = 26
     static let maxAgentRows = 3
     static let hudHeight: CGFloat = 76
+    /// Total wing width every HUD adds to the notch, so they all share one island size.
+    static let hudWings: CGFloat = 196
     static let hudRowHeight: CGFloat = 18
     static let wingPadding: CGFloat = 6
     static let hitMargin: CGFloat = 6
-    static let lockWings = (leading: 34.0, trailing: 68.0)
+    /// Wing content sits this close to the notch, with `wingEdge` left at the island's outer end.
+    static let notchGap: CGFloat = 4
+    static let wingEdge: CGFloat = 8
     static let hoverGrowth = CGSize(width: 14, height: 6)
 
     var artworkSize: CGFloat { notchHeight - 12 }
     var isFullscreen = false
 
     var wingWidth: CGFloat {
-        let left: [CGFloat] = [showsAgents ? 32 : 0]
+        let left: [CGFloat] = [showsAgents ? AgentStack.width(for: agentRows) : 0]
         let right: [CGFloat] = [showsArtwork ? artworkSize : 0, showsAudioBars ? 14 : 0]
         let widest = max(Self.contentWidth(left), Self.contentWidth(right))
         return widest == 0 ? 0 : widest + Self.wingPadding * 2
@@ -80,15 +84,15 @@ struct IslandLayout: Equatable {
         case .closed:
             centred(CGSize(width: closedWidth, height: notchHeight))
         case .locked:
-            compact(leading: Self.lockWings.leading, trailing: Self.lockWings.trailing)
+            compact(leading: LockedView.leadingWing, trailing: Self.hudWings - LockedView.leadingWing)
         case .hud(let kind):
             switch kind.style {
             case .compact(let leading, let trailing):
                 compact(leading: leading, trailing: trailing)
             case .twoRow(let wing):
                 centred(CGSize(width: notchWidth + wing * 2, height: notchHeight + Self.hudRowHeight + 6))
-            case .card(let width):
-                centred(CGSize(width: closedWidth + width, height: Self.hudHeight))
+            case .card:
+                centred(CGSize(width: notchWidth + Self.hudWings, height: Self.hudHeight))
             }
         case .expanded:
             centred(CGSize(width: Self.expandedWidth, height: expandedHeight))

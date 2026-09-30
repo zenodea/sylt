@@ -6,6 +6,8 @@ final class IslandHostingView: NSHostingView<IslandView> {
     weak var state: IslandState?
 
     private var swipe = CGVector.zero
+    /// Beyond this the island is fully pulled; winding further would only delay a reversal.
+    private static let swipeLimit: CGFloat = 60
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
@@ -16,8 +18,8 @@ final class IslandHostingView: NSHostingView<IslandView> {
             swipe = .zero
         case .changed:
             let sign: CGFloat = event.isDirectionInvertedFromDevice ? 1 : -1
-            swipe.dx += event.scrollingDeltaX * sign
-            swipe.dy += event.scrollingDeltaY * sign
+            swipe.dx = Self.clamp(swipe.dx + event.scrollingDeltaX * sign)
+            swipe.dy = Self.clamp(swipe.dy + event.scrollingDeltaY * sign)
             state.swipeMoved(swipe)
         case .ended:
             if let direction = SwipeDirection(vector: swipe) { state.swiped(direction) }
@@ -27,6 +29,10 @@ final class IslandHostingView: NSHostingView<IslandView> {
         default:
             break
         }
+    }
+
+    private static func clamp(_ value: CGFloat) -> CGFloat {
+        min(max(value, -swipeLimit), swipeLimit)
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {

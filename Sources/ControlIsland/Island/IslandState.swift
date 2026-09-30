@@ -17,6 +17,8 @@ final class IslandState: ObservableObject {
     let herdr = HerdrMonitor()
     let nowPlaying = NowPlayingMonitor()
     let notifications = SystemNotificationMonitor()
+    let bluetooth = BluetoothMonitor()
+    let network = NetworkMonitor()
     let lock = LockMonitor()
     let fullscreen = FullscreenMonitor()
 
@@ -68,6 +70,8 @@ final class IslandState: ObservableObject {
         case .nowPlaying: nowPlaying
         case .herdr: herdr
         case .notifications: notifications
+        case .bluetooth: bluetooth
+        case .network: network
         }
     }
 
@@ -127,6 +131,15 @@ final class IslandState: ObservableObject {
         volume.changes
             .sink { [weak self] in self?.showHUD(.volume) }
             .store(in: &cancellables)
+        volume.muteChanges
+            .sink { [weak self] in self?.showHUD(.mute($0)) }
+            .store(in: &cancellables)
+        bluetooth.events
+            .sink { [weak self] in self?.showHUD(.bluetooth($0)) }
+            .store(in: &cancellables)
+        network.changes
+            .sink { [weak self] in self?.showHUD(.network($0)) }
+            .store(in: &cancellables)
         brightness.changes
             .sink { [weak self] in self?.showHUD(.brightness) }
             .store(in: &cancellables)
@@ -157,8 +170,7 @@ final class IslandState: ObservableObject {
 
     private func unlocked() {
         if preferences.playsUnlockSound { Sounds.unlock() }
-        transition(to: .closed)
-        showHUD(.unlocked)
+        if preferences.enabledHUDs.contains(.unlock) { showHUD(.unlocked) } else { transition(to: .closed) }
     }
 
     /// Normalised -1...1 pull in each axis; the island stretches that way and stays anchored to the notch.

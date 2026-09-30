@@ -10,3 +10,5 @@ extension BrightnessMonitor: Monitor {}
 extension NowPlayingMonitor: Monitor {}
 extension HerdrMonitor: Monitor {}
 extension SystemNotificationMonitor: Monitor {}
+extension BluetoothMonitor: Monitor {}
+extension NetworkMonitor: Monitor {}

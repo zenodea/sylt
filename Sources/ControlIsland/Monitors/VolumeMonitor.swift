@@ -8,6 +8,8 @@ final class VolumeMonitor: ObservableObject {
     @Published private(set) var level: Float = 0   // 0...1
     @Published private(set) var isMuted = false
     let changes = PassthroughSubject<Void, Never>()
+    let muteChanges = PassthroughSubject<Bool, Never>()
+    private var reportedMute = false
 
     private var deviceID = AudioDeviceID(kAudioObjectUnknown)
     private var listenerBlock: AudioObjectPropertyListenerBlock?
@@ -82,7 +84,13 @@ final class VolumeMonitor: ObservableObject {
            AudioObjectGetPropertyData(deviceID, &muteAddress, 0, nil, &size, &mute) == noErr {
             isMuted = mute != 0
         }
-        if notify { changes.send() }
+        guard notify else { reportedMute = isMuted; return }
+        if isMuted != reportedMute {
+            reportedMute = isMuted
+            muteChanges.send(isMuted)
+        } else {
+            changes.send()
+        }
     }
 
     /// Sets the output volume (0...1) without triggering the HUD.

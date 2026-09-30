@@ -5,6 +5,8 @@ enum Plugin: String, CaseIterable, Identifiable, Codable {
     case nowPlaying
     case herdr
     case notifications
+    case bluetooth
+    case network
 
     var id: String { rawValue }
 
@@ -16,6 +18,8 @@ enum Plugin: String, CaseIterable, Identifiable, Codable {
         case .nowPlaying: "Now Playing"
         case .herdr: "Herdr"
         case .notifications: "Notifications"
+        case .bluetooth: "Bluetooth"
+        case .network: "Network"
         }
     }
 
@@ -27,6 +31,8 @@ enum Plugin: String, CaseIterable, Identifiable, Codable {
         case .nowPlaying: "Artwork, playback controls and track changes."
         case .herdr: "Agent status for the Herdr terminal workspace manager."
         case .notifications: "Mirror Notification Center banners in the island. Experimental, needs Accessibility."
+        case .bluetooth: "Devices connecting and disconnecting, with their battery."
+        case .network: "Wi-Fi, Ethernet and offline changes."
         }
     }
 
@@ -38,8 +44,10 @@ enum Plugin: String, CaseIterable, Identifiable, Codable {
         case .nowPlaying: "music.note"
         case .herdr: "terminal.fill"
         case .notifications: "bell.badge.fill"
+        case .bluetooth: "wave.3.right.circle.fill"
+        case .network: "wifi"
         }
     }
 
-    static let defaultEnabled: Set<Plugin> = [.battery, .volume, .brightness, .nowPlaying]
+    static let defaultEnabled: Set<Plugin> = [.battery, .volume, .brightness, .nowPlaying, .bluetooth, .network]
 }

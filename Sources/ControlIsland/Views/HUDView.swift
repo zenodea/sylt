@@ -21,15 +21,17 @@ struct HUDView: View {
         .foregroundStyle(.white)
     }
 
+    /// Content hugs the notch; the slack sits at the island's outer ends.
     private func wings(leading leadingWidth: Double, trailing trailingWidth: Double) -> some View {
-        HStack(spacing: 0) {
+        let gap = IslandLayout.notchGap
+        return HStack(spacing: 0) {
             leading
-                .frame(width: max(0, leadingWidth - 8), alignment: .leading)
-                .padding(.leading, leadingWidth > 0 ? 8 : 0)
+                .frame(width: max(0, leadingWidth - gap), alignment: .trailing)
+                .padding(.trailing, leadingWidth > 0 ? gap : 0)
             Spacer().frame(width: layout.notchWidth)
             trailing
-                .frame(width: max(0, trailingWidth - 8), alignment: .trailing)
-                .padding(.trailing, trailingWidth > 0 ? 8 : 0)
+                .frame(width: max(0, trailingWidth - gap), alignment: .leading)
+                .padding(.leading, trailingWidth > 0 ? gap : 0)
         }
         .frame(height: layout.notchHeight + 2)
         .contentShape(Rectangle())
@@ -39,38 +41,75 @@ struct HUDView: View {
     @ViewBuilder
     private var leading: some View {
         switch kind {
-        case .volume: Image(systemName: volume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-        case .brightness: Image(systemName: "sun.max.fill")
         case .battery: BatteryGlyph(snapshot: battery.snapshot, compact: true)
         case .agentFinished(let agent):
             HStack(spacing: 6) {
-                Text("🐑").font(.system(size: 13))
                 HarnessIcon(harness: agent.harness, size: 16)
                 Text(agent.title)
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .lineLimit(1)
                     .truncationMode(.tail)
+                DoneMark()
             }
+            .padding(.leading, IslandLayout.wingEdge)
         case .nowPlaying:
             if let track = nowPlaying.track { ArtworkView(image: track.artwork, size: layout.artworkSize) }
-        case .notification, .unlocked: EmptyView()
+        case .bluetooth(let event):
+            if case .connected = event { BluetoothGlyph(connected: true) } else { BluetoothGlyph(connected: false) }
+        case .network(let link): NetworkGlyph(link: link)
+        case .volume, .brightness, .mute, .notification, .unlocked: EmptyView()
         }
     }
 
     @ViewBuilder
     private var trailing: some View {
         switch kind {
-        case .volume: LevelBar(value: volume.isMuted ? 0 : Double(volume.level))
-        case .brightness: LevelBar(value: Double(brightness.level))
+        case .volume:
+            level(Image(systemName: volume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill"), volume.isMuted ? 0 : Double(volume.level))
+        case .brightness: level(Image(systemName: "sun.max.fill"), Double(brightness.level))
+        case .mute(let muted): level(MuteGlyph(muted: muted), muted ? 0 : Double(volume.level))
         case .battery(let alert):
-            Text(batteryMessage(alert))
+            Text(alert.message(onAC: battery.snapshot.onAC))
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(batteryColor(alert))
                 .lineLimit(1)
         case .nowPlaying:
             if let track = nowPlaying.track { AudioBars(isPlaying: nowPlaying.isPlaying, colors: track.barColors) }
+        case .bluetooth(let event): bluetooth(event)
+        case .network(let link):
+            Text(link.title)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(link == .offline ? Color.white.opacity(0.6) : .white)
         case .agentFinished, .notification, .unlocked: EmptyView()
         }
+    }
+
+    private func level(_ glyph: some View, _ value: Double) -> some View {
+        HStack(spacing: 8) {
+            glyph.frame(width: 16)
+            LevelBar(value: value)
+        }
+        .padding(.trailing, IslandLayout.wingEdge)
+    }
+
+    private func bluetooth(_ event: BluetoothMonitor.Event) -> some View {
+        let device: BluetoothMonitor.Device
+        switch event {
+        case .connected(let connected): device = connected
+        case .disconnected(let disconnected): device = disconnected
+        }
+        return HStack(spacing: 8) {
+            Text(device.name)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .opacity(device.battery == nil ? 0.6 : 1)
+            if let battery = device.battery {
+                DeviceBattery(percent: battery)
+            }
+        }
+        .padding(.trailing, IslandLayout.wingEdge)
     }
 
     @ViewBuilder
@@ -111,16 +150,6 @@ struct HUDView: View {
 
     private func tapped() {
         if case .agentFinished(let agent) = kind { herdr.focus(agent) }
-    }
-
-    private func batteryMessage(_ alert: BatteryAlert) -> String {
-        switch alert {
-        case .powerSource: battery.snapshot.onAC ? "Charging" : "On battery"
-        case .level(100): "Fully charged"
-        case .level(let percent) where percent <= 10: "Critically low"
-        case .level(let percent) where percent <= 20: "Low battery"
-        case .level: "Battery"
-        }
     }
 
     private func batteryColor(_ alert: BatteryAlert) -> Color {

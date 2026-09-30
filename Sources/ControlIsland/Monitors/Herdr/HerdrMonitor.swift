@@ -5,6 +5,8 @@ import Combine
 final class HerdrMonitor: ObservableObject {
     @Published private(set) var agents: [HerdrAgent] = []
     @Published private(set) var available = false
+    /// When each agent last changed between working and waiting, as seen by this app.
+    @Published private(set) var statusSince: [String: Date] = [:]
     let finishedAgents = PassthroughSubject<HerdrAgent, Never>()
 
     private var timer: Timer?
@@ -18,7 +20,7 @@ final class HerdrMonitor: ObservableObject {
     }()
 
     var workingCount: Int { agents.filter(\.isWorking).count }
-    var idleCount: Int { agents.count - workingCount }
+    var waitingCount: Int { agents.count - workingCount }
 
     func start() {
         guard binary != nil, timer == nil else { return }
@@ -35,9 +37,19 @@ final class HerdrMonitor: ObservableObject {
         available = false
     }
 
+    /// Switches Herdr to the agent's pane and brings its terminal window to the front.
     func focus(_ agent: HerdrAgent) {
-        ProcessTree.hostApplication(ofProcessNamed: "herdr")?.activate(options: .activateIgnoringOtherApps)
-        run(["agent", "focus", agent.pane_id]) { _ in }
+        let host = ProcessTree.hostApplication(ofProcessNamed: "herdr")
+        if let host {
+            NSApp.yieldActivation(to: host)
+            host.activate()
+        }
+        run(["agent", "focus", agent.pane_id]) { _ in
+            Task { @MainActor in
+                guard let host else { return }
+                WindowRaiser.raise(in: host, titleContaining: agent.terminal_title_stripped)
+            }
+        }
     }
 
     private func poll() {
@@ -60,13 +72,20 @@ final class HerdrMonitor: ObservableObject {
         }
     }
 
+    /// Waiting agents first: they are the ones that need you.
     private func update(_ next: [HerdrAgent]) {
-        guard next != agents else { return }
-        let wasWorking = Set(agents.filter(\.isWorking).map(\.id))
-        agents = next
-        for agent in next where !agent.isWorking && wasWorking.contains(agent.id) {
-            finishedAgents.send(agent)
+        let sorted = next.sorted { ($0.isWorking ? 1 : 0, $0.id) < ($1.isWorking ? 1 : 0, $1.id) }
+        guard sorted != agents else { return }
+        let previous = Dictionary(agents.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let now = Date()
+        for agent in sorted {
+            guard let before = previous[agent.id] else { statusSince[agent.id] = now; continue }
+            guard before.isWorking != agent.isWorking else { continue }
+            statusSince[agent.id] = now
+            if before.isWorking { finishedAgents.send(agent) }
         }
+        statusSince = statusSince.filter { id, _ in sorted.contains { $0.id == id } }
+        agents = sorted
     }
 
     private func run(_ args: [String], completion: @escaping (Data?) -> Void) {

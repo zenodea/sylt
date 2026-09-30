@@ -17,7 +17,7 @@ struct ClosedView: View {
     private var leftWing: some View {
         HStack(spacing: 4) {
             if herdr.available {
-                SheepBadge(workingCount: herdr.workingCount)
+                AgentStack(agents: herdr.agents)
             }
         }
         .padding(.leading, IslandLayout.wingPadding)

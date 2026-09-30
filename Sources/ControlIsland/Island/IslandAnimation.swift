@@ -8,6 +8,7 @@ enum IslandAnimation {
     static let cursor = Animation.interactiveSpring(response: 0.22, dampingFraction: 0.78)
     static let press = Animation.spring(response: 0.2, dampingFraction: 0.6)
     static let value = Animation.spring(response: 0.3, dampingFraction: 0.85)
+    static let unlock = Animation.spring(response: 0.45, dampingFraction: 0.5)
 
     static func transition(to mode: IslandMode) -> Animation {
         switch mode {

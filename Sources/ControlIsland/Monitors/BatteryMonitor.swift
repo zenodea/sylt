@@ -13,6 +13,16 @@ struct BatterySnapshot: Equatable {
 enum BatteryAlert: Hashable {
     case level(Int)
     case powerSource
+
+    func message(onAC: Bool) -> String {
+        switch self {
+        case .powerSource: onAC ? "Charging" : "On battery"
+        case .level(100): "Fully charged"
+        case .level(let percent) where percent <= 10: "Critically low"
+        case .level(let percent) where percent <= 20: "Low battery"
+        case .level: "Battery"
+        }
+    }
 }
 
 @MainActor
