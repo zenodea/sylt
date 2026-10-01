@@ -5,7 +5,7 @@ enum Sounds {
         NSSound(named: "Glass")?.play()
     }
 
-    static func timer() {
-        NSSound(named: "Hero")?.play()
+    static func play(_ name: String) {
+        NSSound(named: name)?.play()
     }
 }

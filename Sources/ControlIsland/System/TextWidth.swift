@@ -2,8 +2,8 @@ import AppKit
 
 /// Measures rounded system text so wings can be sized to what they hold.
 enum TextWidth {
-    static func of(_ text: String, size: CGFloat, weight: NSFont.Weight = .semibold) -> CGFloat {
-        let base = NSFont.systemFont(ofSize: size, weight: weight)
+    static func of(_ text: String, size: CGFloat, weight: NSFont.Weight = .semibold, monospacedDigits: Bool = false) -> CGFloat {
+        let base = monospacedDigits ? NSFont.monospacedDigitSystemFont(ofSize: size, weight: weight) : NSFont.systemFont(ofSize: size, weight: weight)
         let descriptor = base.fontDescriptor.withDesign(.rounded) ?? base.fontDescriptor
         let font = NSFont(descriptor: descriptor, size: size) ?? base
         return ceil(NSAttributedString(string: text, attributes: [.font: font]).size().width)

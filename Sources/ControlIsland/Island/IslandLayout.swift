@@ -4,35 +4,23 @@ struct IslandLayout: Equatable {
     var notchWidth: CGFloat = 180
     var notchHeight: CGFloat = 32
     var showsArtwork = false
-    var showsAgents = false
     var showsAudioBars = false
     var showsMediaCard = false
-    var agentRows = 0
     var showsCalendar = false
     var showsNextEvent = false
-    var showsTimer = false
     var privacyDots = 0
     var showsFocus = false
     var showsHeadphones = false
-    var showsWeather = false
-    var shelfFiles = 0
-    var clipboardRows = 0
-    var showsTimerControls = false
+    var pluginLeft: [CGFloat] = []
+    var pluginRight: [CGFloat] = []
+    var pluginSections: [CGFloat] = []
 
     static let expandedWidth: CGFloat = 440
     static let expandedBaseHeight: CGFloat = 46
     static let emptyExpandedHeight: CGFloat = 36
     static let mediaCardHeight: CGFloat = 138
-    static let agentRowHeight: CGFloat = 26
-    static let agentHeaderHeight: CGFloat = 26
-    static let maxAgentRows = 3
     static let hudHeight: CGFloat = 76
     static let eventRowHeight: CGFloat = 34
-    static let timerRowHeight: CGFloat = 36
-    static let shelfHeight: CGFloat = 64
-    static let clipboardRowHeight: CGFloat = 24
-    static let maxClipboardRows = 4
-    static let weatherRowHeight: CGFloat = 34
     static let sectionGap: CGFloat = 10
     /// The notification card's extra width.
     static let cardWings: CGFloat = 196
@@ -49,14 +37,14 @@ struct IslandLayout: Equatable {
 
     /// Each closed wing fits its own content; an empty wing is zero.
     var leftWing: CGFloat {
-        Self.wing([showsAgents ? AgentStack.width(for: agentRows) : 0, showsCalendar ? 52 : 0, showsTimer ? 50 : 0])
+        Self.wing([showsCalendar ? 52 : 0] + pluginLeft)
     }
 
     var rightWing: CGFloat {
         Self.wing([
-            CGFloat(privacyDots) * 10, showsFocus ? 14 : 0, showsHeadphones ? 40 : 0, showsWeather ? 44 : 0,
+            CGFloat(privacyDots) * 10, showsFocus ? 14 : 0, showsHeadphones ? 40 : 0,
             showsArtwork ? artworkSize : 0, showsAudioBars ? 14 : 0,
-        ])
+        ] + pluginRight)
     }
 
     var closedWidth: CGFloat { notchWidth + leftWing + rightWing }
@@ -71,13 +59,7 @@ struct IslandLayout: Equatable {
         var sections: [CGFloat] = []
         if showsMediaCard { sections.append(Self.mediaCardHeight) }
         if showsNextEvent { sections.append(Self.eventRowHeight) }
-        if showsTimerControls { sections.append(Self.timerRowHeight) }
-        if showsAgents {
-            sections.append(Self.agentHeaderHeight + CGFloat(min(max(agentRows, 1), Self.maxAgentRows)) * Self.agentRowHeight)
-        }
-        if shelfFiles > 0 { sections.append(Self.shelfHeight) }
-        if clipboardRows > 0 { sections.append(Self.agentHeaderHeight + CGFloat(min(clipboardRows, Self.maxClipboardRows)) * Self.clipboardRowHeight) }
-        if showsWeather { sections.append(Self.weatherRowHeight) }
+        sections += pluginSections.filter { $0 > 0 }
         return sections
     }
 
@@ -88,10 +70,8 @@ struct IslandLayout: Equatable {
     }
 
     var canvasSize: CGSize {
-        let tallest = Self.mediaCardHeight + Self.eventRowHeight + Self.timerRowHeight
-            + Self.agentHeaderHeight + CGFloat(Self.maxAgentRows) * Self.agentRowHeight + Self.shelfHeight
-            + Self.agentHeaderHeight + CGFloat(Self.maxClipboardRows) * Self.clipboardRowHeight + Self.weatherRowHeight
-            + 6 * Self.sectionGap
+        let tallest = Self.mediaCardHeight + Self.eventRowHeight
+            + 6 * (PluginSection.headerHeight + CGFloat(PluginSection.maxRows) * PluginSection.detailRowHeight + PluginSection.filesHeight + PluginSection.buttonsHeight + Self.sectionGap)
         return CGSize(width: Self.expandedWidth + 160, height: Self.expandedBaseHeight + tallest + 80)
     }
 

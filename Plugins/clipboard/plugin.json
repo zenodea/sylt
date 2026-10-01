@@ -1,0 +1,12 @@
+{
+  "protocol": 1,
+  "id": "clipboard",
+  "name": "Clipboard",
+  "description": "The last few things you copied, one click to copy again.",
+  "symbol": "doc.on.clipboard.fill",
+  "run": "clipboard.py",
+  "enabledByDefault": false,
+  "settings": [
+    { "key": "capacity", "title": "Items to keep", "type": "number", "default": 8 }
+  ]
+}

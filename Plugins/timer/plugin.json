@@ -1,0 +1,11 @@
+{
+  "protocol": 1,
+  "id": "timer",
+  "name": "Timer",
+  "description": "Countdowns started from the island, with a chime when they end.",
+  "symbol": "timer",
+  "run": "timer.py",
+  "settings": [
+    { "key": "presets", "title": "Presets (minutes)", "type": "text", "default": "5, 15, 25, 60" }
+  ]
+}

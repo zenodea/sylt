@@ -6,7 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let preferences = Preferences()
     private let mediaKeys = MediaKeyInterceptor()
     private lazy var state = IslandState(preferences: preferences)
-    private lazy var settingsWindow = SettingsWindow(preferences: preferences, mediaKeys: mediaKeys)
+    private lazy var settingsWindow = SettingsWindow(preferences: preferences, mediaKeys: mediaKeys, plugins: state.plugins)
     private var panel: NotchPanel?
     private var cancellables = Set<AnyCancellable>()
     private var activity: NSObjectProtocol?
@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         mediaKeys.deactivate()
+        state.plugins.stop()
     }
 
     private func bindMediaKeys() {

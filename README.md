@@ -23,25 +23,19 @@ Each wing is sized to its own content. An empty side adds nothing.
 | Bluetooth | A rune that draws itself in on connect, the device name and a gauge filled to its exact charge. Low-battery warnings at 20 and 10 percent. |
 | Network | Wi-Fi arcs lighting up, a cable clicking in, or a slashed Wi-Fi when you go offline. |
 | Calendar | The next event five minutes before it starts and again at start. |
-| Timer | A chime and overlay when a countdown ends. |
 | Keyboard | Caps Lock on or off, keyboard layout changes. |
 | Focus | The Focus mode you switched to. |
 | Mic and camera | When either starts or stops being used. |
-| Downloads | A browser download starting and landing. |
 | Thermals | When the Mac gets hot enough to throttle, and when it cools. |
-| Agents | An agent finishing, with a green tick. |
 | Notifications | Notification Center banners mirrored as a card. Experimental. |
 | Unlock | A padlock that springs open with a greeting when you unlock. |
+| Plugins | Whatever a plugin asks for: a timer ending, a download landing, an agent finishing. |
 
 **Expanded** (click or swipe down) stacks what's relevant:
 
 - Media card with artwork, transport, a seek bar, the source app and an output volume slider with the device name.
 - Next event with a Join button for Zoom, Meet, Teams and Webex links.
-- Timer presets: 5, 15, 25 and 60 minutes.
-- Agents from Herdr, or found by process when Herdr isn't installed, waiting ones first with how long they've waited. Click one to raise its terminal.
-- A file shelf: drop files on the island to hold them, drag them out later.
-- Clipboard history, one click to copy again.
-- Weather with the day's range.
+- Every plugin's section: timer presets, agents waiting first with how long they've waited, the file shelf, clipboard history, the weather.
 
 **Locked** the island shows a padlock and the time, and stays visible over the login window.
 
@@ -70,8 +64,55 @@ Each is asked for the first time its plugin needs it, and each plugin can be swi
 
 - The island is a transparent panel over the notch, drawn with SwiftUI. It is moved into its own WindowServer space pinned at the lock-screen level through the private SkyLight framework, which is what keeps it above full-screen apps and the login window.
 - The panel only takes the mouse while the cursor is over the island, so the rest of the strip stays click-through.
-- Every data source is a plugin: a `Monitor` that publishes changes, a `HUDKind` for its overlay, and views for its wing badge and expanded section. Preferences, Settings and the island state pick them up from `Plugin.allCases`.
+- Built-in sources are Swift `Monitor`s with a `HUDKind` for their overlay. Everything else is a plugin: a program in any language that prints JSON, rendered by the island with the same badges, overlays and sections. Six ship in the app: weather, downloads, timer, clipboard, file shelf and agents.
 - MediaRemote withholds metadata from third-party apps on recent macOS, so now-playing data comes from a small adapter hosted in Apple's own `perl`, with AppleScript for Spotify and Music and a session-store lookup for Firefox.
+
+## Writing a plugin
+
+A plugin is a folder with a `plugin.json` and a program. Drop it in `~/Library/Application Support/Control Island/Plugins` and it starts; Settings has a button for the folder. The six shipped plugins in `Plugins/` are the reference.
+
+```json
+{
+  "protocol": 1,
+  "id": "coffee",
+  "name": "Coffee",
+  "description": "Cups so far today.",
+  "symbol": "cup.and.saucer.fill",
+  "run": "coffee.sh",
+  "settings": [{ "key": "goal", "title": "Daily goal", "type": "number", "default": 3 }]
+}
+```
+
+The program prints one JSON object per line. Each line replaces one thing:
+
+```sh
+#!/bin/sh
+read start                               # {"event":"start","settings":{...},"dataDir":"..."}
+echo '{"wing": {"side": "right", "items": [{"symbol": "cup.and.saucer.fill", "text": "2"}]}}'
+echo '{"hud": {"symbol": "cup.and.saucer.fill", "tint": "orange", "text": "Coffee logged"}}'
+echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup"}], "buttons": [{"id": "reset", "title": "Reset"}]}}'
+while read event; do                     # {"event":"click","row":"log"} {"event":"button","id":"reset"} ...
+  case "$event" in *'"click"'*) echo '{"wing": {"side": "right", "items": [{"symbol": "cup.and.saucer.fill", "text": "3"}]}}';; esac
+done
+```
+
+What a plugin can print:
+
+| Line | Effect |
+| --- | --- |
+| `{"wing": {"side": "left" or "right", "items": [...]}}` | Replaces the plugin's badge in that wing. An item mixes `symbol`, `image` (`app:bundle.id`, `icon:/path`, `file:/path`), `text`, `tint`, `dot`, `ring` (0 to 1) and `status` (`working` or `waiting`). Empty items clear it. |
+| `{"hud": {...}}` | Shows an overlay now: `symbol`/`image`, `tint`, `text` or `level` (0 to 1), `side` (`both`, `left`, `right`), `duration`, `sound`. |
+| `{"section": {...}}` | Replaces the plugin's expanded section: `title`, `symbol`, `rows`, `files` (paths, draggable), `buttons`, `actions`. A row has `id`, `symbol`/`image`, `title`, `detail`, `trailing`, `trailingTint`, `status`, `progress`, `buttons`. |
+| `{"clearSection": true}` | Removes the section. |
+| `{"sound": "Hero"}` | Plays a system sound. |
+| `{"activate": {"process": "herdr"}}` | Brings an app forward, by process name, `pid` or `bundle`. |
+| `{"open": "/path or https://..."}` | Opens a file or URL. |
+
+What the host writes to the plugin's stdin: `start` with `settings` and `dataDir`, `settings` when they change, `click` with a row `id`, `button` with an `id` (and its row), `action` with an `id`, `drop` with `files` when the manifest has `"accepts": ["files"]`, `remove` with a file path, and `stop`.
+
+Manifests can set `"interval": seconds` to be run once per interval instead of staying running, `"accepts": ["files"]` to receive drops, `"enabledByDefault": false`, and `settings` of type `bool`, `text`, `number` or `choice` (with `options`), which Settings turns into a form. Tints are `white`, `dim`, `green`, `orange`, `red`, `yellow`, `blue`, `indigo`, `purple`, `pink`, `cyan` or a `#hex`.
+
+Plugins run as you, with your permissions. Scripts without an executable bit run through the interpreter their extension implies: `.py`, `.sh`, `.rb`, `.js`, `.swift`.
 
 ## Development
 
@@ -81,6 +122,6 @@ make test    # unit tests
 make open    # release bundle, relaunch
 ```
 
-Sources are grouped by concern under `Sources/ControlIsland`: `Island` (state, layout, modes, animation), `Monitors` (one folder per domain), `Views` (wings, overlays, expanded sections, badges), `Settings` and `System`. Tests live in `Tests/ControlIslandTests`.
+Sources are grouped by concern under `Sources/ControlIsland`: `Island` (state, layout, modes, animation), `Monitors` (one folder per domain), `Plugins` (the protocol, process host and registry), `Views` (wings, overlays, expanded sections, badges, plugin renderers), `Settings` and `System`. Shipped plugins live in `Plugins/`, tests in `Tests/ControlIslandTests`. Run a debug build against the repo's plugins with `ISLAND_PLUGINS=Plugins .build/debug/ControlIsland`.
 
 Private APIs can change between macOS releases. The SkyLight calls and the Focus store are the two places most likely to need attention after an update.

@@ -152,6 +152,7 @@
     <div class="links">
       <a href="#features">Plugins</a>
       <a href="#how">How it works</a>
+      <a href="#plugins-yours">Write your own</a>
       <a href="#install">Install</a>
       <a href="https://github.com/zenodea/controlisland">GitHub</a>
     </div>
@@ -178,7 +179,7 @@
 <section id="features">
   <div class="wrap">
     <h2>Eighteen plugins. Pick one.</h2>
-    <p class="lead">Each is a switch in Settings. Tap one to see how the island shows it.</p>
+    <p class="lead">Each is a switch in Settings. Twelve are built in; six are ordinary plugins you could have written yourself. Tap one to see how the island shows it.</p>
     <div class="chips" id="chips" role="tablist"></div>
     <div class="stage" id="stage">
       <div class="scene"><div class="notch"></div><div class="isl" id="preview"><div class="w l"><span class="c"></span></div><div class="n"></div><div class="w r"><span class="c"></span></div><div class="below"><span class="c"></span></div></div></div>
@@ -196,6 +197,22 @@
       <div class="step"><b>Click-through</b><p>It only takes the mouse while the cursor is over the island. The rest of the strip belongs to whatever is underneath.</p></div>
       <div class="step"><b>Honest motion</b><p>Icons change in place rather than swapping: a padlock opens, a cover flips, a slash draws across a speaker.</p></div>
     </div>
+  </div>
+</section>
+
+<section id="plugins-yours">
+  <div class="wrap">
+    <h2>Write your own, in anything.</h2>
+    <p class="lead">A plugin is a folder with a manifest and a program that prints JSON lines. Bash, Python, Swift, Go, whatever you like. The island draws it with the same badges, overlays and sections as everything else.</p>
+<pre><span class="c"># plugin.json</span>
+{ "protocol": 1, "id": "coffee", "name": "Coffee", "symbol": "cup.and.saucer.fill", "run": "coffee.sh" }
+
+<span class="c"># coffee.sh</span>
+read start
+echo '{"wing": {"side": "right", "items": [{"symbol": "cup.and.saucer.fill", "text": "2"}]}}'
+echo '{"hud": {"symbol": "cup.and.saucer.fill", "tint": "orange", "text": "Coffee logged"}}'
+echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup"}]}}'</pre>
+    <p class="lead" style="margin-top:18px">Drop the folder into the plugins folder from Settings and it's running. Six of the plugins above, weather, downloads, timer, clipboard, shelf and agents, are written exactly this way. The protocol is in the <a href="https://github.com/zenodea/controlisland#writing-a-plugin">README</a>.</p>
   </div>
 </section>
 

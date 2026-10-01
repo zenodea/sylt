@@ -24,12 +24,12 @@ final class PreferencesTests: XCTestCase {
         let preferences = Preferences(defaults: defaults)
         XCTAssertTrue(preferences.enabledPlugins.contains(.battery))
         XCTAssertFalse(preferences.enabledPlugins.contains(.volume), "a known default the user turned off stays off")
-        XCTAssertTrue(preferences.enabledPlugins.contains(.weather), "an unseen default switches on")
-        XCTAssertFalse(preferences.enabledPlugins.contains(.clipboard), "non-default plugins stay off")
+        XCTAssertTrue(preferences.enabledPlugins.contains(.calendar), "an unseen default switches on")
+        XCTAssertFalse(preferences.enabledPlugins.contains(.notifications), "non-default plugins stay off")
 
-        preferences.enabledPlugins.remove(.weather)
+        preferences.enabledPlugins.remove(.calendar)
         let again = Preferences(defaults: defaults)
-        XCTAssertFalse(again.enabledPlugins.contains(.weather), "once seen, a plugin is never forced on again")
+        XCTAssertFalse(again.enabledPlugins.contains(.calendar), "once seen, a plugin is never forced on again")
     }
 
     func testTogglesPersist() {

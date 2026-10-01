@@ -55,17 +55,13 @@ struct IslandView: View {
         .environmentObject(state.battery)
         .environmentObject(state.volume)
         .environmentObject(state.brightness)
-        .environmentObject(state.herdr)
         .environmentObject(state.nowPlaying)
         .environmentObject(state.preferences)
         .environmentObject(state.calendar)
-        .environmentObject(state.timer)
         .environmentObject(state.privacy)
         .environmentObject(state.focus)
         .environmentObject(state.bluetooth)
-        .environmentObject(state.weather)
-        .environmentObject(state.shelf)
-        .environmentObject(state.clipboard)
+        .environmentObject(state.plugins)
     }
 
     private static func urls(from providers: [NSItemProvider]) async -> [URL] {

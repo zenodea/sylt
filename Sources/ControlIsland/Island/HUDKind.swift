@@ -6,7 +6,6 @@ enum HUDKind: Hashable {
     case brightness
     case battery(BatteryAlert)
     case nowPlaying
-    case agentFinished(HerdrAgent)
     case unlocked
     case notification(SystemNotification)
     case mute(Bool)
@@ -14,13 +13,12 @@ enum HUDKind: Hashable {
     case network(NetworkMonitor.Link)
     case peripheralBattery(BluetoothMonitor.Device)
     case calendar(CalendarMonitor.Event)
-    case timerDone(TimeInterval)
     case capsLock(Bool)
     case inputSource(String)
     case focus(String?)
     case privacy(PrivacyMonitor.Use)
-    case download(DownloadsMonitor.Event)
     case thermal(ProcessInfo.ThermalState)
+    case external(ExternalHUD)
 
     enum Style: Hashable {
         /// Content lives in the wings, island stays at notch height. A nil
@@ -44,7 +42,6 @@ enum HUDKind: Hashable {
         switch self {
         case .volume, .brightness, .mute: .compact(leading: nil, trailing: Self.wing(16 + 8 + 72))
         case .battery: .compact(leading: Self.wing(48), trailing: Self.wing(Self.text(Self.batteryMessages)))
-        case .agentFinished(let agent): .compact(leading: Self.wing(min(Self.text(agent.title), 140) + 41), trailing: nil)
         case .unlocked: .compact(leading: LockedView.leadingWing, trailing: LockedView.greetingWing)
         case .nowPlaying: .twoRow
         case .notification: .card
@@ -52,12 +49,11 @@ enum HUDKind: Hashable {
         case .peripheralBattery(let device): Self.glyph(trailing: Self.device(device))
         case .network: Self.glyph(trailing: Self.text(NetworkMonitor.Link.allCases.map(\.title)))
         case .calendar(let event): Self.glyph(trailing: min(Self.text(event.title), 150) + 6 + Self.text("in 30m"))
-        case .timerDone(let duration): Self.glyph(trailing: Self.text("\(Int(duration / 60)) min timer done"))
         case .focus(let mode): Self.glyph(trailing: Self.text(mode ?? "Focus off"))
         case .privacy: Self.glyph(trailing: Self.text(Self.privacyMessages))
-        case .download(let event): Self.glyph(trailing: min(Self.text(event.name), 160))
         case .thermal(let state): Self.glyph(trailing: Self.text(state == .nominal ? "Cooled down" : "\(state.title) · performance reduced"))
         case .capsLock: .compact(leading: nil, trailing: Self.wing(16 + 8 + Self.text(["Caps Lock on", "Caps Lock off"])))
+        case .external(let hud): hud.style
         case .inputSource(let name): .compact(leading: nil, trailing: Self.wing(16 + 8 + min(Self.text(name), 140)))
         }
     }
@@ -87,19 +83,17 @@ enum HUDKind: Hashable {
         case .brightness: .brightness
         case .battery: .battery
         case .nowPlaying: .nowPlaying
-        case .agentFinished: .herdr
         case .unlocked: .unlock
         case .notification: .notifications
         case .mute: .volume
         case .bluetooth, .peripheralBattery: .bluetooth
         case .network: .network
         case .calendar: .calendar
-        case .timerDone: .timer
         case .capsLock, .inputSource: .keyboard
         case .focus: .focus
         case .privacy: .privacy
-        case .download: .downloads
         case .thermal: .thermals
+        case .external: .plugins
         }
     }
 
@@ -109,26 +103,45 @@ enum HUDKind: Hashable {
         case .battery: 1.5
         case .unlocked: 1.4
         case .nowPlaying: 2.2
-        case .agentFinished: 2.5
         case .notification: 3
         case .mute: 1
         case .bluetooth, .peripheralBattery: 2.4
         case .network: 1.8
         case .calendar: 4
-        case .timerDone: 3
         case .capsLock: 0.9
         case .inputSource: 1.2
         case .focus: 1.8
         case .privacy: 1.6
-        case .download: 2.2
         case .thermal: 2.5
+        case .external(let hud): hud.hud.duration ?? 2
+        }
+    }
+}
+
+/// A plugin's HUD, with the plugin that asked for it and a unique identity so a repeat shows again.
+struct ExternalHUD: Hashable {
+    let pluginID: String
+    let hud: PluginHUD
+    let id = UUID()
+
+    var hasGlyph: Bool { hud.symbol != nil || hud.image != nil }
+
+    var content: CGFloat {
+        hud.level != nil ? 72 : min(TextWidth.of(hud.text ?? "", size: 11), 160)
+    }
+
+    var style: HUDKind.Style {
+        switch hud.side {
+        case "right": .compact(leading: nil, trailing: HUDKind.wing((hasGlyph ? 16 + 8 : 0) + content))
+        case "left": .compact(leading: HUDKind.wing(content + (hasGlyph ? 16 + 6 : 0)), trailing: nil)
+        default: .compact(leading: hasGlyph ? HUDKind.wing(18) : nil, trailing: HUDKind.wing(content))
         }
     }
 }
 
 enum HUDCategory: String, CaseIterable, Identifiable, Codable {
-    case volume, brightness, battery, nowPlaying, herdr, unlock, notifications, bluetooth, network
-    case calendar, timer, keyboard, focus, privacy, downloads, thermals
+    case volume, brightness, battery, nowPlaying, unlock, notifications, bluetooth, network
+    case calendar, keyboard, focus, privacy, thermals, plugins
 
     var id: String { rawValue }
 
@@ -138,18 +151,16 @@ enum HUDCategory: String, CaseIterable, Identifiable, Codable {
         case .brightness: "Brightness"
         case .battery: "Battery alerts"
         case .nowPlaying: "Track changes"
-        case .herdr: "Herdr agents"
         case .unlock: "Unlock"
         case .notifications: "Notifications"
         case .bluetooth: "Bluetooth"
         case .network: "Network"
         case .calendar: "Calendar reminders"
-        case .timer: "Timer finished"
         case .keyboard: "Caps Lock and layout"
         case .focus: "Focus changes"
         case .privacy: "Mic and camera"
-        case .downloads: "Downloads"
         case .thermals: "Thermals"
+        case .plugins: "Plugins"
         }
     }
 
@@ -159,18 +170,16 @@ enum HUDCategory: String, CaseIterable, Identifiable, Codable {
         case .brightness: "sun.max.fill"
         case .battery: "battery.75percent"
         case .nowPlaying: "music.note"
-        case .herdr: "terminal.fill"
         case .unlock: "lock.open.fill"
         case .notifications: "bell.fill"
         case .bluetooth: "dot.radiowaves.left.and.right"
         case .network: "wifi"
         case .calendar: "calendar"
-        case .timer: "timer"
         case .keyboard: "keyboard.fill"
         case .focus: "moon.fill"
         case .privacy: "mic.fill"
-        case .downloads: "arrow.down.circle.fill"
         case .thermals: "flame.fill"
+        case .plugins: "puzzlepiece.extension.fill"
         }
     }
 }

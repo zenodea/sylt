@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var preferences: Preferences
     @ObservedObject var mediaKeys: MediaKeyInterceptor
+    @ObservedObject var plugins: PluginRegistry
     @State private var pane = Pane.general
     @State private var opensAtLogin = LoginItem.isEnabled
 
@@ -41,7 +42,7 @@ struct SettingsView: View {
             Form {
                 switch pane {
                 case .general: general
-                case .plugins: plugins
+                case .plugins: pluginsPane
                 case .huds: huds
                 case .about: about
                 }
@@ -81,8 +82,9 @@ struct SettingsView: View {
         }
     }
 
-    private var plugins: some View {
-        Section {
+    @ViewBuilder
+    private var pluginsPane: some View {
+        Section("Built in") {
             ForEach(Plugin.allCases) { plugin in
                 Toggle(isOn: preferences.binding(for: plugin)) {
                     HStack(spacing: 12) {
@@ -102,6 +104,24 @@ struct SettingsView: View {
                 .toggleStyle(.switch)
                 .padding(.vertical, 2)
             }
+        }
+        Section {
+            ForEach(plugins.plugins) { plugin in
+                ExternalPluginRow(plugin: plugin, registry: plugins)
+            }
+            if plugins.plugins.isEmpty {
+                Text("No plugins yet. Drop a folder with a plugin.json into the plugins folder.")
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Button("Open plugins folder") { NSWorkspace.shared.open(PluginRegistry.userFolder) }
+                Button("Reload") { plugins.reload() }
+                Spacer()
+            }
+        } header: {
+            Text("Plugins")
+        } footer: {
+            Text("Plugins are programs in any language that print JSON. They run with your permissions.")
         }
     }
 
@@ -172,5 +192,78 @@ private struct IslandMark: View {
 private extension Bundle {
     var shortVersion: String {
         infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
+    }
+}
+
+/// An external plugin: its switch, and its settings when it declares any.
+private struct ExternalPluginRow: View {
+    @ObservedObject var plugin: ExternalPlugin
+    @ObservedObject var registry: PluginRegistry
+    @State private var expanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle(isOn: Binding(get: { registry.isEnabled(plugin) }, set: { registry.setEnabled($0, plugin) })) {
+                HStack(spacing: 12) {
+                    Image(systemName: plugin.manifest.symbol ?? "puzzlepiece.extension.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                        .background(plugin.isBundled ? Color.accentColor : .purple, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(plugin.manifest.name)
+                            if !plugin.isBundled {
+                                Text("Yours").font(.caption2).padding(.horizontal, 5).padding(.vertical, 1)
+                                    .background(.purple.opacity(0.25), in: Capsule())
+                            }
+                        }
+                        if let description = plugin.manifest.description {
+                            Text(description).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .toggleStyle(.switch)
+            if let settings = plugin.manifest.settings, !settings.isEmpty, registry.isEnabled(plugin) {
+                DisclosureGroup("Settings", isExpanded: $expanded) {
+                    ForEach(settings) { setting in
+                        PluginSettingField(setting: setting, plugin: plugin, store: registry.store)
+                    }
+                }
+                .font(.callout)
+                .padding(.leading, 40)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+/// One field of a plugin's settings, typed by its manifest.
+private struct PluginSettingField: View {
+    let setting: PluginManifest.Setting
+    let plugin: ExternalPlugin
+    @ObservedObject var store: PluginStore
+
+    private var value: JSONValue { store.values(for: plugin.manifest)[setting.key] ?? .null }
+
+    private func set(_ value: JSONValue) {
+        store.set(value, for: setting.key, in: plugin.manifest)
+        plugin.settingsChanged()
+    }
+
+    var body: some View {
+        switch setting.type {
+        case .bool:
+            Toggle(setting.title, isOn: Binding(get: { value.boolValue ?? false }, set: { set(.bool($0)) }))
+        case .text:
+            TextField(setting.title, text: Binding(get: { value.stringValue ?? "" }, set: { set(.string($0)) }))
+        case .number:
+            TextField(setting.title, value: Binding(get: { value.doubleValue ?? 0 }, set: { set(.number($0)) }), format: .number)
+        case .choice:
+            Picker(setting.title, selection: Binding(get: { value.stringValue ?? setting.options?.first ?? "" }, set: { set(.string($0)) })) {
+                ForEach(setting.options ?? [], id: \.self) { Text($0) }
+            }
+        }
     }
 }

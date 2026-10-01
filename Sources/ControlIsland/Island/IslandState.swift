@@ -14,21 +14,16 @@ final class IslandState: ObservableObject {
     let battery = BatteryMonitor()
     let volume = VolumeMonitor()
     let brightness = BrightnessMonitor()
-    let herdr = HerdrMonitor()
     let nowPlaying = NowPlayingMonitor()
     let notifications = SystemNotificationMonitor()
     let bluetooth = BluetoothMonitor()
     let network = NetworkMonitor()
     let calendar = CalendarMonitor()
-    let timer = TimerMonitor()
     let keyboard = KeyboardMonitor()
     let focus = FocusMonitor()
     let privacy = PrivacyMonitor()
-    let downloads = DownloadsMonitor()
-    let weather = WeatherMonitor()
     let thermal = ThermalMonitor()
-    let shelf = ShelfMonitor()
-    let clipboard = ClipboardMonitor()
+    let plugins: PluginRegistry
     let lock = LockMonitor()
     let fullscreen = FullscreenMonitor()
 
@@ -36,8 +31,9 @@ final class IslandState: ObservableObject {
     private var collapseTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
 
-    init(preferences: Preferences) {
+    init(preferences: Preferences, pluginStore: PluginStore? = nil) {
         self.preferences = preferences
+        plugins = PluginRegistry(store: pluginStore ?? PluginStore())
     }
 
     var notchHeight: CGFloat { layout.notchHeight }
@@ -58,8 +54,10 @@ final class IslandState: ObservableObject {
     func start() {
         lock.start()
         fullscreen.start()
+        plugins.start()
         bindAlerts()
         bindLayout()
+        bindPlugins()
         preferences.$enabledPlugins
             .sink { [weak self] in self?.applyPlugins($0) }
             .store(in: &cancellables)
@@ -78,20 +76,14 @@ final class IslandState: ObservableObject {
         case .volume: volume
         case .brightness: brightness
         case .nowPlaying: nowPlaying
-        case .herdr: herdr
         case .notifications: notifications
         case .bluetooth: bluetooth
         case .network: network
         case .calendar: calendar
-        case .timer: timer
         case .keyboard: keyboard
         case .focus: focus
         case .privacy: privacy
-        case .downloads: downloads
-        case .weather: weather
         case .thermals: thermal
-        case .shelf: shelf
-        case .clipboard: clipboard
         }
     }
 
@@ -104,8 +96,36 @@ final class IslandState: ObservableObject {
 
     func dropped(_ urls: [URL]) {
         guard !urls.isEmpty else { return }
-        shelf.add(urls)
+        plugins.dropped(urls)
         Haptics.expand()
+    }
+
+    /// Plugin wings and sections feed the layout; a plugin's HUD goes through the usual gate.
+    private func bindPlugins() {
+        plugins.huds
+            .sink { [weak self] plugin, hud in
+                if let sound = hud.sound { Sounds.play(sound) }
+                self?.showHUD(.external(ExternalHUD(pluginID: plugin.id, hud: hud)))
+            }
+            .store(in: &cancellables)
+        plugins.$plugins
+            .map { plugins in
+                Publishers.MergeMany(plugins.map { plugin in
+                    plugin.$left.combineLatest(plugin.$right, plugin.$section).map { _ in () }
+                })
+                .prepend(())
+            }
+            .switchToLatest()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.refreshPluginLayout() }
+            .store(in: &cancellables)
+    }
+
+    private func refreshPluginLayout() {
+        let running = plugins.plugins.filter(\.isRunning)
+        layout.pluginLeft = running.map { PluginItem.width(of: $0.left) }
+        layout.pluginRight = running.map { PluginItem.width(of: $0.right) }
+        layout.pluginSections = running.compactMap { $0.section?.height }
     }
 
     func hoverChanged(_ inside: Bool) {
@@ -162,7 +182,6 @@ final class IslandState: ObservableObject {
         show(volume.changes) { .volume }
         show(brightness.changes) { .brightness }
         show(battery.alerts) { .battery($0) }
-        show(herdr.finishedAgents) { .agentFinished($0) }
         show(nowPlaying.trackChanges.merge(with: nowPlaying.playbackResumed)) { .nowPlaying }
         show(notifications.notifications) { .notification($0) }
         show(volume.muteChanges) { .mute($0) }
@@ -170,12 +189,10 @@ final class IslandState: ObservableObject {
         show(bluetooth.lowBattery) { .peripheralBattery($0) }
         show(network.changes) { .network($0) }
         show(calendar.reminders) { .calendar($0) }
-        show(timer.finished) { .timerDone($0) }
         show(keyboard.capsLock) { .capsLock($0) }
         show(keyboard.inputSource) { .inputSource($0) }
         show(focus.changes) { .focus($0) }
         show(privacy.changes) { .privacy($0) }
-        show(downloads.events) { .download($0) }
         show(thermal.changes) { .thermal($0) }
         lock.$isLocked
             .dropFirst()
@@ -237,44 +254,29 @@ final class IslandState: ObservableObject {
             .store(in: &cancellables)
 
         nowPlaying.$track
-            .combineLatest(herdr.$available, herdr.$agents)
-            .sink { [weak self] track, agentsAvailable, agents in
+            .sink { [weak self] track in
                 guard let self else { return }
                 layout.showsArtwork = track != nil
                 layout.showsAudioBars = track != nil
                 layout.showsMediaCard = track != nil
-                layout.showsAgents = agentsAvailable
-                layout.agentRows = agentsAvailable ? agents.count : 0
             }
             .store(in: &cancellables)
 
         calendar.$next
-            .combineLatest(calendar.$imminent, timer.$end, preferences.$enabledPlugins)
-            .sink { [weak self] next, imminent, end, plugins in
-                guard let self else { return }
-                layout.showsNextEvent = next != nil
-                layout.showsCalendar = imminent
-                layout.showsTimer = end != nil
-                layout.showsTimerControls = plugins.contains(.timer)
+            .combineLatest(calendar.$imminent)
+            .sink { [weak self] next, imminent in
+                self?.layout.showsNextEvent = next != nil
+                self?.layout.showsCalendar = imminent
             }
             .store(in: &cancellables)
 
         privacy.$use
-            .combineLatest(focus.$mode, bluetooth.$connected, weather.$report)
-            .sink { [weak self] use, focus, connected, report in
+            .combineLatest(focus.$mode, bluetooth.$connected)
+            .sink { [weak self] use, focus, connected in
                 guard let self else { return }
                 layout.privacyDots = (use.microphone ? 1 : 0) + (use.camera ? 1 : 0)
                 layout.showsFocus = focus != nil
                 layout.showsHeadphones = connected.contains { $0.isAudio && $0.battery != nil }
-                layout.showsWeather = report != nil
-            }
-            .store(in: &cancellables)
-
-        shelf.$files
-            .combineLatest(clipboard.$items)
-            .sink { [weak self] files, items in
-                self?.layout.shelfFiles = files.count
-                self?.layout.clipboardRows = items.count
             }
             .store(in: &cancellables)
     }

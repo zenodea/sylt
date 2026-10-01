@@ -1,0 +1,8 @@
+{
+  "protocol": 1,
+  "id": "downloads",
+  "name": "Downloads",
+  "description": "Browser downloads starting and finishing.",
+  "symbol": "arrow.down.circle.fill",
+  "run": "downloads.py"
+}

@@ -1,0 +1,9 @@
+{
+  "protocol": 1,
+  "id": "shelf",
+  "name": "File shelf",
+  "description": "Drop files on the island to keep them handy, drag them out later.",
+  "symbol": "tray.full.fill",
+  "run": "shelf.py",
+  "accepts": ["files"]
+}

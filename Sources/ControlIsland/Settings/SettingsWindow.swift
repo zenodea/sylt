@@ -5,7 +5,7 @@ import SwiftUI
 final class SettingsWindow {
     private let window: NSWindow
 
-    init(preferences: Preferences, mediaKeys: MediaKeyInterceptor) {
+    init(preferences: Preferences, mediaKeys: MediaKeyInterceptor, plugins: PluginRegistry) {
         window = NSWindow(
             contentRect: .zero,
             styleMask: [.titled, .closable],
@@ -15,7 +15,7 @@ final class SettingsWindow {
         window.title = "Control Island"
         window.isReleasedWhenClosed = false
         window.contentViewController = NSHostingController(
-            rootView: SettingsView(preferences: preferences, mediaKeys: mediaKeys))
+            rootView: SettingsView(preferences: preferences, mediaKeys: mediaKeys, plugins: plugins))
         window.setContentSize(window.contentViewController!.view.fittingSize)
         window.center()
     }

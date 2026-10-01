@@ -4,14 +4,15 @@ import XCTest
 final class HUDKindTests: XCTestCase {
     private let samples: [HUDKind] = [
         .volume, .brightness, .mute(true), .battery(.level(15)), .battery(.powerSource),
-        .agentFinished(HerdrAgent(agent: "claude", agent_status: "idle", pane_id: "p", cwd: "/tmp/x", focused: false, terminal_title_stripped: "A long title that will need truncation somewhere")),
+        .external(ExternalHUD(pluginID: "x", hud: PluginHUD(symbol: "star.fill", text: "A long title that will need truncation somewhere", side: "left"))),
         .unlocked, .nowPlaying,
         .notification(SystemNotification(appName: "Messages", title: "Hi", body: "There", bundleIdentifier: nil)),
         .bluetooth(.connected(.init(name: "AirPods", address: "a", battery: 50))),
         .peripheralBattery(.init(name: "Mouse", address: "b", battery: 9)),
         .network(.wifi), .calendar(.init(id: "e", title: "Standup", start: .now, end: .now, joinURL: nil)),
-        .timerDone(1500), .capsLock(true), .inputSource("British"), .focus("Work"), .privacy(.init(microphone: true)),
-        .download(.started("file")), .thermal(.serious),
+        .capsLock(true), .inputSource("British"), .focus("Work"), .privacy(.init(microphone: true)), .thermal(.serious),
+        .external(ExternalHUD(pluginID: "x", hud: PluginHUD(text: "Right only", side: "right"))),
+        .external(ExternalHUD(pluginID: "x", hud: PluginHUD(symbol: "sun.max.fill", level: 0.5))),
     ]
 
     func testEveryKindHasPositiveDurationAndAWing() {

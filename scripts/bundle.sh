@@ -9,5 +9,6 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Framewor
 cp .build/release/ControlIsland "$APP/Contents/MacOS/"
 cp .build/release/libMediaRemoteAdapter.dylib "$APP/Contents/Frameworks/"
 cp Resources/Info.plist "$APP/Contents/"
+cp -R Plugins "$APP/Contents/Resources/Plugins"
 codesign --force --deep --sign - "$APP"
 echo "Built $APP"

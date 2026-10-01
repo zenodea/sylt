@@ -19,8 +19,7 @@ final class IslandLayoutTests: XCTestCase {
 
     func testWingsSizeIndependently() {
         var layout = layout
-        layout.showsAgents = true
-        layout.agentRows = 2
+        layout.showsCalendar = true
         XCTAssertGreaterThan(layout.leftWing, 0)
         XCTAssertEqual(layout.rightWing, 0)
         let frame = layout.frame(for: .closed, hovering: false)
@@ -30,8 +29,7 @@ final class IslandLayoutTests: XCTestCase {
 
     func testRightOnlyHUDKeepsClosedLeftWing() {
         var layout = layout
-        layout.showsAgents = true
-        layout.agentRows = 1
+        layout.pluginLeft = [40]
         let widths = layout.wingWidths(for: .hud(.volume))
         XCTAssertEqual(widths.leading, layout.leftWing)
         XCTAssertGreaterThan(widths.trailing, 0)
@@ -39,9 +37,9 @@ final class IslandLayoutTests: XCTestCase {
 
     func testLeftOnlyHUDKeepsClosedRightWing() {
         var layout = layout
-        layout.showsWeather = true
-        let agent = HerdrAgent(agent: "pi", agent_status: "idle", pane_id: "p", cwd: "/tmp", focused: false, terminal_title_stripped: "job")
-        let widths = layout.wingWidths(for: .hud(.agentFinished(agent)))
+        layout.pluginRight = [44]
+        let hud = ExternalHUD(pluginID: "agents", hud: PluginHUD(symbol: "checkmark.circle.fill", text: "Done", side: "left"))
+        let widths = layout.wingWidths(for: .hud(.external(hud)))
         XCTAssertEqual(widths.trailing, layout.rightWing)
         XCTAssertGreaterThan(widths.leading, 0)
     }
@@ -65,8 +63,7 @@ final class IslandLayoutTests: XCTestCase {
 
     func testHitFrameContainsIsland() {
         var layout = layout
-        layout.showsAgents = true
-        layout.agentRows = 3
+        layout.pluginLeft = [48]
         let hit = layout.hitFrame(for: .closed, hovering: false)
         let island = layout.frame(for: .closed, hovering: false)
         XCTAssertEqual(hit.width, island.size.width + IslandLayout.hitMargin * 2)
@@ -78,10 +75,10 @@ final class IslandLayoutTests: XCTestCase {
         var layout = layout
         XCTAssertEqual(layout.expandedHeight, IslandLayout.expandedBaseHeight + IslandLayout.emptyExpandedHeight)
         layout.showsMediaCard = true
-        layout.showsWeather = true
+        layout.pluginSections = [34]
         XCTAssertEqual(
             layout.expandedHeight,
-            IslandLayout.expandedBaseHeight + IslandLayout.mediaCardHeight + IslandLayout.weatherRowHeight + IslandLayout.sectionGap
+            IslandLayout.expandedBaseHeight + IslandLayout.mediaCardHeight + 34 + IslandLayout.sectionGap
         )
         XCTAssertLessThan(layout.expandedHeight, layout.canvasSize.height)
     }
