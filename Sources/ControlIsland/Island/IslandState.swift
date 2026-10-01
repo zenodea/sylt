@@ -125,12 +125,10 @@ final class IslandState: ObservableObject {
         } else if case .hud = mode {
             scheduleHUDDismissal(after: 0.8)
         } else if mode == .expanded {
-            collapseTimer = .scheduledTimer(withTimeInterval: 0.3, repeats: false) { [weak self] _ in
-                Task { @MainActor in
+            collapseTimer = .after(0.3) { [weak self] in
                     self?.transition(to: .closed)
                     Haptics.collapse()
-                }
-            }
+        }
         } else {
             cursor = .zero
         }
@@ -161,64 +159,33 @@ final class IslandState: ObservableObject {
     }
 
     private func bindAlerts() {
-        volume.changes
-            .sink { [weak self] in self?.showHUD(.volume) }
-            .store(in: &cancellables)
-        volume.muteChanges
-            .sink { [weak self] in self?.showHUD(.mute($0)) }
-            .store(in: &cancellables)
-        bluetooth.events
-            .sink { [weak self] in self?.showHUD(.bluetooth($0)) }
-            .store(in: &cancellables)
-        network.changes
-            .sink { [weak self] in self?.showHUD(.network($0)) }
-            .store(in: &cancellables)
-        bluetooth.lowBattery
-            .sink { [weak self] in self?.showHUD(.peripheralBattery($0)) }
-            .store(in: &cancellables)
-        calendar.reminders
-            .sink { [weak self] in self?.showHUD(.calendar($0)) }
-            .store(in: &cancellables)
-        timer.finished
-            .sink { [weak self] in self?.showHUD(.timerDone($0)) }
-            .store(in: &cancellables)
-        keyboard.capsLock
-            .sink { [weak self] in self?.showHUD(.capsLock($0)) }
-            .store(in: &cancellables)
-        keyboard.inputSource
-            .sink { [weak self] in self?.showHUD(.inputSource($0)) }
-            .store(in: &cancellables)
-        focus.changes
-            .sink { [weak self] in self?.showHUD(.focus($0)) }
-            .store(in: &cancellables)
-        privacy.changes
-            .sink { [weak self] in self?.showHUD(.privacy($0)) }
-            .store(in: &cancellables)
-        downloads.events
-            .sink { [weak self] in self?.showHUD(.download($0)) }
-            .store(in: &cancellables)
-        thermal.changes
-            .sink { [weak self] in self?.showHUD(.thermal($0)) }
-            .store(in: &cancellables)
-        brightness.changes
-            .sink { [weak self] in self?.showHUD(.brightness) }
-            .store(in: &cancellables)
-        battery.alerts
-            .sink { [weak self] in self?.showHUD(.battery($0)) }
-            .store(in: &cancellables)
-        herdr.finishedAgents
-            .sink { [weak self] in self?.showHUD(.agentFinished($0)) }
-            .store(in: &cancellables)
-        nowPlaying.trackChanges
-            .merge(with: nowPlaying.playbackResumed)
-            .sink { [weak self] in self?.showHUD(.nowPlaying) }
-            .store(in: &cancellables)
-        notifications.notifications
-            .sink { [weak self] in self?.showHUD(.notification($0)) }
-            .store(in: &cancellables)
+        show(volume.changes) { .volume }
+        show(brightness.changes) { .brightness }
+        show(battery.alerts) { .battery($0) }
+        show(herdr.finishedAgents) { .agentFinished($0) }
+        show(nowPlaying.trackChanges.merge(with: nowPlaying.playbackResumed)) { .nowPlaying }
+        show(notifications.notifications) { .notification($0) }
+        show(volume.muteChanges) { .mute($0) }
+        show(bluetooth.events) { .bluetooth($0) }
+        show(bluetooth.lowBattery) { .peripheralBattery($0) }
+        show(network.changes) { .network($0) }
+        show(calendar.reminders) { .calendar($0) }
+        show(timer.finished) { .timerDone($0) }
+        show(keyboard.capsLock) { .capsLock($0) }
+        show(keyboard.inputSource) { .inputSource($0) }
+        show(focus.changes) { .focus($0) }
+        show(privacy.changes) { .privacy($0) }
+        show(downloads.events) { .download($0) }
+        show(thermal.changes) { .thermal($0) }
         lock.$isLocked
             .dropFirst()
             .sink { [weak self] in $0 ? self?.locked() : self?.unlocked() }
+            .store(in: &cancellables)
+    }
+
+    private func show<P: Publisher>(_ publisher: P, as kind: @escaping (P.Output) -> HUDKind) where P.Failure == Never {
+        publisher
+            .sink { [weak self] in self?.showHUD(kind($0)) }
             .store(in: &cancellables)
     }
 
@@ -324,11 +291,9 @@ final class IslandState: ObservableObject {
 
     private func scheduleHUDDismissal(after duration: TimeInterval) {
         hudTimer?.invalidate()
-        hudTimer = .scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
-            Task { @MainActor in
+        hudTimer = .after(duration) { [weak self] in
                 guard let self, case .hud = self.mode, !self.isHovering else { return }
                 self.transition(to: self.restingMode)
-            }
         }
     }
 

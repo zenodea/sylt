@@ -75,8 +75,6 @@ struct SettingsView: View {
             }
         } header: {
             Text("System overlays")
-        } footer: {
-            Text("The island takes the volume and brightness keys itself, which needs Accessibility access.")
         }
         Section("Unlock") {
             Toggle("Play a sound when the Mac unlocks", isOn: $preferences.playsUnlockSound)
@@ -104,8 +102,6 @@ struct SettingsView: View {
                 .toggleStyle(.switch)
                 .padding(.vertical, 2)
             }
-        } footer: {
-            Text("A plugin that is off collects nothing and shows nothing.")
         }
     }
 

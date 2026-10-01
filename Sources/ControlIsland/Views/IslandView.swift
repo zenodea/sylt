@@ -98,8 +98,8 @@ struct IslandView: View {
         case .locked, .hud(.unlocked): LockedView(layout: state.layout, unlocked: state.mode != .locked)
         case .closed, .hud:
             // One branch for closed and wing-based HUDs, so the wings keep their identity between them.
-            if case .hud(let kind) = state.mode, !kind.style.keepsWings {
-                HUDView(kind: kind, layout: state.layout)
+            if case .hud(.notification(let notification)) = state.mode {
+                NotificationCard(notification: notification, layout: state.layout)
             } else {
                 WingsView(mode: state.mode, layout: state.layout)
             }

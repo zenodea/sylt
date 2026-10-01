@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control Island</title>
+<meta name="description" content="A dynamic island for the MacBook notch: media, agents, meetings, timers, levels and alerts, drawn where your eyes already are.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0d12; --bg-2: #11141b; --panel: #161a23; --line: rgba(255,255,255,.08);
+    --fg: #f3f4f7; --muted: rgba(243,244,247,.62); --dim: rgba(243,244,247,.4);
+    --accent: #7dd3fc; --green: #4ade80; --orange: #fb923c; --blue: #60a5fa; --violet: #a78bfa;
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; line-height: 1.5;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+  /* nav */
+  nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(16px); background: rgba(11,13,18,.7); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.01em; text-decoration: none; }
+  .brand .pill { width: 34px; height: 12px; background: #000; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,.6); }
+  nav .links { display: flex; gap: 22px; font-size: 14px; color: var(--muted); }
+  nav .links a { text-decoration: none; }
+  nav .links a:hover { color: var(--fg); }
+
+  /* hero */
+  .hero { padding: 72px 0 40px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; inset: -40% -20% auto; height: 520px; background: radial-gradient(ellipse at top, rgba(125,211,252,.16), transparent 60%); pointer-events: none; }
+  .hero h1 { font-size: clamp(38px, 6vw, 64px); line-height: 1.02; letter-spacing: -.035em; margin: 26px 0 16px; font-weight: 800; }
+  .hero h1 span { background: linear-gradient(90deg, #fff, #93c5fd 60%, #c4b5fd); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { font-size: 18px; color: var(--muted); max-width: 620px; margin: 0 auto 28px; }
+  .cta { display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 999px; font-weight: 600; font-size: 15px; text-decoration: none; border: 1px solid var(--line); background: var(--panel); transition: transform .15s ease, background .15s ease; }
+  .btn:hover { transform: translateY(-1px); background: #1b2030; }
+  .btn.primary { background: var(--fg); color: #0b0d12; border-color: transparent; }
+  .btn.primary:hover { background: #fff; }
+  code.inline { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: rgba(255,255,255,.08); padding: 2px 7px; border-radius: 6px; }
+
+  /* live island demo */
+  .screen { position: relative; margin: 0 auto; width: min(760px, 100%); aspect-ratio: 760/300; border-radius: 22px 22px 0 0; overflow: hidden;
+    background: radial-gradient(120% 90% at 30% 10%, #1d2a4a, #0d1120 60%, #090b12); border: 1px solid var(--line); border-bottom: none; box-shadow: 0 40px 100px rgba(0,0,0,.5); }
+  .screen { display: flex; justify-content: center; align-items: flex-start; }
+  .screen .stars { position: absolute; inset: 0; background-image: radial-gradient(1px 1px at 12% 60%, #fff8 50%, transparent 51%), radial-gradient(1px 1px at 70% 30%, #fff6 50%, transparent 51%), radial-gradient(1.5px 1.5px at 88% 72%, #fff5 50%, transparent 51%), radial-gradient(1px 1px at 40% 85%, #fff4 50%, transparent 51%); }
+  .notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 160px; height: 28px; background: #000; border-radius: 0 0 14px 14px; }
+  .caption { text-align: center; color: var(--dim); font-size: 13px; margin-top: 14px; min-height: 20px; }
+  @keyframes breathe { 0%,100% { transform: scale(1); opacity: .75; } 50% { transform: scale(1.3); opacity: 1; } }
+  @keyframes bar { 0%,100% { height: 5px; } 50% { height: 14px; } }
+  @keyframes ripple { 0%,100% { transform: translateY(0); opacity: .5; } 50% { transform: translateY(-3px); opacity: 1; } }
+
+
+  /* plugin scroller + preview */
+  .chips { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 14px; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; scroll-snap-align: start; display: flex; align-items: center; gap: 9px; padding: 10px 14px 10px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, transform .15s; }
+  .chip .ico { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 14px; background: rgba(255,255,255,.08); }
+  .chip:hover { background: #1b2030; transform: translateY(-1px); }
+  .chip[aria-selected="true"] { background: var(--fg); color: #0b0d12; border-color: transparent; }
+  .chip[aria-selected="true"] .ico { background: rgba(0,0,0,.1); }
+  .stage { margin-top: 8px; border-radius: 22px; overflow: hidden; border: 1px solid var(--line); background: var(--bg-2); }
+  .stage .scene { position: relative; height: 170px; display: flex; justify-content: center; align-items: flex-start; background: radial-gradient(120% 90% at 30% 10%, #1d2a4a, #0d1120 60%, #090b12); }
+  .stage .scene .notch { z-index: 1; }
+  .stage .body { display: grid; grid-template-columns: 1fr; gap: 0; }
+  .stage .note { padding: 18px 22px; font-size: 15px; color: var(--muted); }
+  .stage .note b { color: var(--fg); display: block; margin-bottom: 2px; font-size: 16px; }
+  .isl { position: relative; z-index: 2; display: flex; flex-wrap: wrap; align-items: flex-start; background: #000; border-radius: 0 0 16px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.6); color: #fff; font-size: 12px; font-weight: 600; overflow: hidden; }
+  .isl .w .c, .isl .below .c { display: flex; align-items: center; gap: 7px; }
+  .isl .agent { width: 14px; height: 14px; border-radius: 4px; position: relative; flex: none; }
+  .isl .agent::after { content: ""; position: absolute; right: -2px; bottom: -2px; width: 5px; height: 5px; border-radius: 50%; border: 1px solid #000; }
+  .isl .agent.claude { background: #d97757; } .isl .agent.claude::after { background: var(--green); animation: breathe 1.6s ease-in-out infinite; }
+  .isl .agent.pi { background: #2a2a2e; opacity: .5; } .isl .agent.pi::after { background: var(--orange); }
+  .isl .art { width: 20px; height: 20px; border-radius: 6px; background: linear-gradient(135deg, #f472b6, #8b5cf6 60%, #22d3ee); flex: none; }
+  .isl .bars { display: flex; gap: 2px; align-items: center; height: 14px; }
+  .isl .bars i { width: 3px; border-radius: 2px; background: #f0abfc; animation: bar 1s ease-in-out infinite; height: 6px; }
+  .isl .bars i:nth-child(2) { animation-delay: .15s; background: #c084fc; } .isl .bars i:nth-child(3) { animation-delay: .3s; background: #818cf8; } .isl .bars i:nth-child(4) { animation-delay: .45s; background: #67e8f9; }
+  .isl .card { display: flex; gap: 12px; margin: 6px 12px 8px; padding: 10px; border-radius: 14px; background: linear-gradient(135deg, rgba(167,139,250,.22), rgba(167,139,250,.06)); border: 1px solid rgba(192,132,252,.5); width: 400px; max-width: calc(100vw - 80px); }
+  .isl .card .cover { width: 60px; height: 60px; border-radius: 14px; background: linear-gradient(135deg, #f472b6, #8b5cf6 60%, #22d3ee); flex: none; }
+  .isl .card .meta { flex: 1; min-width: 0; font-size: 12px; font-weight: 500; }
+  .isl .card .meta b { display: block; font-size: 13px; }
+  .isl .card .meta small { color: rgba(255,255,255,.6); }
+  .isl .card .seek { margin: 8px 0; height: 6px; border-radius: 3px; background: rgba(255,255,255,.2); } .isl .card .seek i { display: block; width: 38%; height: 100%; border-radius: 3px; background: #fff; }
+  .isl .card .ctl { display: flex; gap: 22px; justify-content: center; font-size: 13px; }
+  .isl .dots { display: inline-flex; gap: 3px; margin-left: auto; } .isl .dots i { width: 4px; height: 4px; border-radius: 50%; background: var(--green); animation: ripple 1.2s ease-in-out infinite; } .isl .dots i:nth-child(2) { animation-delay: .15s; } .isl .dots i:nth-child(3) { animation-delay: .3s; }
+  .isl .below { width: 100%; } .isl .below:empty { display: none; }
+  .isl .below .c { flex-direction: column; align-items: stretch; gap: 0; }
+  .isl .n { width: 160px; height: 28px; flex: none; }
+  .isl .w { display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 8px 0 0; white-space: nowrap; }
+  .isl .w.l { padding: 0 4px 0 8px; } .isl .w.r { padding: 0 8px 0 4px; }
+  .isl .w:empty { padding: 0; }
+  .isl .row { padding: 0 12px 8px; font-size: 11px; color: rgba(255,255,255,.85); font-weight: 500; }
+  .isl .g { display: inline-grid; place-items: center; width: 18px; height: 18px; font-size: 13px; }
+  .isl .dim { color: rgba(255,255,255,.6); }
+  .isl .amber { color: var(--orange); } .isl .red { color: #f87171; } .isl .green { color: var(--green); } .isl .blue { color: var(--blue); } .isl .violet { color: var(--violet); }
+  .isl .bar { width: 72px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.2); overflow: hidden; } .isl .bar i { display: block; height: 100%; width: 65%; background: #fff; border-radius: 3px; animation: grow .8s cubic-bezier(.3,1.2,.4,1); }
+  .isl .bar.off i { width: 0; }
+  .isl .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; } .dot.o { background: var(--orange); box-shadow: 0 0 6px var(--orange); } .dot.gn { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .isl .gauge { position: relative; width: 20px; height: 10px; border: 1px solid rgba(255,255,255,.45); border-radius: 3px; } .isl .gauge::after { content: ""; position: absolute; right: -4px; top: 3px; width: 2px; height: 4px; background: rgba(255,255,255,.45); border-radius: 1px; }
+  .isl .gauge i { position: absolute; left: 2px; top: 2px; bottom: 2px; width: calc((100% - 4px) * var(--p)); background: var(--green); border-radius: 1.5px; animation: grow .9s cubic-bezier(.3,1.2,.4,1); } .isl .gauge.low i { background: #f87171; }
+  .isl .ring { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); border-top-color: var(--orange); border-right-color: var(--orange); }
+  .isl .lock { width: 11px; height: 8px; background: #ddd; border-radius: 2.5px; position: relative; margin-top: 6px; } .isl .lock::before { content: ""; position: absolute; left: 2px; top: -6px; width: 7px; height: 7px; border: 2px solid #ddd; border-bottom: none; border-radius: 5px 5px 0 0; box-sizing: border-box; }
+  .isl .lock.open { background: var(--green); } .isl .lock.open::before { border-color: var(--green); transform: translate(-1px, -2px) rotate(-28deg); transform-origin: left bottom; }
+  .isl .sec { margin: 0 12px; padding: 6px 10px; border-radius: 10px; background: rgba(255,255,255,.06); font-size: 11px; display: flex; align-items: center; gap: 8px; }
+  .isl .sec + .sec { margin-top: 6px; } .isl .sec:last-child { margin-bottom: 10px; }
+  .isl .sec .sp { margin-left: auto; color: rgba(255,255,255,.5); }
+  .isl .file { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 9px; font-weight: 500; width: 52px; } .isl .file b { width: 26px; height: 30px; border-radius: 4px; background: linear-gradient(#f8fafc, #cbd5e1); }
+  .isl .pill { padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.1); font-size: 11px; }
+  .isl .hdr { padding: 8px 12px 4px; font-size: 11px; color: rgba(255,255,255,.5); display: flex; gap: 8px; }
+  .isl .hdr .sp { margin-left: auto; }
+  @keyframes grow { from { width: 0; } }
+
+  /* sections */
+  section { padding: 72px 0; border-top: 1px solid var(--line); }
+  h2 { font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -.03em; margin: 0 0 10px; }
+  .lead { color: var(--muted); max-width: 640px; margin: 0 0 36px; font-size: 16px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+  .feature { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; transition: transform .2s ease, border-color .2s ease; }
+  .feature:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.16); }
+  .feature .ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 17px; margin-bottom: 12px; background: rgba(255,255,255,.07); }
+  .feature h3 { margin: 0 0 6px; font-size: 15px; }
+  .feature p { margin: 0; color: var(--muted); font-size: 13.5px; }
+
+  .shots { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); }
+  @media (max-width: 520px) { .shots { grid-template-columns: 1fr; } }
+  .shot { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .shot img { display: block; width: 100%; height: auto; }
+  .shot figcaption { padding: 10px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
+
+  .steps { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+  .step b { display: block; margin-bottom: 6px; }
+  .step p { margin: 0; color: var(--muted); font-size: 14px; }
+  pre { background: #0e1118; border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow: auto; font-size: 13.5px; line-height: 1.6; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #dbeafe; }
+  pre .c { color: var(--dim); }
+  footer { padding: 36px 0 56px; color: var(--dim); font-size: 13px; text-align: center; border-top: 1px solid var(--line); }
+  @media (max-width: 640px) { .hero { padding-top: 48px; } .island.expanded { width: 92%; } nav .links { display: none; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#"><span class="pill"></span> Control Island</a>
+    <div class="links">
+      <a href="#features">Plugins</a>
+      <a href="#how">How it works</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/zenodea/controlisland">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="screen" aria-hidden="true">
+      <div class="stars"></div>
+      <div class="notch"></div>
+      <div class="isl" id="hero"><div class="w l"><span class="c"></span></div><div class="n"></div><div class="w r"><span class="c"></span></div><div class="below"><span class="c"></span></div></div>
+    </div>
+    <div class="caption" id="caption">Closed</div>
+    <h1>The notch, <span>finally useful.</span></h1>
+    <p>A dynamic island for the MacBook notch. Glanceable state in two wings, overlays that grow out of the notch for a moment, and an expanded view when you want more. Above every window, even the lock screen.</p>
+    <div class="cta">
+      <a class="btn primary" href="#install">Build it in a minute</a>
+      <a class="btn" href="https://github.com/zenodea/controlisland">View on GitHub</a>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Eighteen plugins. Pick one.</h2>
+    <p class="lead">Each is a switch in Settings. Tap one to see how the island shows it.</p>
+    <div class="chips" id="chips" role="tablist"></div>
+    <div class="stage" id="stage">
+      <div class="scene"><div class="notch"></div><div class="isl" id="preview"><div class="w l"><span class="c"></span></div><div class="n"></div><div class="w r"><span class="c"></span></div><div class="below"><span class="c"></span></div></div></div>
+      <div class="note" id="note"></div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step"><b>Two independent wings</b><p>An overlay claims the left side, the right, or both. Whatever it doesn't claim keeps its content and its width, measured from what it holds.</p></div>
+      <div class="step"><b>Above everything</b><p>The panel sits in its own WindowServer space at the lock-screen level, via SkyLight, so it stays over full-screen apps and the login window.</p></div>
+      <div class="step"><b>Click-through</b><p>It only takes the mouse while the cursor is over the island. The rest of the strip belongs to whatever is underneath.</p></div>
+      <div class="step"><b>Honest motion</b><p>Icons change in place rather than swapping: a padlock opens, a cover flips, a slash draws across a speaker.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install</h2>
+    <p class="lead">macOS 14 or later, on a Mac with a notch.</p>
+<pre><span class="c"># clone, build a release bundle and launch it</span>
+git clone https://github.com/zenodea/controlisland.git
+cd controlisland
+make open
+
+<span class="c"># run the tests</span>
+make test</pre>
+    <p class="lead" style="margin-top:18px">Right-click the island for Settings, including <code class="inline">Open at login</code>. Each plugin asks for its permission the first time it needs one, and each can be switched off.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">Control Island · built with SwiftUI · <a href="https://github.com/zenodea/controlisland">Source on GitHub</a></div>
+</footer>
+
+<script>
+
+  // ---- One island engine for the hero and the plugin previews.
+  // A region that doesn't change is left alone; one that does blurs out and in, while the island springs to its new size.
+  const spring = 'cubic-bezier(.3,1.35,.4,1)';
+  function island(el) {
+    const regions = { l: el.querySelector('.w.l .c'), r: el.querySelector('.w.r .c'), below: el.querySelector('.below .c') };
+    return {
+      render(v) {
+        const before = { w: el.offsetWidth, h: el.offsetHeight };
+        for (const key of ['l', 'r', 'below']) {
+          const node = regions[key], incoming = v[key] ?? '';
+          if (node.innerHTML === incoming) continue;
+          node.animate([{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(4px)' }], { duration: 120, easing: 'ease-in', fill: 'none' }).onfinish = () => {
+            node.innerHTML = incoming;
+            node.animate([{ opacity: 0, filter: 'blur(6px)', transform: 'translateY(3px)' }, { opacity: 1, filter: 'blur(0)', transform: 'none' }], { duration: 280, delay: 60, easing: 'ease-out', fill: 'backwards' });
+          };
+        }
+        const probe = el.cloneNode(true);
+        for (const key of ['l', 'r', 'below']) probe.querySelector(key === 'below' ? '.below .c' : `.w.${key} .c`).innerHTML = v[key] ?? '';
+        probe.style.cssText = 'position:absolute;visibility:hidden;left:0;top:0';
+        el.parentElement.appendChild(probe);
+        const after = { w: probe.offsetWidth, h: probe.offsetHeight };
+        probe.remove();
+        if (before.w !== after.w || before.h !== after.h) {
+          el.animate([{ width: before.w + 'px', height: before.h + 'px' }, { width: after.w + 'px', height: after.h + 'px' }], { duration: 520, easing: spring, fill: 'none' });
+        }
+      }
+    };
+  }
+
+  const agents = '<span class="agent claude"></span><span class="agent pi"></span><span class="agent pi"></span>';
+  const music = '<span class="art"></span><span class="bars"><i></i><i></i><i></i><i></i></span>';
+  const meeting = '<span class="g">📅</span><span>12m</span>';
+  const rune = '<svg width="12" height="18" viewBox="0 0 12 18" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4.5 L11 13.5 L6 17 L6 1 L11 4.5 L1 13.5"/></svg>';
+  const card = '<div class="card"><div class="cover"></div><div class="meta"><b>All Hail Shadow</b><small>Crush 40</small><div class="seek"><i></i></div><div class="ctl"><span>◀◀</span><span>❚❚</span><span>▶▶</span></div></div></div>';
+
+  // ---- Hero: cycles through the everyday states.
+  const hero = island(document.getElementById('hero'));
+  const caption = document.getElementById('caption');
+  const states = [
+    ['Closed', { l: meeting, r: music }, 2600],
+    ['Volume', { l: meeting, r: '<span class="g">🔊</span><span class="bar"><i></i></span>' }, 2400],
+    ['Closed', { l: meeting, r: music }, 1400],
+    ['Track change', { l: meeting, r: music, below: '<div class="row">All Hail Shadow &nbsp;·&nbsp; Crush 40</div>' }, 2800],
+    ['Closed', { l: meeting, r: music }, 1400],
+    ['Expanded', { l: '', r: '', below: card + '<div class="sec" style="margin-bottom:10px"><span class="g">☀️</span><b>12°</b><span class="dim">Clear</span><span class="sp">H 18° L 11°</span></div>' }, 3600],
+  ];
+  let si = 0;
+  function step() {
+    const [text, view, wait] = states[si];
+    hero.render(view);
+    caption.textContent = text;
+    si = (si + 1) % states.length;
+    setTimeout(step, wait);
+  }
+  hero.render(states[0][1]);
+  caption.textContent = states[0][0];
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setTimeout(step, 1600);
+
+  // ---- Plugins: what each one puts in the left wing, the right wing and below.
+  const plugins = [
+    { icon: '🎵', name: 'Now Playing', l: meeting, r: music, below: '<div class="row">All Hail Shadow &nbsp;·&nbsp; Crush 40</div>', note: ['A track changes', 'The wings stay put, the cover flips, and the title slides out below.'] },
+    { icon: '🐑', name: 'Agents', l: agents, r: music, note: ['Agents in the left wing', 'Working ones first and breathing green; idle ones faded with an amber dot.'] },
+    { icon: '📅', name: 'Calendar', l: '<span class="g amber">📅</span>', r: '<span>Design review</span><span class="amber">in 4m</span>', note: ['Five minutes before a meeting', 'The event and a countdown. Expanded, there is a Join button for calls.'] },
+    { icon: '⏱️', name: 'Timer', l: '<span class="ring"></span><span>24:59</span>', r: music, note: ['A timer running', 'A draining ring with the time left sits in the left wing until it chimes.'] },
+    { icon: '🔊', name: 'Volume', l: meeting, r: '<span class="g">🔊</span><span class="bar"><i></i></span>', note: ['Volume keys', 'Grows to the right only. The left wing does not move.'] },
+    { icon: '☀️', name: 'Brightness', l: meeting, r: '<span class="g">☀️</span><span class="bar"><i style="width:45%"></i></span>', note: ['Brightness keys', 'Same shape as volume, so nothing jumps.'] },
+    { icon: '🔇', name: 'Mute', l: meeting, r: '<span class="g">🔇</span><span class="bar off"><i></i></span>', note: ['Mute', 'A slash draws across the speaker and the bar drains.'] },
+    { icon: '🔋', name: 'Battery', l: '<span>18%</span><span class="g">🔋</span>', r: '<span class="red">Low battery</span>', note: ['Battery alerts', 'Percent on the left, a message on the right, at the levels that matter.'] },
+    { icon: '🎧', name: 'Bluetooth', l: rune, r: '<span>Zeno\'s AirPods…</span><span>72%</span><span class="gauge" style="--p:.72"><i></i></span>', note: ['A device connects', 'The rune draws itself in. The gauge fills to the exact charge.'] },
+    { icon: '📶', name: 'Network', l: '<span class="g">📶</span>', r: '<span>Wi-Fi</span>', note: ['Network changes', 'Wi-Fi, Ethernet or Offline, with its own little animation.'] },
+    { icon: '🎙️', name: 'Mic & camera', l: '<span class="dot o"></span><span class="dot gn"></span>', r: '<span>Mic and camera on</span>', note: ['Something is listening', 'Orange for the mic, green for the camera. The dots stay in the wing while in use.'] },
+    { icon: '🌙', name: 'Focus', l: '<span class="g violet">🌙</span>', r: '<span>Work</span>', note: ['A Focus switches on', 'The mode name now, a moon in the wing afterwards.'] },
+    { icon: '⌨️', name: 'Keyboard', l: meeting, r: '<span class="g">⇪</span><span>Caps Lock on</span>', note: ['Caps Lock and layouts', 'Right side only, like volume.'] },
+    { icon: '⬇️', name: 'Downloads', l: '<span class="g blue">⬇︎</span>', r: '<span>report-final.pdf</span>', note: ['A download starts', 'And a green tick when it lands.'] },
+    { icon: '🌤️', name: 'Weather', l: meeting, r: '<span class="g">☀️</span><span>12°</span>' + music, note: ['Weather in the wing', 'Conditions and the day\'s range when expanded.'] },
+    { icon: '🔥', name: 'Thermals', l: '<span class="g amber">🔥</span>', r: '<span>Hot · performance reduced</span>', note: ['The Mac throttles', 'And an all-clear once it cools.'] },
+    { icon: '🗂️', name: 'File shelf', below: '<div class="hdr">🗂️ Shelf <span class="sp">Clear</span></div><div class="sec" style="gap:14px"><span class="file"><b></b>brief.pdf</span><span class="file"><b></b>logo.png</span><span class="file"><b></b>notes.md</span></div>', note: ['Files dropped on the island', 'They wait here. Drag them out whenever you need them.'] },
+    { icon: '📋', name: 'Clipboard', below: '<div class="hdr">📋 Clipboard</div><div class="sec">git rebase -i HEAD~3 <span class="sp">⧉</span></div><div class="sec">https://zenodea.github.io/controlisland <span class="sp">⧉</span></div><div class="sec">Design review at 4 <span class="sp">⧉</span></div>', note: ['Recent copies', 'One click puts one back on the pasteboard.'] },
+    { icon: '🔔', name: 'Notifications', below: '<div class="sec" style="margin-top:4px"><span class="g" style="width:28px;height:28px;border-radius:8px;background:#34c759">💬</span><span><b style="display:block">Alice</b><span class="dim">See you at 8?</span></span></div>', note: ['A banner arrives', 'Mirrored as a card below the notch. Experimental.'] },
+    { icon: '🔒', name: 'Lock screen', l: '<span class="lock"></span>', r: '<span>20:12</span>', note: ['Locked', 'Padlock and time, above the login window. Click again to unlock.'], alt: { l: '<span class="lock open"></span>', r: '<span>Welcome back, Zeno</span>', note: ['Unlocked', 'The same padlock swings open with a greeting.'] } },
+  ];
+  const chips = document.getElementById('chips'), note = document.getElementById('note');
+  const preview = island(document.getElementById('preview'));
+  let selected = null, alt = false;
+  plugins.forEach((p, idx) => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.role = 'tab'; b.innerHTML = `<span class="ico">${p.icon}</span>${p.name}`;
+    const select = (scroll) => {
+      alt = selected === p && p.alt ? !alt : false;
+      selected = p;
+      const v = alt ? p.alt : p;
+      [...chips.children].forEach(c => c.setAttribute('aria-selected', c === b));
+      preview.render(v);
+      note.innerHTML = `<b>${v.note[0]}</b>${v.note[1]}`;
+      if (scroll) b.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    };
+    b.onclick = () => select(true);
+    chips.appendChild(b);
+    if (idx === 0) select(false);
+  });
+</script>
+</body>
+</html>

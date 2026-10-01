@@ -7,10 +7,5 @@ struct SystemNotification: Hashable, Identifiable {
     let body: String
     let bundleIdentifier: String?
 
-    var icon: NSImage? {
-        guard let bundleIdentifier,
-              let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier)
-        else { return nil }
-        return NSWorkspace.shared.icon(forFile: url.path)
-    }
+    @MainActor var icon: NSImage? { AppIcons.icon(for: bundleIdentifier) }
 }

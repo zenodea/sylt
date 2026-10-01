@@ -26,13 +26,16 @@ final class Preferences: ObservableObject {
         self.defaults = defaults
         // Plugins added since the user last ran the app start out at their default.
         let known = Set(defaults.stringArray(forKey: Key.knownPlugins) ?? [])
+        let plugins: Set<Plugin>
         if let stored = defaults.stringArray(forKey: Key.plugins) {
-            enabledPlugins = Set(stored.compactMap(Plugin.init(rawValue:)))
+            plugins = Set(stored.compactMap(Plugin.init(rawValue:)))
                 .union(Plugin.defaultEnabled.filter { !known.contains($0.rawValue) })
         } else {
-            enabledPlugins = Plugin.defaultEnabled
+            plugins = Plugin.defaultEnabled
         }
+        enabledPlugins = plugins
         defaults.set(Plugin.allCases.map(\.rawValue), forKey: Key.knownPlugins)
+        defaults.set(plugins.map(\.rawValue).sorted(), forKey: Key.plugins)
         replacesSystemOverlays = defaults.object(forKey: Key.overlays) as? Bool ?? true
         if let stored = defaults.stringArray(forKey: Key.huds) {
             enabledHUDs = Set(stored.compactMap(HUDCategory.init(rawValue:)))

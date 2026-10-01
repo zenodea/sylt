@@ -11,7 +11,6 @@ final class NowPlayingMonitor: ObservableObject {
 
     private let adapter = MediaRemoteAdapterProcess()
     private var artworkCache: (hash: UInt, image: NSImage)?
-    private var appIcons: [String: NSImage] = [:]
     private let artworkResolver = ArtworkResolver()
     private let scripted = ScriptedPlayerPoller()
 
@@ -80,7 +79,7 @@ final class NowPlayingMonitor: ObservableObject {
             duration: payload.duration,
             bundleIdentifier: payload.bundle,
             artworkHash: payload.artworkHash,
-            artwork: artwork(for: payload) ?? track?.artwork ?? appIcon(for: payload.bundle)
+            artwork: artwork(for: payload) ?? track?.artwork ?? AppIcons.icon(for: payload.bundle)
         )
         let changedSong = track.map { !$0.isSameSong(next) } ?? false
         if next != track { track = next }
@@ -104,7 +103,7 @@ final class NowPlayingMonitor: ObservableObject {
             return
         }
         let hadTrack = track != nil
-        next.artwork = track?.artwork ?? appIcon(for: player.rawValue)
+        next.artwork = track?.artwork ?? AppIcons.icon(for: player.rawValue)
         track = next
         if hadTrack { trackChanges.send() }
         resolveArtwork(for: next)
@@ -119,19 +118,10 @@ final class NowPlayingMonitor: ObservableObject {
     private func resolveArtwork(for target: NowPlayingTrack) {
         artworkResolver.resolve(target) { [weak self] image in
             guard let self, var current = track, current.isSameSong(target) else { return }
-            current.artwork = image ?? appIcon(for: current.bundleIdentifier)
+            current.artwork = image ?? AppIcons.icon(for: current.bundleIdentifier)
             current.hasResolvedArtwork = true
             track = current
         }
-    }
-
-    private func appIcon(for bundleIdentifier: String?) -> NSImage? {
-        guard let bundleIdentifier else { return nil }
-        if let cached = appIcons[bundleIdentifier] { return cached }
-        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else { return nil }
-        let icon = NSWorkspace.shared.icon(forFile: url.path)
-        appIcons[bundleIdentifier] = icon
-        return icon
     }
 
     private func artwork(for payload: NowPlayingPayload) -> NSImage? {

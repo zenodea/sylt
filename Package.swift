@@ -26,6 +26,11 @@ let package = Package(
                 .unsafeFlags(["-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist",
                               "-Xlinker", "Resources/Info.plist"]),
             ]
-        )
+        ),
+        .testTarget(
+            name: "ControlIslandTests",
+            dependencies: ["ControlIsland"],
+            path: "Tests/ControlIslandTests"
+        ),
     ]
 )

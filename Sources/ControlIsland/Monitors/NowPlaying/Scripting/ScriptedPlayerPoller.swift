@@ -13,9 +13,7 @@ final class ScriptedPlayerPoller {
         stop()
         self.player = player
         poll()
-        timer = .scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.poll() }
-        }
+        timer = .every(2) { [weak self] in self?.poll() }
     }
 
     func stop() {

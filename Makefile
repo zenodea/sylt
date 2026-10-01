@@ -1,6 +1,8 @@
-.PHONY: build run bundle open
+.PHONY: build run bundle open test
 build:
 	swift build
+test:
+	swift test
 run: build
 	.build/debug/ControlIsland
 bundle:
