@@ -58,6 +58,12 @@ enum HUDKind: Hashable {
         }
     }
 
+    /// Mute and volume are one wing that morphs; everything else replaces its wing.
+    var wingIdentity: HUDKind {
+        if case .mute = self { return .volume }
+        return self
+    }
+
     static let batteryMessages = ["Charging", "On battery", "Fully charged", "Critically low", "Low battery", "Battery"]
     static let privacyMessages = ["Mic and camera on", "Microphone on", "Camera on", "Mic and camera off"]
 
@@ -127,7 +133,7 @@ struct ExternalHUD: Hashable {
     var hasGlyph: Bool { hud.symbol != nil || hud.image != nil }
 
     var content: CGFloat {
-        hud.level != nil ? 72 : min(TextWidth.of(hud.text ?? "", size: 11), 160)
+        (hud.level != nil ? 72 : min(TextWidth.of(hud.text ?? "", size: 11), 160)) + (hud.trailingSymbol == nil ? 0 : 8 + 16)
     }
 
     var style: HUDKind.Style {

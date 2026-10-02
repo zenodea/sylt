@@ -10,14 +10,14 @@ extension PluginItem {
         var parts: [CGFloat] = []
         if symbol != nil || image != nil { parts.append(Self.glyph) }
         if let text, !text.isEmpty { parts.append(TextWidth.of(text, size: 11, monospacedDigits: true) + 1) }
-        if dot != nil || status != nil { parts.append(7) }
+        if dot != nil || (status != nil && symbol == nil && image == nil) { parts.append(7) }
         if ring != nil { parts.append(12) }
         return parts.reduce(0, +) + CGFloat(max(0, parts.count - 1)) * Self.gap
     }
 
-    static func width(of items: [PluginItem]) -> CGFloat {
+    static func width(of items: [PluginItem], spacing: CGFloat = 8) -> CGFloat {
         let widths = items.map(\.width).filter { $0 > 0 }
-        return widths.reduce(0, +) + CGFloat(max(0, widths.count - 1)) * 8
+        return widths.reduce(0, +) + CGFloat(max(0, widths.count - 1)) * spacing
     }
 }
 
@@ -39,7 +39,7 @@ extension PluginSection {
 }
 
 extension PluginRow {
-    var height: CGFloat { detail == nil ? PluginSection.rowHeight : PluginSection.detailRowHeight }
+    var height: CGFloat { detail == nil && large != true ? PluginSection.rowHeight : PluginSection.detailRowHeight }
 }
 
 extension Color {

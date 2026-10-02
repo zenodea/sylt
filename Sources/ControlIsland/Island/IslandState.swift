@@ -123,8 +123,8 @@ final class IslandState: ObservableObject {
 
     private func refreshPluginLayout() {
         let running = plugins.plugins.filter(\.isRunning)
-        layout.pluginLeft = running.map { PluginItem.width(of: $0.left) }
-        layout.pluginRight = running.map { PluginItem.width(of: $0.right) }
+        layout.pluginLeft = running.map { PluginItem.width(of: $0.left, spacing: $0.leftSpacing) }
+        layout.pluginRight = running.map { PluginItem.width(of: $0.right, spacing: $0.rightSpacing) }
         layout.pluginSections = running.compactMap { $0.section?.height }
     }
 

@@ -13,6 +13,7 @@ struct PluginSectionView: View {
                         if let symbol = section.symbol { Image(systemName: symbol) }
                         Text(title)
                         Spacer()
+                        if let items = section.items { PluginBadge(items: items) }
                         ForEach(section.actions ?? []) { action in
                             Button(action.title) { plugin.send(PluginEvent(event: "action", id: action.id)); Haptics.press() }
                                 .buttonStyle(.plain)
@@ -22,16 +23,27 @@ struct PluginSectionView: View {
                     .foregroundStyle(.white.opacity(0.5))
                     .frame(height: PluginSection.headerHeight - 4)
                 }
-                ForEach((section.rows ?? []).prefix(PluginSection.maxRows)) { row in
-                    PluginRowView(row: row) { plugin.send(PluginEvent(event: "click", row: row.rowID)); Haptics.press() } button: { id in
-                        plugin.send(PluginEvent(event: "button", row: row.rowID, id: id)); Haptics.press()
+                if let rows = section.rows, !rows.isEmpty {
+                    // More rows than fit scroll inside the space the first few take.
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 3) {
+                            ForEach(rows) { row in
+                                PluginRowView(row: row) { plugin.send(PluginEvent(event: "click", row: row.rowID)); Haptics.press() } button: { id in
+                                    plugin.send(PluginEvent(event: "button", row: row.rowID, id: id)); Haptics.press()
+                                }
+                            }
+                        }
                     }
+                    .frame(height: rows.prefix(PluginSection.maxRows).reduce(0) { $0 + $1.height } - 3)
                 }
                 if let paths = section.files, !paths.isEmpty {
                     fileStrip(paths)
                 }
                 if let buttons = section.buttons, !buttons.isEmpty {
                     HStack(spacing: 8) {
+                        if section.title == nil, let symbol = section.symbol {
+                            Image(systemName: symbol).foregroundStyle(.white.opacity(0.6)).padding(.trailing, 2)
+                        }
                         ForEach(buttons) { button in
                             Button(button.title) { plugin.send(PluginEvent(event: "button", id: button.id)); Haptics.expand() }
                                 .buttonStyle(Pill(tint: .white.opacity(0.1)))
@@ -80,10 +92,14 @@ private struct PluginRowView: View {
         Button(action: tap) {
             HStack(spacing: 8) {
                 if row.symbol != nil || row.image != nil {
-                    PluginGlyph(symbol: row.symbol, image: row.image, size: 16)
+                    PluginGlyph(symbol: row.symbol, image: row.image, size: row.large == true ? 20 : 16)
                 }
                 VStack(alignment: .leading, spacing: 0) {
-                    if let title = row.title { Text(title).lineLimit(1) }
+                    if let title = row.title {
+                        Text(title)
+                            .font(row.large == true ? .system(size: 15, weight: .semibold, design: .rounded) : .system(size: 12, weight: .medium, design: .rounded))
+                            .lineLimit(1)
+                    }
                     if let detail = row.detail {
                         Text(detail).font(.system(size: 10)).foregroundStyle(.white.opacity(0.5)).lineLimit(1)
                     }
@@ -99,7 +115,7 @@ private struct PluginRowView: View {
                         .monospacedDigit()
                 }
                 if let status = row.status {
-                    if status == "working" { WorkingDots() } else { StatusDot(working: false) }
+                    if status == "working" { WorkingDots() } else { StatusMark(status: status) }
                 }
                 ForEach(row.buttons ?? []) { item in
                     Button(item.title) { button(item.id) }.buttonStyle(Pill(tint: .white.opacity(0.12)))
@@ -108,7 +124,7 @@ private struct PluginRowView: View {
             .padding(.vertical, 3)
             .padding(.horizontal, 8)
             .frame(height: row.height - 3)
-            .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+            .background(.white.opacity(row.highlighted == true ? 0.12 : 0.06), in: RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
     }

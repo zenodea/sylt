@@ -9,6 +9,7 @@ final class PluginRegistry: ObservableObject {
     let huds = PassthroughSubject<(ExternalPlugin, PluginHUD), Never>()
 
     let store: PluginStore
+    private let clipboard = ClipboardWatcher()
     private var cancellables = Set<AnyCancellable>()
     private var pluginCancellables: [String: AnyCancellable] = [:]
     private var watcher: DispatchSourceFileSystemObject?
@@ -19,6 +20,13 @@ final class PluginRegistry: ObservableObject {
 
     init(store: PluginStore) {
         self.store = store
+        clipboard.changes
+            .sink { [weak self] text in
+                for plugin in self?.plugins ?? [] where plugin.manifest.wantsClipboard && plugin.isRunning {
+                    plugin.send(PluginEvent(event: "clipboard", text: text))
+                }
+            }
+            .store(in: &cancellables)
     }
 
     func start() {
@@ -29,6 +37,7 @@ final class PluginRegistry: ObservableObject {
 
     func stop() {
         plugins.forEach { $0.stop() }
+        clipboard.stop()
         watcher?.cancel()
         watcher = nil
         if descriptor >= 0 { close(descriptor) }
@@ -55,16 +64,26 @@ final class PluginRegistry: ObservableObject {
         plugins = next
         for plugin in plugins {
             pluginCancellables[plugin.id] = plugin.huds.sink { [weak self, weak plugin] hud in
-                guard let plugin else { return }
-                self?.huds.send((plugin, hud))
+                guard let self, let plugin, store.showsHUDs(plugin.manifest) else { return }
+                huds.send((plugin, hud))
             }
             applyEnabled(plugin)
         }
+        watchClipboardIfWanted()
+    }
+
+    func setShowsHUDs(_ on: Bool, _ plugin: ExternalPlugin) {
+        store.setShowsHUDs(on, plugin.manifest)
+    }
+
+    private func watchClipboardIfWanted() {
+        plugins.contains { $0.manifest.wantsClipboard && store.isEnabled($0.manifest) } ? clipboard.start() : clipboard.stop()
     }
 
     func setEnabled(_ on: Bool, _ plugin: ExternalPlugin) {
         store.setEnabled(on, plugin.manifest)
         applyEnabled(plugin)
+        watchClipboardIfWanted()
     }
 
     func isEnabled(_ plugin: ExternalPlugin) -> Bool { store.isEnabled(plugin.manifest) }

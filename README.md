@@ -101,14 +101,14 @@ What a plugin can print:
 | Line | Effect |
 | --- | --- |
 | `{"wing": {"side": "left" or "right", "items": [...]}}` | Replaces the plugin's badge in that wing. An item mixes `symbol`, `image` (`app:bundle.id`, `icon:/path`, `file:/path`), `text`, `tint`, `dot`, `ring` (0 to 1) and `status` (`working` or `waiting`). Empty items clear it. |
-| `{"hud": {...}}` | Shows an overlay now: `symbol`/`image`, `tint`, `text` or `level` (0 to 1), `side` (`both`, `left`, `right`), `duration`, `sound`. |
-| `{"section": {...}}` | Replaces the plugin's expanded section: `title`, `symbol`, `rows`, `files` (paths, draggable), `buttons`, `actions`. A row has `id`, `symbol`/`image`, `title`, `detail`, `trailing`, `trailingTint`, `status`, `progress`, `buttons`. |
+| `{"hud": {...}}` | Shows an overlay now: `symbol`/`image`, `tint`, `text` or `level` (0 to 1), `side` (`both`, `left`, `right`), `duration`, `sound`, and a `trailingSymbol` with `trailingTint` that pops in after the text. |
+| `{"section": {...}}` | Replaces the plugin's expanded section: `title`, `symbol`, `rows`, `files` (paths, draggable), `buttons`, `actions`. A row has `id`, `symbol`/`image`, `title`, `detail`, `trailing`, `trailingTint`, `status`, `progress`, `buttons`, `highlighted`, `large`. A wing can set `spacing` between its items. |
 | `{"clearSection": true}` | Removes the section. |
 | `{"sound": "Hero"}` | Plays a system sound. |
-| `{"activate": {"process": "herdr"}}` | Brings an app forward, by process name, `pid` or `bundle`. |
+| `{"activate": {"process": "herdr", "window": "title"}}` | Brings an app forward, by process name, `pid` or `bundle`, and raises the window whose title contains `window`. |
 | `{"open": "/path or https://..."}` | Opens a file or URL. |
 
-What the host writes to the plugin's stdin: `start` with `settings` and `dataDir`, `settings` when they change, `click` with a row `id`, `button` with an `id` (and its row), `action` with an `id`, `drop` with `files` when the manifest has `"accepts": ["files"]`, `remove` with a file path, and `stop`.
+What the host writes to the plugin's stdin: `start` with `settings` and `dataDir`, `settings` when they change, `click` with a row `id`, `button` with an `id` (and its row), `action` with an `id`, `drop` with `files` when the manifest has `"accepts": ["files"]`, `clipboard` with `text` on every copy when it has `"accepts": ["clipboard"]` (password managers are skipped for you), `remove` with a file path, and `stop`.
 
 Manifests can set `"interval": seconds` to be run once per interval instead of staying running, `"accepts": ["files"]` to receive drops, `"enabledByDefault": false`, and `settings` of type `bool`, `text`, `number` or `choice` (with `options`), which Settings turns into a form. Tints are `white`, `dim`, `green`, `orange`, `red`, `yellow`, `blue`, `indigo`, `purple`, `pink`, `cyan` or a `#hex`.
 

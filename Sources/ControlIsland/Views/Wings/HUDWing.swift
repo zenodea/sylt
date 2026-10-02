@@ -42,11 +42,27 @@ struct HUDWing: View {
 
     @ViewBuilder
     private var trailing: some View {
+        if let muted = mutedState {
+            // One view for mute and volume, so the bar slides and the speaker morphs between them.
+            level(MuteGlyph(muted: muted), muted ? 0 : Double(volume.level))
+        } else {
+            trailingSwitch
+        }
+    }
+
+    private var mutedState: Bool? {
         switch kind {
-        case .volume:
-            level(Image(systemName: volume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill"), volume.isMuted ? 0 : Double(volume.level))
+        case .volume: volume.isMuted
+        case .mute(let muted): muted
+        default: nil
+        }
+    }
+
+    @ViewBuilder
+    private var trailingSwitch: some View {
+        switch kind {
+        case .volume, .mute: EmptyView()
         case .brightness: level(Image(systemName: "sun.max.fill"), Double(brightness.level))
-        case .mute(let muted): level(MuteGlyph(muted: muted), muted ? 0 : Double(volume.level))
         case .battery(let alert):
             Text(alert.message(onAC: battery.snapshot.onAC))
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -86,6 +102,9 @@ struct HUDWing: View {
                 LevelBar(value: level)
             } else {
                 HUDLabel(text: external.hud.text ?? "")
+            }
+            if let symbol = external.hud.trailingSymbol {
+                PopGlyph(symbol: symbol, tint: Color(tint: external.hud.trailingTint ?? "green"))
             }
         }
     }

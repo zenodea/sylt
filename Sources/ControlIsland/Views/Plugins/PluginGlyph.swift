@@ -18,6 +18,7 @@ struct PluginGlyph: View {
         } else if let symbol {
             Image(systemName: symbol)
                 .font(.system(size: size * 0.85, weight: .semibold))
+                .symbolRenderingMode(tint == nil ? .multicolor : .monochrome)
                 .foregroundStyle(Color(tint: tint))
                 .frame(width: size, height: size)
         }

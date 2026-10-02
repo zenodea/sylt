@@ -11,6 +11,8 @@ final class ExternalPlugin: ObservableObject, Identifiable {
 
     @Published private(set) var left: [PluginItem] = []
     @Published private(set) var right: [PluginItem] = []
+    @Published private(set) var leftSpacing: CGFloat = 8
+    @Published private(set) var rightSpacing: CGFloat = 8
     @Published private(set) var section: PluginSection?
     @Published private(set) var isRunning = false
     let huds = PassthroughSubject<PluginHUD, Never>()
@@ -107,7 +109,8 @@ final class ExternalPlugin: ObservableObject, Identifiable {
 
     private func handle(_ message: PluginMessage) {
         if let wing = message.wing {
-            if wing.side == "left" { left = wing.items ?? [] } else { right = wing.items ?? [] }
+            let spacing = CGFloat(wing.spacing ?? 8)
+            if wing.side == "left" { leftSpacing = spacing; left = wing.items ?? [] } else { rightSpacing = spacing; right = wing.items ?? [] }
         }
         if let section = message.section { self.section = section }
         if message.clearSection == true { section = nil }
@@ -129,5 +132,8 @@ final class ExternalPlugin: ObservableObject, Identifiable {
         guard let host else { return }
         NSApp.yieldActivation(to: host)
         host.activate()
+        if let window = activation.window {
+            Timer.after(0.3) { WindowRaiser.raise(in: host, titleContaining: window) }
+        }
     }
 }

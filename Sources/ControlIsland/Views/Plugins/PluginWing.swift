@@ -8,7 +8,7 @@ struct PluginWing: View {
     var body: some View {
         let items = side == .leading ? plugin.left : plugin.right
         if plugin.isRunning, !items.isEmpty {
-            PluginBadge(items: items)
+            PluginBadge(items: items, spacing: side == .leading ? plugin.leftSpacing : plugin.rightSpacing)
         }
     }
 }

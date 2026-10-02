@@ -35,7 +35,7 @@ struct WingsView: View {
             if let kind = hudKind(claiming: side) {
                 HUDWing(kind: kind, side: side, layout: layout)
                     .padding(side == .leading ? .trailing : .leading, IslandLayout.notchGap)
-                    .id(kind)
+                    .id(kind.wingIdentity)
             } else {
                 ClosedWing(side: side, layout: layout)
                     .padding(.horizontal, IslandLayout.wingPadding)

@@ -58,6 +58,20 @@ final class PluginTests: XCTestCase {
         XCTAssertEqual(HUDKind.external(ExternalHUD(pluginID: "p", hud: PluginHUD(duration: 4))).duration, 4)
     }
 
+    func testOverlaysCanBeQuietedPerPlugin() throws {
+        let manifest = try JSONDecoder().decode(PluginManifest.self, from: Data(manifestJSON.utf8))
+        let store = PluginStore(defaults: defaults())
+        XCTAssertTrue(store.showsHUDs(manifest))
+        store.setShowsHUDs(false, manifest)
+        XCTAssertFalse(store.showsHUDs(manifest))
+        let clipboard = try JSONDecoder().decode(PluginManifest.self, from: Data(#"{"protocol": 1, "id": "c", "name": "C", "run": "c.py", "accepts": ["clipboard"]}"#.utf8))
+        XCTAssertTrue(clipboard.wantsClipboard)
+        XCTAssertFalse(clipboard.acceptsFiles)
+        let hud = ExternalHUD(pluginID: "a", hud: PluginHUD(symbol: "x", text: "Done", side: "left", trailingSymbol: "checkmark.circle.fill"))
+        let plain = ExternalHUD(pluginID: "a", hud: PluginHUD(symbol: "x", text: "Done", side: "left"))
+        XCTAssertGreaterThan(hud.content, plain.content, "a trailing symbol reserves its room")
+    }
+
     func testStoreDefaultsAndOverrides() throws {
         let manifest = try JSONDecoder().decode(PluginManifest.self, from: Data(manifestJSON.utf8))
         let store = PluginStore(defaults: defaults())

@@ -10,5 +10,7 @@ cp .build/release/ControlIsland "$APP/Contents/MacOS/"
 cp .build/release/libMediaRemoteAdapter.dylib "$APP/Contents/Frameworks/"
 cp Resources/Info.plist "$APP/Contents/"
 cp -R Plugins "$APP/Contents/Resources/Plugins"
-codesign --force --deep --sign - "$APP"
+# A stable identity keeps Accessibility and other grants across rebuilds; see scripts/signing-identity.sh.
+IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | grep -o '"Control Island Dev"' | head -1 | tr -d '"')
+codesign --force --deep --sign "${IDENTITY:--}" "$APP"
 echo "Built $APP"

@@ -8,13 +8,14 @@ struct SettingsView: View {
     @State private var opensAtLogin = LoginItem.isEnabled
 
     enum Pane: String, CaseIterable, Identifiable {
-        case general, plugins, huds, about
+        case general, builtIn, plugins, huds, about
 
         var id: String { rawValue }
 
         var title: String {
             switch self {
             case .general: "General"
+            case .builtIn: "Built in"
             case .plugins: "Plugins"
             case .huds: "Overlays"
             case .about: "About"
@@ -24,6 +25,7 @@ struct SettingsView: View {
         var symbol: String {
             switch self {
             case .general: "gearshape.fill"
+            case .builtIn: "square.grid.2x2.fill"
             case .plugins: "puzzlepiece.extension.fill"
             case .huds: "rectangle.topthird.inset.filled"
             case .about: "info.circle.fill"
@@ -32,16 +34,18 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: .constant(.all)) {
             List(Pane.allCases, selection: $pane) { pane in
                 Label(pane.title, systemImage: pane.symbol).tag(pane)
             }
             .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(168)
+            .navigationSplitViewColumnWidth(min: 168, ideal: 168, max: 168)
+            .toolbar(removing: .sidebarToggle)
         } detail: {
             Form {
                 switch pane {
                 case .general: general
+                case .builtIn: builtInPane
                 case .plugins: pluginsPane
                 case .huds: huds
                 case .about: about
@@ -82,9 +86,8 @@ struct SettingsView: View {
         }
     }
 
-    @ViewBuilder
-    private var pluginsPane: some View {
-        Section("Built in") {
+    private var builtInPane: some View {
+        Section {
             ForEach(Plugin.allCases) { plugin in
                 Toggle(isOn: preferences.binding(for: plugin)) {
                     HStack(spacing: 12) {
@@ -104,7 +107,12 @@ struct SettingsView: View {
                 .toggleStyle(.switch)
                 .padding(.vertical, 2)
             }
+        } footer: {
+            Text("Part of the app. Each talks to the system directly.")
         }
+    }
+
+    private var pluginsPane: some View {
         Section {
             ForEach(plugins.plugins) { plugin in
                 ExternalPluginRow(plugin: plugin, registry: plugins)
@@ -118,10 +126,8 @@ struct SettingsView: View {
                 Button("Reload") { plugins.reload() }
                 Spacer()
             }
-        } header: {
-            Text("Plugins")
         } footer: {
-            Text("Plugins are programs in any language that print JSON. They run with your permissions.")
+            Text("Programs in any language that print JSON, bundled or yours. They run with your permissions.")
         }
     }
 
@@ -225,9 +231,10 @@ private struct ExternalPluginRow: View {
                 }
             }
             .toggleStyle(.switch)
-            if let settings = plugin.manifest.settings, !settings.isEmpty, registry.isEnabled(plugin) {
-                DisclosureGroup("Settings", isExpanded: $expanded) {
-                    ForEach(settings) { setting in
+            if registry.isEnabled(plugin) {
+                DisclosureGroup("Options", isExpanded: $expanded) {
+                    Toggle("Show overlays", isOn: Binding(get: { registry.store.showsHUDs(plugin.manifest) }, set: { registry.setShowsHUDs($0, plugin) }))
+                    ForEach(plugin.manifest.settings ?? []) { setting in
                         PluginSettingField(setting: setting, plugin: plugin, store: registry.store)
                     }
                 }

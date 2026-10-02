@@ -25,6 +25,10 @@ struct MuteGlyph: View {
                 withAnimation(.easeOut(duration: 0.3).delay(0.15)) { slash = muted ? 1 : 0 }
                 if !muted { waves = true }
             }
+            .onChange(of: muted) { _, muted in
+                withAnimation(.easeOut(duration: 0.3)) { slash = muted ? 1 : 0 }
+                if !muted { waves.toggle() }
+            }
     }
 }
 

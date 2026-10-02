@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Claude, Codex and Pi agents: waiting ones first in the expanded list, up to three in the left wing."""
+"""Claude, Codex and Pi agents in three groups: working, then done, then waiting, newest change first in each."""
 import json, os, shutil, subprocess, sys, threading, time
 
 HERDR = next((p for p in [os.path.expanduser("~/.local/bin/herdr"), "/opt/homebrew/bin/herdr", "/usr/local/bin/herdr"] if os.access(p, os.X_OK)), None)
-GLYPH = {"claude": {"image": "app:com.anthropic.claudefordesktop"}, "codex": {"image": "app:com.openai.codex"}, "pi": {"text": "π", "tint": "indigo"}}
+HERE = os.path.dirname(os.path.abspath(__file__))
+GLYPH = {"claude": {"image": "app:com.anthropic.claudefordesktop"}, "codex": {"image": "app:com.openai.codex"}, "pi": {"image": "file:" + os.path.join(HERE, "pi.svg")}}
+RANK = {"working": 0, "done": 1, "waiting": 2}
 lock = threading.Lock()
 agents = []
 since = {}
-cpu = {}
+store = None
 
 def emit(message):
     with lock:
@@ -18,9 +20,13 @@ def from_herdr():
     out = subprocess.run([HERDR, "agent", "list"], capture_output=True, check=False).stdout
     data = json.loads(out or b"{}").get("result", {}).get("agents", [])
     return [{
-        "id": a["pane_id"], "agent": a.get("agent", "").lower(), "working": a.get("agent_status") == "working",
+        "id": a["pane_id"], "agent": a.get("agent", "").lower(), "status": status(a.get("agent_status")),
         "title": a.get("terminal_title_stripped") or os.path.basename(a.get("cwd", "")) or a.get("agent", ""),
+        "focused": bool(a.get("focused")),
     } for a in data]
+
+def status(raw):
+    return {"working": "working", "done": "done"}.get(raw, "waiting")
 
 def from_processes():
     out = subprocess.run(["ps", "-axo", "pid=,%cpu=,comm="], capture_output=True, check=False).stdout.decode()
@@ -33,7 +39,7 @@ def from_processes():
         if name not in GLYPH: continue
         cwd = subprocess.run(["lsof", "-a", "-d", "cwd", "-p", pid, "-Fn"], capture_output=True, check=False).stdout.decode()
         folder = next((l[1:] for l in cwd.splitlines() if l.startswith("n/")), "")
-        found.append({"id": "pid:" + pid, "agent": name, "working": float(load) > 3, "title": os.path.basename(folder) or name})
+        found.append({"id": "pid:" + pid, "agent": name, "status": "working" if float(load) > 3 else "waiting", "title": os.path.basename(folder) or name, "focused": False})
     return found
 
 def elapsed(seconds):
@@ -42,19 +48,34 @@ def elapsed(seconds):
 
 def publish():
     now = time.time()
-    rows = [dict(GLYPH.get(a["agent"], {"symbol": "terminal.fill"}), id=a["id"], title=a["title"],
-                 status="working" if a["working"] else "waiting",
-                 trailing=None if a["working"] else elapsed(now - since.get(a["id"], now))) for a in agents]
-    for row in rows: row.pop("tint", None)
-    wing = [dict(GLYPH.get(a["agent"], {"symbol": "terminal.fill"}), status="working" if a["working"] else "waiting")
-            for a in sorted(agents, key=lambda a: not a["working"])[:3]]
-    emit({"wing": {"side": "left", "items": wing}})
+    rows = []
+    for a in agents:
+        changed = since.get(a["id"])
+        rows.append(dict(GLYPH.get(a["agent"], {"symbol": "terminal.fill"}), id=a["id"], title=a["title"], status=a["status"],
+                         highlighted=a["focused"], trailing=None if a["status"] == "working" or changed is None else elapsed(now - changed)))
+    wing = [dict(GLYPH.get(a["agent"], {"symbol": "terminal.fill"}), status=a["status"]) for a in agents[:3]]
+    emit({"wing": {"side": "left", "items": wing, "spacing": 3}})
     if rows:
-        waiting = sum(1 for a in agents if not a["working"]); working = len(agents) - waiting
-        emit({"section": {"title": "Agents", "symbol": "terminal.fill", "rows": rows,
-                          "actions": [{"id": "counts", "title": "%d waiting · %d working" % (waiting, working)}]}})
+        counts = {k: sum(1 for a in agents if a["status"] == k) for k in RANK}
+        emit({"section": {"title": "🐑 Herdr" if HERDR else "Agents", "symbol": None if HERDR else "terminal.fill", "rows": rows,
+                          "items": [{"dot": "green", "text": str(counts["working"])}, {"dot": "blue", "text": str(counts["done"])}, {"dot": "orange", "text": str(counts["waiting"])}]}})
     else:
         emit({"clearSection": True})
+
+def load_since(data_dir):
+    global store
+    store = os.path.join(data_dir or ".", "since.json")
+    try:
+        with open(store) as handle: since.update({k: float(v) for k, v in json.load(handle).items()})
+    except (OSError, ValueError):
+        pass
+
+def save_since():
+    if store:
+        try:
+            with open(store, "w") as handle: json.dump(since, handle)
+        except OSError:
+            pass
 
 def listen():
     for line in sys.stdin:
@@ -62,11 +83,14 @@ def listen():
             event = json.loads(line)
         except ValueError:
             continue
-        if event.get("event") == "click":
+        if event.get("event") == "start":
+            load_since(event.get("dataDir"))
+        elif event.get("event") == "click":
             target = event.get("row", "")
             if HERDR and not target.startswith("pid:"):
                 subprocess.run([HERDR, "agent", "focus", target], check=False)
-                emit({"activate": {"process": "herdr"}})
+                title = next((a["title"] for a in agents if a["id"] == target), None)
+                emit({"activate": {"process": "herdr", "window": title}})
             elif target.startswith("pid:"):
                 emit({"activate": {"pid": int(target[4:])}})
         elif event.get("event") == "stop":
@@ -79,17 +103,22 @@ while True:
         found = from_herdr() if HERDR else from_processes()
     except Exception:
         found = []
-    found.sort(key=lambda a: (a["working"], a["id"]))
     previous = {a["id"]: a for a in agents}
     now = time.time()
+    changed = False
     for a in found:
         before = previous.get(a["id"])
-        if before is None or before["working"] != a["working"]:
+        if before is not None and before["status"] != a["status"]:
             since[a["id"]] = now
-            if before is not None and before["working"] and not a["working"]:
-                emit({"hud": {"symbol": "checkmark.circle.fill", "tint": "green", "text": a["title"], "side": "left", "duration": 2.5}})
-    for gone in set(previous) - {a["id"] for a in found}: since.pop(gone, None)
-    if found != agents:
+            changed = True
+            if before["status"] == "working" and a["status"] != "working":
+                emit({"hud": dict(GLYPH.get(a["agent"], {"symbol": "terminal.fill"}), text=a["title"], side="left", duration=2.5, trailingSymbol="checkmark.circle.fill", trailingTint="green")})
+    for gone in set(previous) - {a["id"] for a in found}:
+        if since.pop(gone, None) is not None: changed = True
+    if changed: save_since()
+    # Working first, then done, then waiting; within a group the most recent change on top.
+    found.sort(key=lambda a: (RANK[a["status"]], -since.get(a["id"], 0), a["id"]))
+    if found != agents or changed:
         agents = found
         publish()
     time.sleep(2)

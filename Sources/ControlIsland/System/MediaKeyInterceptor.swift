@@ -57,20 +57,18 @@ final class MediaKeyInterceptor: ObservableObject {
         }
     }
 
+    /// The HID tap sees keys before anything else does, so Control Center never
+    /// gets the chance to draw its overlay; the session tap is the fallback.
     private func installTap() {
         let info = Unmanaged.passUnretained(self).toOpaque()
-        let created = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: CGEventMask(1 << Self.systemDefinedEvent.rawValue),
-            callback: { _, type, event, info in
-                guard let info else { return Unmanaged.passUnretained(event) }
-                let interceptor = Unmanaged<MediaKeyInterceptor>.fromOpaque(info).takeUnretainedValue()
-                return MainActor.assumeIsolated { interceptor.handle(type: type, event: event) }
-            },
-            userInfo: info
-        )
+        let callback: CGEventTapCallBack = { _, type, event, info in
+            guard let info else { return Unmanaged.passUnretained(event) }
+            let interceptor = Unmanaged<MediaKeyInterceptor>.fromOpaque(info).takeUnretainedValue()
+            return MainActor.assumeIsolated { interceptor.handle(type: type, event: event) }
+        }
+        let mask = CGEventMask(1 << Self.systemDefinedEvent.rawValue)
+        let created = CGEvent.tapCreate(tap: .cghidEventTap, place: .headInsertEventTap, options: .defaultTap, eventsOfInterest: mask, callback: callback, userInfo: info)
+            ?? CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap, eventsOfInterest: mask, callback: callback, userInfo: info)
         guard let created else {
             isAuthorized = false
             scheduleRetry()

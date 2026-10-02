@@ -11,6 +11,7 @@ final class PluginStore: ObservableObject {
     private static let enabledKey = "externalPluginsEnabled"
     private static let disabledKey = "externalPluginsDisabled"
     private static let settingsKey = "externalPluginSettings"
+    private static let quietKey = "externalPluginsQuiet"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -31,6 +32,18 @@ final class PluginStore: ObservableObject {
         if on { enabled.insert(manifest.id); disabled.remove(manifest.id) } else { enabled.remove(manifest.id); disabled.insert(manifest.id) }
         defaults.set(enabled.sorted(), forKey: Self.enabledKey)
         defaults.set(disabled.sorted(), forKey: Self.disabledKey)
+    }
+
+    /// Whether a plugin's overlays show; its wing and section are unaffected.
+    func showsHUDs(_ manifest: PluginManifest) -> Bool {
+        !Set(defaults.stringArray(forKey: Self.quietKey) ?? []).contains(manifest.id)
+    }
+
+    func setShowsHUDs(_ on: Bool, _ manifest: PluginManifest) {
+        var quiet = Set(defaults.stringArray(forKey: Self.quietKey) ?? [])
+        if on { quiet.remove(manifest.id) } else { quiet.insert(manifest.id) }
+        defaults.set(quiet.sorted(), forKey: Self.quietKey)
+        objectWillChange.send()
     }
 
     func values(for manifest: PluginManifest) -> [String: JSONValue] {

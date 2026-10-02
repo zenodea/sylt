@@ -7,6 +7,7 @@ run: build
 	.build/debug/ControlIsland
 bundle:
 	scripts/bundle.sh
-open: bundle
+open:
 	pkill -x ControlIsland || true
+	$(MAKE) bundle
 	open build/ControlIsland.app

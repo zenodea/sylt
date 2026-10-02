@@ -40,6 +40,6 @@ high = round(forecast["daily"]["temperature_2m_max"][0])
 low = round(forecast["daily"]["temperature_2m_min"][0])
 emit({"wing": {"side": "right", "items": [{"symbol": symbol, "text": "%d°" % temperature}]}})
 emit({"section": {"rows": [{
-    "id": "weather", "symbol": symbol, "title": "%d°  %s" % (temperature, summary),
+    "id": "weather", "symbol": symbol, "title": "%d°  %s" % (temperature, summary), "large": True,
     "detail": place.get("city", ""), "trailing": "H %d°  L %d°" % (high, low),
 }]}})

@@ -35,6 +35,7 @@ struct PluginManifest: Decodable, Hashable {
     let enabledByDefault: Bool?
 
     var acceptsFiles: Bool { accepts?.contains("files") ?? false }
+    var wantsClipboard: Bool { accepts?.contains("clipboard") ?? false }
     var isOneShot: Bool { interval != nil }
 
     enum CodingKeys: String, CodingKey {
@@ -69,6 +70,9 @@ struct PluginRow: Decodable, Hashable, Identifiable {
     var status: String?
     var progress: Double?
     var buttons: [Button]?
+    var highlighted: Bool?
+    /// A bigger title, for a headline number like a temperature.
+    var large: Bool?
 
     var rowID: String { id ?? "\(title ?? "")\(detail ?? "")" }
 }
@@ -79,6 +83,8 @@ struct PluginSection: Decodable, Hashable {
 
     var title: String?
     var symbol: String?
+    /// Small items at the right of the header, like tallies.
+    var items: [PluginItem]?
     var rows: [PluginRow]?
     var files: [String]?
     var buttons: [PluginRow.Button]?
@@ -95,12 +101,17 @@ struct PluginHUD: Decodable, Hashable {
     var side: String?
     var duration: Double?
     var sound: String?
+    /// A symbol after the text that bounces in, like a tick.
+    var trailingSymbol: String?
+    var trailingTint: String?
 }
 
 struct PluginActivation: Decodable, Hashable {
     var process: String?
     var pid: Int32?
     var bundle: String?
+    /// Raise the window whose title contains this, once the app is in front.
+    var window: String?
 }
 
 /// One line of plugin output.
@@ -108,6 +119,8 @@ struct PluginMessage: Decodable {
     struct Wing: Decodable {
         let side: String
         let items: [PluginItem]?
+        /// Space between items; 8 unless the plugin wants its icons tighter.
+        let spacing: Double?
     }
 
     var wing: Wing?
@@ -129,6 +142,7 @@ struct PluginEvent: Encodable {
     var row: String? = nil
     var id: String? = nil
     var files: [String]? = nil
+    var text: String? = nil
 }
 
 /// A JSON scalar, array or object, for settings values.
