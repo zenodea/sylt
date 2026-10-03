@@ -72,7 +72,8 @@ struct IslandLayout: Equatable {
     var canvasSize: CGSize {
         let tallest = Self.mediaCardHeight + Self.eventRowHeight
             + 6 * (PluginSection.headerHeight + CGFloat(PluginSection.maxRows) * PluginSection.detailRowHeight + PluginSection.filesHeight + PluginSection.buttonsHeight + Self.sectionGap)
-        return CGSize(width: Self.expandedWidth + 160, height: Self.expandedBaseHeight + tallest + 80)
+        // Wide enough that a one-sided HUD plus a full closed wing never reaches the window's edge.
+        return CGSize(width: Self.expandedWidth + 500, height: Self.expandedBaseHeight + tallest + 80)
     }
 
     /// Island frame in canvas coordinates (top-left origin), grown by the hit margin.

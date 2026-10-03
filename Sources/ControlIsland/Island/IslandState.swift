@@ -7,6 +7,17 @@ final class IslandState: ObservableObject {
     @Published var mode: IslandMode = .closed
     @Published var cursor: CGPoint = .zero
     @Published var swipePull: CGVector = .zero
+    /// Where the held pointer will come out, on the island's rim, in canvas coordinates.
+    @Published private(set) var exitPoint: CGPoint = .zero
+    /// How hard the pointer is being pushed, 0...1; at 1 it pops out.
+    @Published private(set) var pullStrength: CGFloat = 0
+    /// The lean the push gives the island, -1...1 per axis.
+    @Published private(set) var cursorPull: CGVector = .zero
+    /// A one-shot burst of light where the pointer just popped out.
+    @Published private(set) var burst: (point: CGPoint, id: UUID)?
+    /// Mouse travel that frees the pointer, and how quickly the lean saturates.
+    static let releaseDistance: CGFloat = 520
+    static let pullSoftness: CGFloat = 320
     @Published private(set) var isHovering = false
     @Published private(set) var layout = IslandLayout()
 
@@ -42,6 +53,9 @@ final class IslandState: ObservableObject {
 
     var islandFrame: IslandFrame { layout.frame(for: mode, hovering: isHovering) }
     var hitFrame: CGRect { layout.hitFrame(for: mode, hovering: isHovering) }
+
+    /// The island takes the cursor in everywhere except the expanded panel, which has controls to click.
+    var absorbsCursor: Bool { isHovering && mode != .expanded && !lock.isLocked }
 
     /// Where the island settles when nothing is showing.
     private var restingMode: IslandMode { lock.isLocked ? .locked : .closed }
@@ -158,12 +172,56 @@ final class IslandState: ObservableObject {
     func cursorMoved(to point: CGPoint) {
         guard hitFrame.contains(point) else { return hoverChanged(false) }
         hoverChanged(true)
-        let frame = islandFrame
-        let x = point.x - (layout.canvasSize.width - frame.size.width) / 2 - frame.centerOffset
-        cursor = CGPoint(
-            x: min(max(x / frame.size.width * 2 - 1, -1), 1),
-            y: min(max(point.y / frame.size.height, 0), 1)
-        )
+    }
+
+    /// While the island holds the pointer, mouse travel is a push: the island
+    /// leans that way and its rim lights up where the pointer would come out.
+    func cursorPushed(_ travel: CGVector) {
+        let direction = CGVector(dx: travel.dx, dy: max(0, travel.dy))
+        let strength = min(1, hypot(direction.dx, direction.dy) / Self.releaseDistance)
+        withAnimation(IslandAnimation.cursor) {
+            cursorPull = CGVector(dx: tanh(direction.dx / Self.pullSoftness), dy: tanh(direction.dy / Self.pullSoftness))
+            cursor = CGPoint(x: cursorPull.dx * 0.6, y: cursorPull.dy * 0.6)
+            pullStrength = strength
+            exitPoint = rimPoint(toward: direction, outside: 0)
+        }
+    }
+
+    /// The mouse stopped: the island settles back with a soft spring.
+    func cursorSettled() {
+        withAnimation(IslandAnimation.swipeRebound) {
+            cursorPull = .zero
+            cursor = .zero
+            pullStrength = 0
+        }
+    }
+
+    /// Where a push in this direction meets the island's rim, optionally a little
+    /// past it, in canvas coordinates. Pushing up goes nowhere: the screen ends there.
+    func rimPoint(toward travel: CGVector, outside: CGFloat) -> CGPoint {
+        let island = layout.hitFrame(for: mode, hovering: true)
+        let centre = CGPoint(x: island.midX, y: island.midY)
+        let direction = CGVector(dx: travel.dx, dy: max(0, travel.dy))
+        let length = hypot(direction.dx, direction.dy)
+        guard length > 0.001 else { return centre }
+        var scale = CGFloat.greatestFiniteMagnitude
+        if direction.dx != 0 { scale = min(scale, ((direction.dx > 0 ? island.maxX : island.minX) - centre.x) / direction.dx) }
+        if direction.dy > 0 { scale = min(scale, (island.maxY - centre.y) / direction.dy) }
+        let unit = CGVector(dx: direction.dx / length, dy: direction.dy / length)
+        return CGPoint(x: centre.x + direction.dx * scale + unit.dx * outside, y: centre.y + direction.dy * scale + unit.dy * outside)
+    }
+
+    func cursorReleased(toward direction: CGVector) {
+        if hypot(direction.dx, max(0, direction.dy)) > 0.001 {
+            burst = (rimPoint(toward: direction, outside: 0), UUID())
+            Haptics.peek()
+        }
+        withAnimation(IslandAnimation.swipeRebound) {
+            cursorPull = .zero
+            cursor = .zero
+            pullStrength = 0
+        }
+        hoverChanged(false)
     }
 
     func pressed() {

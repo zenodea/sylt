@@ -6,6 +6,8 @@ import Foundation
 final class BrightnessMonitor: ObservableObject {
     @Published private(set) var level: Float = 0
     @Published private(set) var available = false
+    /// Only changes made through the island. Auto-brightness and other
+    /// sources update the level without an overlay.
     let changes = PassthroughSubject<Void, Never>()
 
     private let display = CGMainDisplayID()
@@ -16,10 +18,10 @@ final class BrightnessMonitor: ObservableObject {
         guard DisplayServices.isAvailable, DisplayServices.canChangeBrightness(display) else { return }
         available = true
         Self.active = self
-        read(notify: false)
+        read()
         guard !observing else { return }
         observing = DisplayServices.observeBrightness(of: display) { _, _, _, _, _ in
-            Task { @MainActor in BrightnessMonitor.active?.read(notify: true) }
+            Task { @MainActor in BrightnessMonitor.active?.read() }
         }
     }
 
@@ -32,15 +34,15 @@ final class BrightnessMonitor: ObservableObject {
         let clamped = min(max(value, 0), 1)
         DisplayServices.setBrightness(clamped, of: display)
         level = clamped
+        changes.send()
     }
 
     func step(_ delta: Float) {
         set(level + delta)
     }
 
-    private func read(notify: Bool) {
+    private func read() {
         guard let value = DisplayServices.brightness(of: display) else { return }
         level = value
-        if notify { changes.send() }
     }
 }

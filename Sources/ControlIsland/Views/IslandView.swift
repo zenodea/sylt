@@ -31,6 +31,12 @@ struct IslandView: View {
                         .offset(x: frame.centerOffset)
                         .id(state.mode.contentIdentity)
                         .transition(IslandAnimation.content)
+                    if state.absorbsCursor {
+                        RimGlow(shape: shape, point: state.exitPoint, strength: state.pullStrength)
+                    }
+                    if let burst = state.burst {
+                        ReleaseBurst(point: burst.point).id(burst.id)
+                    }
                 }
                 .clipShape(shape)
             }
@@ -38,7 +44,10 @@ struct IslandView: View {
             .contentShape(shape)
             .modifier(CursorPull(cursor: state.cursor, enabled: state.isHovering && state.mode != .expanded))
             .scaleEffect(y: isPressed ? 0.95 : 1, anchor: .top)
-            .modifier(SwipeStretch(pull: state.swipePull))
+            .modifier(SwipeStretch(pull: CGVector(
+                dx: min(max(state.swipePull.dx + state.cursorPull.dx, -1), 1),
+                dy: min(max(state.swipePull.dy + state.cursorPull.dy, -1), 1)
+            )))
             .gesture(pressGesture, including: state.mode == .expanded ? .subviews : .all)
             .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
                 Task { state.dropped(await Self.urls(from: providers)) }
@@ -101,6 +110,47 @@ struct IslandView: View {
             }
         case .expanded: ExpandedView(notchHeight: state.notchHeight, layout: state.layout)
         }
+    }
+}
+
+/// The flash where the pointer just left: a ring that expands and fades at the rim.
+private struct ReleaseBurst: View {
+    let point: CGPoint
+    @State private var fired = false
+
+    var body: some View {
+        Circle()
+            .stroke(.white.opacity(fired ? 0 : 0.7), lineWidth: fired ? 1 : 3)
+            .background(Circle().fill(.white.opacity(fired ? 0 : 0.25)))
+            .frame(width: 24, height: 24)
+            .scaleEffect(fired ? 3.2 : 0.4)
+            .position(point)
+            .allowsHitTesting(false)
+            .onAppear { withAnimation(.easeOut(duration: 0.45)) { fired = true } }
+    }
+}
+
+/// The island's edge lighting up where the held pointer would come out, brighter the harder it is pushed.
+private struct RimGlow: View {
+    let shape: IslandShape
+    let point: CGPoint
+    let strength: CGFloat
+
+    var body: some View {
+        shape
+            .stroke(.white, lineWidth: 2.5)
+            .blur(radius: 1.5)
+            .mask(
+                Circle()
+                    .fill(RadialGradient(colors: [.white, .white.opacity(0.5), .clear], center: .center, startRadius: 0, endRadius: 46))
+                    .frame(width: 92, height: 92)
+                    .position(point)
+            )
+            .opacity(0.15 + strength * 0.85)
+            .opacity(strength > 0.03 ? 1 : 0)
+            .animation(IslandAnimation.cursor, value: point)
+            .animation(IslandAnimation.cursor, value: strength)
+            .allowsHitTesting(false)
     }
 }
 
