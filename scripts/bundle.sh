@@ -9,6 +9,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Framewor
 cp .build/release/ControlIsland "$APP/Contents/MacOS/"
 cp .build/release/libMediaRemoteAdapter.dylib "$APP/Contents/Frameworks/"
 cp Resources/Info.plist "$APP/Contents/"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 cp -R Plugins "$APP/Contents/Resources/Plugins"
 # A stable identity keeps Accessibility and other grants across rebuilds; see scripts/signing-identity.sh.
 IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | grep -o '"Control Island Dev"' | head -1 | tr -d '"')

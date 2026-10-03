@@ -43,7 +43,7 @@ struct IslandLayout: Equatable {
     var rightWing: CGFloat {
         Self.wing([
             CGFloat(privacyDots) * 10, showsFocus ? 14 : 0, showsHeadphones ? 40 : 0,
-            showsArtwork ? artworkSize : 0, showsAudioBars ? 14 : 0,
+            showsArtwork ? artworkSize : 0, showsAudioBars ? AudioBars.width : 0,
         ] + pluginRight)
     }
 

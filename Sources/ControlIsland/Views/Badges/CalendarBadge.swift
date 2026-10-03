@@ -10,6 +10,7 @@ struct CalendarBadge: View {
                 Text(Self.countdown(to: event.start, now: context.date))
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .monospacedDigit()
+                    .fixedSize()
             }
             .foregroundStyle(event.start.timeIntervalSince(context.date) < 5 * 60 ? Color.orange : .white.opacity(0.85))
         }

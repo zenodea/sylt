@@ -33,6 +33,7 @@ struct PluginBadge: View {
                             .foregroundStyle(Color(tint: item.tint ?? "white").opacity(item.tint == nil ? 0.85 : 1))
                             .monospacedDigit()
                             .lineLimit(1)
+                            .fixedSize()
                     }
                     if let ring = item.ring {
                         TimerRing(fraction: ring, size: 12)

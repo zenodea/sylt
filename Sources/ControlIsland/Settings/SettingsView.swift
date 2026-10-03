@@ -71,16 +71,28 @@ struct SettingsView: View {
             Toggle("Replace the macOS volume and brightness overlays", isOn: $preferences.replacesSystemOverlays)
                 .disabled(!preferences.isEnabled(.volume) && !preferences.isEnabled(.brightness))
             LabeledContent("Accessibility") {
-                if mediaKeys.isAuthorized {
-                    Label("Granted", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                HStack(spacing: 10) {
+                    if mediaKeys.isAuthorized {
+                        Label("Granted", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                    } else {
+                        Label("Not granted", systemImage: "xmark.circle.fill").foregroundStyle(.orange)
+                        Button("Open System Settings", action: MediaKeyInterceptor.openAccessibilitySettings)
+                    }
+                }
+            }
+            LabeledContent("Key interception") {
+                if mediaKeys.isIntercepting {
+                    Label("Active", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
                 } else {
-                    Button("Open System Settings", action: MediaKeyInterceptor.openAccessibilitySettings)
+                    Label(preferences.replacesSystemOverlays ? "Waiting for Accessibility" : "Off", systemImage: "circle")
+                        .foregroundStyle(.secondary)
                 }
             }
         } header: {
             Text("System overlays")
         }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in mediaKeys.refreshAuthorization() }
+        .onAppear { mediaKeys.refreshAuthorization() }
         Section("Unlock") {
             Toggle("Play a sound when the Mac unlocks", isOn: $preferences.playsUnlockSound)
         }
@@ -107,8 +119,6 @@ struct SettingsView: View {
                 .toggleStyle(.switch)
                 .padding(.vertical, 2)
             }
-        } footer: {
-            Text("Part of the app. Each talks to the system directly.")
         }
     }
 
@@ -126,8 +136,6 @@ struct SettingsView: View {
                 Button("Reload") { plugins.reload() }
                 Spacer()
             }
-        } footer: {
-            Text("Programs in any language that print JSON, bundled or yours. They run with your permissions.")
         }
     }
 
@@ -160,7 +168,9 @@ struct SettingsView: View {
     private var about: some View {
         Section {
             VStack(spacing: 10) {
-                IslandMark()
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 96, height: 96)
                 Text("Control Island")
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                 Text("Version \(Bundle.main.shortVersion)")
@@ -176,22 +186,6 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
         }
-    }
-}
-
-/// A miniature island, for the About pane.
-private struct IslandMark: View {
-    var body: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(.black)
-            .frame(width: 96, height: 30)
-            .overlay(alignment: .leading) {
-                Circle().fill(.white.opacity(0.85)).frame(width: 8, height: 8).padding(.leading, 12)
-            }
-            .overlay(alignment: .trailing) {
-                AudioBars(isPlaying: true, colors: [.white], height: 12).padding(.trailing, 12)
-            }
-            .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
     }
 }
 

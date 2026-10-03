@@ -10,6 +10,7 @@ struct HeadphonesBadge: View {
             Text("\(device.battery ?? 0)")
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .monospacedDigit()
+                .fixedSize()
         }
         .foregroundStyle((device.battery ?? 100) <= 20 ? Color.red : .white.opacity(0.85))
     }

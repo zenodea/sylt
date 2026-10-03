@@ -23,6 +23,16 @@ final class MediaKeyInterceptor: ObservableObject {
     private static let auxiliaryControlSubtype: Int16 = 8
 
     var isActive: Bool { tap != nil || retryTimer != nil }
+    /// The tap is installed and keys are being swallowed.
+    var isIntercepting: Bool { tap != nil }
+
+    /// Asks macOS again, for the Settings pane, without prompting.
+    func refreshAuthorization() {
+        let trusted = AXIsProcessTrusted()
+        if trusted != isAuthorized { isAuthorized = trusted }
+        if trusted, isActive, tap == nil { retryTimer?.invalidate(); retryTimer = nil; installTap() }
+        objectWillChange.send()
+    }
 
     func activate() {
         guard !isActive else { return }
