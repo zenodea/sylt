@@ -1,16 +1,15 @@
 import SwiftUI
 
-/// Muting draws a slash through the speaker as it dips; unmuting wipes the
-/// slash away and the sound waves light up again.
+/// Muting draws a slash through the speaker as it dips; unmuting wipes the slash
+/// away. The waves fill with the level, so the symbol itself never changes.
 struct MuteGlyph: View {
     let muted: Bool
+    var level: Double = 1
     @State private var slash: CGFloat = 0
-    @State private var waves = false
 
     var body: some View {
-        Image(systemName: muted ? "speaker.fill" : "speaker.wave.2.fill")
+        Image(systemName: "speaker.wave.3.fill", variableValue: muted ? 0 : level)
             .font(.system(size: 13, weight: .semibold))
-            .symbolEffect(.variableColor.iterative, options: .nonRepeating, value: waves)
             .symbolEffect(.bounce.down, options: .nonRepeating, value: slash)
             .overlay {
                 Slash()
@@ -21,13 +20,11 @@ struct MuteGlyph: View {
                     .stroke(.white, style: StrokeStyle(lineWidth: 2, lineCap: .round))
             }
             .onAppear {
-                slash = muted ? 0 : 1
-                withAnimation(.easeOut(duration: 0.3).delay(0.15)) { slash = muted ? 1 : 0 }
-                if !muted { waves = true }
+                // Appear in the current state; only a change of state is animated.
+                slash = muted ? 1 : 0
             }
             .onChange(of: muted) { _, muted in
                 withAnimation(.easeOut(duration: 0.3)) { slash = muted ? 1 : 0 }
-                if !muted { waves.toggle() }
             }
     }
 }

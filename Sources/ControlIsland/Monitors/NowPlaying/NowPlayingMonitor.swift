@@ -8,6 +8,12 @@ final class NowPlayingMonitor: ObservableObject {
     @Published private(set) var position = PlaybackPosition.idle
     let trackChanges = PassthroughSubject<Void, Never>()
     let playbackResumed = PassthroughSubject<Void, Never>()
+    /// Apps that could be shown right now: whatever macOS reports as playing, plus any
+    /// running player the island can read directly.
+    @Published private(set) var sources: [String] = []
+    /// A player the user pinned in the expanded card; nil follows macOS.
+    @Published private(set) var pinnedSource: ScriptedPlayer?
+    private var lastPayload: NowPlayingPayload?
 
     private let adapter = MediaRemoteAdapterProcess()
     private var artworkCache: (hash: UInt, image: NSImage)?
@@ -32,20 +38,36 @@ final class NowPlayingMonitor: ObservableObject {
         position = .idle
     }
 
-    func togglePlayPause() { perform(.playPause, key: .playPause) }
-    func next() { perform(.next, key: .next) }
-    func previous() { perform(.previous, key: .previous) }
+    func togglePlayPause() { perform(.playPause, remote: .togglePlayPause) }
+    func next() { perform(.next, remote: .next) }
+    func previous() { perform(.previous, remote: .previous) }
 
-    func seek(to seconds: TimeInterval) {
-        guard let player = scripted.player else { return }
-        Task { _ = await AppleScript.string(player.script(for: .seek(seconds))); scripted.poll() }
+    /// Show this app's playback, or follow macOS again with nil or an app it reports itself.
+    func select(source bundleIdentifier: String?) {
+        let player = bundleIdentifier.flatMap(ScriptedPlayer.init(rawValue:))
+        pinnedSource = player
+        if let player {
+            scripted.start(player)
+            scripted.poll()
+        } else if let lastPayload {
+            apply(lastPayload)
+        }
     }
 
-    private func perform(_ command: ScriptedPlayer.Command, key: MediaKeySimulator.Key) {
+    func seek(to seconds: TimeInterval) {
+        if let player = scripted.player {
+            Task { _ = await AppleScript.string(player.script(for: .seek(seconds))); scripted.poll() }
+        } else {
+            MediaRemoteCommands.seek(to: seconds)
+            adapter.send("refresh")
+        }
+    }
+
+    private func perform(_ command: ScriptedPlayer.Command, remote: MediaRemoteCommands.Command) {
         if let player = scripted.player {
             Task { _ = await AppleScript.string(player.script(for: command)); scripted.poll() }
         } else {
-            MediaKeySimulator.press(key)
+            MediaRemoteCommands.send(remote)
             adapter.send("refresh")
         }
     }
@@ -54,6 +76,9 @@ final class NowPlayingMonitor: ObservableObject {
         if ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil {
             FileHandle.standardError.write(Data("payload bundle=\(payload.bundle ?? "-") title=\(payload.title?.prefix(20) ?? "-") playing=\(payload.playing) hash=\(payload.artworkHash)\n".utf8))
         }
+        lastPayload = payload
+        refreshSources()
+        if let pinned = pinnedSource, payload.bundle != pinned.rawValue { return }
         if let player = payload.bundle.flatMap(ScriptedPlayer.init(rawValue:)) {
             scripted.start(player)
             scripted.poll()
@@ -90,7 +115,12 @@ final class NowPlayingMonitor: ObservableObject {
     }
 
     private func apply(_ snapshot: PlayerSnapshot?, from player: ScriptedPlayer) {
-        guard let snapshot else { return clear() }
+        refreshSources()
+        guard let snapshot else {
+            // A pinned player that stopped or quit hands control back to macOS.
+            if pinnedSource == player { return select(source: nil) }
+            return clear()
+        }
         if snapshot.isPlaying, !isPlaying, track != nil { playbackResumed.send() }
         isPlaying = snapshot.isPlaying
         position = PlaybackPosition(elapsed: snapshot.position, rate: snapshot.isPlaying ? 1 : 0, timestamp: .now)
@@ -113,6 +143,16 @@ final class NowPlayingMonitor: ObservableObject {
         track = nil
         isPlaying = false
         position = .idle
+    }
+
+    private func refreshSources() {
+        var next: [String] = []
+        if let bundle = lastPayload?.bundle, lastPayload?.title?.isEmpty == false { next.append(bundle) }
+        let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+        for player in ScriptedPlayer.allCases where running.contains(player.rawValue) && !next.contains(player.rawValue) {
+            next.append(player.rawValue)
+        }
+        if next != sources { sources = next }
     }
 
     private func resolveArtwork(for target: NowPlayingTrack) {

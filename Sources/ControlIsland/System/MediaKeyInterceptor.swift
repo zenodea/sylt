@@ -38,6 +38,9 @@ final class MediaKeyInterceptor: ObservableObject {
         guard !isActive else { return }
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
         isAuthorized = AXIsProcessTrustedWithOptions(options)
+        if ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil {
+            FileHandle.standardError.write(Data("media keys: activate trusted=\(isAuthorized)\n".utf8))
+        }
         isAuthorized ? installTap() : scheduleRetry()
     }
 
@@ -79,6 +82,9 @@ final class MediaKeyInterceptor: ObservableObject {
         let mask = CGEventMask(1 << Self.systemDefinedEvent.rawValue)
         let created = CGEvent.tapCreate(tap: .cghidEventTap, place: .headInsertEventTap, options: .defaultTap, eventsOfInterest: mask, callback: callback, userInfo: info)
             ?? CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap, eventsOfInterest: mask, callback: callback, userInfo: info)
+        if ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil {
+            FileHandle.standardError.write(Data("media keys: trusted=\(AXIsProcessTrusted()) tap=\(created != nil)\n".utf8))
+        }
         guard let created else {
             isAuthorized = false
             scheduleRetry()
@@ -103,6 +109,9 @@ final class MediaKeyInterceptor: ObservableObject {
 
         let flags = nsEvent.data1 & 0xFFFF
         let isKeyDown = (flags & 0xFF00) >> 8 == 0xA
+        if ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil {
+            FileHandle.standardError.write(Data("media keys: \(key) down=\(isKeyDown) handler=\(handler != nil)\n".utf8))
+        }
         if isKeyDown {
             let fine = nsEvent.modifierFlags.contains([.shift, .option])
             handler?(key, fine)

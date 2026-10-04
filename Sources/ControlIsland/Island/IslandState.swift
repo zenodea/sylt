@@ -226,15 +226,9 @@ final class IslandState: ObservableObject {
     }
 
     func cursorReleased(toward direction: CGVector) {
-        let length = hypot(direction.dx, max(0, direction.dy))
-        if length > 0.001 {
-            let id = UUID()
-            let point = rimPoint(toward: direction, outside: 0)
-            let unit = CGVector(dx: direction.dx / length, dy: max(0, direction.dy) / length)
-            burst = (point, unit, id)
-            if preferences.releaseEffect == .ripple { splash(LiquidEvent(point: point)) }
+        if hypot(direction.dx, max(0, direction.dy)) > 0.001 {
+            flash(toward: direction)
             if preferences.hapticsOnRelease { Haptics.peek() }
-            Timer.after(1.1) { [weak self] in if self?.burst?.id == id { self?.burst = nil } }
         }
         withAnimation(IslandAnimation.swipeRebound) {
             cursorPull = .zero
@@ -242,6 +236,18 @@ final class IslandState: ObservableObject {
             pullStrength = 0
         }
         hoverChanged(false)
+    }
+
+    /// The chosen release effect at the rim in this direction: what the pointer leaving
+    /// does, also played by a swipe that changes track.
+    func flash(toward direction: CGVector) {
+        let length = hypot(direction.dx, max(0, direction.dy))
+        guard length > 0.001, mode != .expanded else { return }
+        let id = UUID()
+        let point = rimPoint(toward: direction, outside: 0)
+        burst = (point, CGVector(dx: direction.dx / length, dy: max(0, direction.dy) / length), id)
+        if preferences.releaseEffect == .ripple { splash(LiquidEvent(point: point)) }
+        Timer.after(1.1) { [weak self] in if self?.burst?.id == id { self?.burst = nil } }
     }
 
     func pressed() {
@@ -317,9 +323,11 @@ final class IslandState: ObservableObject {
             Haptics.collapse()
         case .left where nowPlaying.track != nil:
             nowPlaying.next()
+            flash(toward: CGVector(dx: -1, dy: 0))
             Haptics.press()
         case .right where nowPlaying.track != nil:
             nowPlaying.previous()
+            flash(toward: CGVector(dx: 1, dy: 0))
             Haptics.press()
         default:
             break

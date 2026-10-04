@@ -16,7 +16,8 @@ enum FirefoxTabs {
         func log(_ text: String) { if debug { FileHandle.standardError.write(Data("firefox store: \(text)\n".utf8)) } }
         guard let store = latestSessionStore() else { log("no store found; roots=\(profileRoots().map { FileManager.default.fileExists(atPath: $0.path) })"); return [] }
         let compressed: Data
-        do { compressed = try Data(contentsOf: store) } catch {
+        do { compressed = try Data(contentsOf: store); FirefoxAccess.shared.reportSuccess() } catch {
+            FirefoxAccess.shared.report(error)
             var chain: [String] = []
             var url = store
             while url.pathComponents.count > 3 {
@@ -67,7 +68,9 @@ enum FirefoxTabs {
                 }
             }
             let profiles = root.appendingPathComponent("Profiles")
-            directories += (try? FileManager.default.contentsOfDirectory(at: profiles, includingPropertiesForKeys: nil)) ?? []
+            do { directories += try FileManager.default.contentsOfDirectory(at: profiles, includingPropertiesForKeys: nil) } catch {
+                if FileManager.default.fileExists(atPath: root.path) { FirefoxAccess.shared.report(error) }
+            }
             return directories
         }
     }

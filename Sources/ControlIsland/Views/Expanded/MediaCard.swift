@@ -10,7 +10,7 @@ struct MediaCard: View {
                 HStack(spacing: 12) {
                     ArtworkView(image: track.artwork, size: 60)
                         .overlay(alignment: .bottomTrailing) {
-                            SourceBadge(bundleIdentifier: track.bundleIdentifier).offset(x: 5, y: 5)
+                            sourceBadge(for: track).offset(x: 5, y: 5)
                         }
                     VStack(alignment: .leading, spacing: 6) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -44,6 +44,40 @@ struct MediaCard: View {
                         lineWidth: 1
                     )
             )
+        }
+    }
+
+    /// The source app. With more than one player going, it is a menu to pick which to show.
+    @ViewBuilder
+    private func sourceBadge(for track: NowPlayingTrack) -> some View {
+        if nowPlaying.sources.count > 1 {
+            Menu {
+                ForEach(nowPlaying.sources, id: \.self) { bundle in
+                    Button {
+                        nowPlaying.select(source: bundle)
+                    } label: {
+                        if let icon = AppIcons.icon(for: bundle) { Image(nsImage: icon) }
+                        Text(AppIcons.name(for: bundle))
+                        if bundle == track.bundleIdentifier { Image(systemName: "checkmark") }
+                    }
+                }
+            } label: {
+                SourceBadge(bundleIdentifier: track.bundleIdentifier)
+                    .overlay(alignment: .topTrailing) {
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 6, weight: .black))
+                            .foregroundStyle(.white)
+                            .padding(2)
+                            .background(.black, in: Circle())
+                            .offset(x: 4, y: -4)
+                    }
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
+        } else {
+            SourceBadge(bundleIdentifier: track.bundleIdentifier)
         }
     }
 

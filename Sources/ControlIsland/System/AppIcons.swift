@@ -13,4 +13,9 @@ enum AppIcons {
         cache[bundleIdentifier] = icon
         return icon
     }
+
+    static func name(for bundleIdentifier: String) -> String {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else { return bundleIdentifier }
+        return FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
+    }
 }

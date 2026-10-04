@@ -6,6 +6,7 @@ struct SettingsView: View {
     @ObservedObject var plugins: PluginRegistry
     @State private var pane = Pane.general
     @State private var opensAtLogin = LoginItem.isEnabled
+    @ObservedObject private var firefoxAccess = FirefoxAccess.shared
 
     enum Pane: String, CaseIterable, Identifiable {
         case general, builtIn, plugins, huds, effects, about
@@ -144,6 +145,7 @@ struct SettingsView: View {
         }
     }
 
+    @ViewBuilder
     private var builtInPane: some View {
         Section {
             ForEach(Plugin.allCases) { plugin in
@@ -164,6 +166,15 @@ struct SettingsView: View {
                 }
                 .toggleStyle(.switch)
                 .padding(.vertical, 2)
+            }
+        }
+        if preferences.isEnabled(.nowPlaying), firefoxAccess.isDenied {
+            Section {
+                LabeledContent("Firefox artwork") {
+                    Button("Open System Settings", action: FirefoxAccess.openPrivacySettings)
+                }
+            } footer: {
+                Text("macOS is not letting Control Island read Firefox's open tabs, so videos playing in Firefox show the Firefox icon instead of their thumbnail. Allow it under Full Disk Access.")
             }
         }
     }

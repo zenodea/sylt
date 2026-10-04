@@ -44,7 +44,7 @@ struct HUDWing: View {
     private var trailing: some View {
         if let muted = mutedState {
             // One view for mute and volume, so the bar slides and the speaker morphs between them.
-            level(MuteGlyph(muted: muted), muted ? 0 : Double(volume.level))
+            level(MuteGlyph(muted: muted, level: Double(volume.level)), muted ? 0 : Double(volume.level))
         } else {
             trailingSwitch
         }
@@ -62,7 +62,8 @@ struct HUDWing: View {
     private var trailingSwitch: some View {
         switch kind {
         case .volume, .mute: EmptyView()
-        case .brightness: level(Image(systemName: "sun.max.fill"), Double(brightness.level))
+        case .brightness:
+            level(Image(systemName: "sun.max.fill", variableValue: Double(brightness.level)), Double(brightness.level))
         case .battery(let alert):
             Text(alert.message(onAC: battery.snapshot.onAC))
                 .font(.system(size: 11, weight: .semibold, design: .rounded))

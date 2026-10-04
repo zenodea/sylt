@@ -211,6 +211,32 @@
   @keyframes timew { 0%, 40% { width: 22px; } 50%, 90% { width: 54px; } 100% { width: 22px; } }
   .step .d-isl.morph { animation: morphw 3.6s ease-in-out infinite; }
   :root[data-theme="light"] .step .demo { background: radial-gradient(120% 100% at 30% 0%, #dbe4ff, #c7d2fe 60%, #e2e8f0); }
+  /* Customise */
+  .step .d-cursor.c-in { animation: cin 5s ease-in-out infinite; }
+  @keyframes cin { 0% { left: 14px; top: 56px; opacity: 1; } 30% { left: calc(50% + 34px); top: 8px; opacity: 1; } 34% { opacity: 0; } 72% { left: calc(50% + 62px); top: 8px; opacity: 0; } 76% { opacity: 1; left: calc(50% + 70px); top: 12px; } 100% { left: calc(100% - 20px); top: 50px; opacity: 1; } }
+  .step .d-isl.c-lean { animation: clean 5s ease-in-out infinite; }
+  @keyframes clean { 0%, 34% { transform: translateX(-50%); } 50% { transform: translateX(-50%) translateX(6px) scaleX(1.06); } 62% { transform: translateX(-50%) translateX(13px) scaleX(1.1); } 74% { transform: translateX(-50%); } 100% { transform: translateX(-50%); } }
+  .step .d-glow { position: absolute; right: -1px; top: 0; height: 100%; width: 14px; border-radius: 0 0 9px 0; background: radial-gradient(60% 80% at 100% 50%, rgba(255,255,255,.9), transparent 70%); opacity: 0; animation: cglow 5s ease-in-out infinite; }
+  @keyframes cglow { 0%, 40% { opacity: 0; } 62%, 70% { opacity: 1; } 76%, 100% { opacity: 0; } }
+  .step .d-isl.c-glass { overflow: hidden; }
+  .step .d-sheen { position: absolute; top: -4px; bottom: -4px; width: 46px; background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent); opacity: 0; left: 100%; animation: csheen 4s ease-out infinite; }
+  @keyframes csheen { 0%, 20% { left: 100%; opacity: 0; } 24% { opacity: 1; } 55% { left: -50px; opacity: .9; } 60%, 100% { left: -50px; opacity: 0; } }
+  .step .d-ring { position: absolute; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.8); opacity: 0; left: calc(50% + 66px); top: 8px; animation: cring 4s ease-out infinite; }
+  @keyframes cring { 0%, 18% { opacity: 0; transform: scale(.3); } 22% { opacity: 1; transform: scale(.3); } 42%, 100% { opacity: 0; transform: scale(2.4); } }
+  .step .d-cursor.c-out { left: calc(50% + 68px); top: 10px; animation: cout 4s ease-out infinite; }
+  @keyframes cout { 0%, 18% { opacity: 0; left: calc(50% + 50px); top: 8px; } 22% { opacity: 1; left: calc(50% + 70px); top: 10px; } 60% { left: calc(100% - 26px); top: 52px; } 100% { opacity: 1; left: calc(100% - 26px); top: 52px; } }
+  .step .d-slider { position: absolute; left: 24px; right: 24px; bottom: 18px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.18); }
+  .step .d-slider::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: #fff; animation: cfill 5s ease-in-out infinite; }
+  .step .d-knob { position: absolute; top: -5px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.4); margin-left: -7px; animation: cknob 5s ease-in-out infinite; }
+  @keyframes cfill { 0%, 10% { width: 20%; } 45%, 60% { width: 85%; } 90%, 100% { width: 20%; } }
+  @keyframes cknob { 0%, 10% { left: 20%; } 45%, 60% { left: 85%; } 90%, 100% { left: 20%; } }
+  .step .d-isl.c-force .d-glow { animation: cforce 5s ease-in-out infinite; }
+  @keyframes cforce { 0%, 10% { opacity: .25; width: 10px; } 45%, 60% { opacity: 1; width: 24px; } 90%, 100% { opacity: .25; width: 10px; } }
+  .step .d-pad { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); width: 64px; height: 36px; border-radius: 8px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.06); }
+  .step .d-finger { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: rgba(255,255,255,.85); animation: cfinger 5s ease-in-out infinite; }
+  @keyframes cfinger { 0%, 12% { opacity: 0; transform: scale(.6); } 18%, 64% { opacity: 1; transform: scale(1); } 70%, 100% { opacity: 0; transform: scale(.6); } }
+  .step .d-isl.c-hold { animation: chold 5s ease-in-out infinite; }
+  @keyframes chold { 0%, 18% { transform: translateX(-50%); } 32%, 64% { transform: translateX(-50%) translateX(-12px) scaleX(1.1); } 76%, 100% { transform: translateX(-50%); } }
   footer { padding: 36px 0 56px; color: var(--dim); font-size: 13px; text-align: center; border-top: 1px solid var(--line); }
   @media (max-width: 640px) { .hero { padding-top: 48px; } nav .links a { display: none; } }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
@@ -224,6 +250,7 @@
       <a href="#builtin">Built in</a>
       <a href="#plugins">Plugins</a>
       <a href="#how">How it works</a>
+      <a href="#customise">Customise</a>
       <a href="#install">Install</a>
       <a href="https://github.com/zenodea/controlisland">GitHub</a>
       <button id="theme" aria-label="Toggle light and dark" title="Light / dark">
@@ -306,6 +333,31 @@ echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup
       <div class="step">
         <div class="demo"><div class="d-notch"></div><div class="d-isl morph"><span class="d-l"><i class="d-lock"></i></span><span class="d-n"></span><span class="d-r"><i class="d-time"></i></span></div></div>
         <b>On the lock screen</b><p>The island stays visible while the Mac is locked, showing a padlock and the time. On unlock the padlock opens and a greeting replaces the time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="customise">
+  <div class="wrap">
+    <h2>Make it yours</h2>
+    <p class="lead">Settings has an Effects pane. Everything the island does with the pointer is a choice.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="demo"><div class="d-notch"></div><div class="d-isl c-lean"><span class="d-l"><i class="d-dot"></i></span><span class="d-n"></span><span class="d-r"><i class="d-ico"></i></span><i class="d-glow"></i></div><div class="d-cursor c-in"></div></div>
+        <b>Takes the pointer in</b><p>Move into the island and the pointer disappears. Moving the mouse leans the island instead, and the rim lights up where it would come out. Turn it off and the island is just a panel.</p>
+      </div>
+      <div class="step">
+        <div class="demo"><div class="d-notch"></div><div class="d-isl c-glass"><span class="d-l"><i class="d-dot"></i></span><span class="d-n"></span><span class="d-r"><i class="d-ico"></i></span><i class="d-sheen"></i></div><div class="d-ring"></div><div class="d-cursor c-out"></div></div>
+        <b>Lets it out your way</b><p>A firm push frees the pointer through the rim on that side. Choose what marks the spot: a ripple around the rim, a ring of light, a reflection across dark glass, or nothing.</p>
+      </div>
+      <div class="step">
+        <div class="demo"><div class="d-notch"></div><div class="d-isl c-force"><span class="d-l"><i class="d-dot"></i></span><span class="d-n"></span><span class="d-r"><i class="d-ico"></i></span><i class="d-glow"></i></div><div class="d-slider"><i class="d-knob"></i></div></div>
+        <b>Push as hard as you like</b><p>A slider sets how much travel it takes to get out. Or skip the hold, and the pointer comes straight back out with the next movement.</p>
+      </div>
+      <div class="step">
+        <div class="demo"><div class="d-notch"></div><div class="d-isl c-hold"><span class="d-l"><i class="d-dot"></i></span><span class="d-n"></span><span class="d-r"><i class="d-ico"></i></span></div><div class="d-pad"><i class="d-finger"></i></div></div>
+        <b>Knows when you let go</b><p>On the trackpad the island keeps its lean while a finger is down and settles when it lifts. The menu bar stays put the whole time the pointer is held.</p>
       </div>
     </div>
   </div>

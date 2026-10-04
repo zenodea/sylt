@@ -26,6 +26,8 @@ final class NotchPanel: NSPanel {
     private static let settleAfterCapture: CFTimeInterval = 0.25
     /// How far past the rim the pointer is thrown, and how long before it can be taken in again.
     private static let ejectDistance: CGFloat = 4
+    /// How far below the top of the screen the held pointer is kept.
+    private static let topMargin: CGFloat = 10
     private static let recaptureDelay: CFTimeInterval = 0.15
     /// The pull decays as time passes between movements, so only a fast,
     /// deliberate shove reaches the release distance. A single quick flick
@@ -60,6 +62,11 @@ final class NotchPanel: NSPanel {
         applyFrame()
         SkyLight.pinAboveLockScreen(self)
         trackCursor()
+        TrackpadTouch.shared.start()
+        TrackpadTouch.shared.onChange = { [weak self] touching in
+            guard let self, captured, !touching else { return }
+            settle()
+        }
     }
 
     deinit {
@@ -114,6 +121,12 @@ final class NotchPanel: NSPanel {
         capturedAt = CACurrentMediaTime()
         CursorControl.hide(on: screen)
         ignoreNextDelta = true
+        // Entering means touching the top of the screen, which is where fullscreen apps
+        // reveal the menu bar. The hidden pointer is moved off that edge at once.
+        if entry.y > frame.maxY - Self.topMargin {
+            entry.y = frame.maxY - Self.topMargin
+            CursorControl.warp(to: cgPoint(entry))
+        }
         lastDrag = CACurrentMediaTime()
         state.cursorPushed(.zero)
         if state.preferences.releaseEffect == .ripple {
@@ -141,13 +154,31 @@ final class NotchPanel: NSPanel {
         if hypot(pull.dx, max(0, pull.dy)) >= state.releaseDistance || speed >= Self.flickSpeed * force { return release(toward: pull) }
         state.cursorPushed(pull)
         keepOffScreenTop()
-        // When the mouse comes to rest, the island settles back in one spring.
         rest?.invalidate()
-        rest = .after(0.12) { [weak self] in
-            guard let self, captured else { return }
-            pull = .zero
-            state.cursorSettled()
-        }
+        // A finger on the trackpad is still holding: the island keeps its lean until it
+        // lifts. Without a trackpad to ask, a short pause in movement counts as letting go.
+        guard !TrackpadTouch.shared.isTouching else { return }
+        rest = .after(0.12) { [weak self] in self?.settle() }
+    }
+
+    /// The hand let go: the island springs back and the hidden pointer is parked.
+    private func settle() {
+        guard captured else { return }
+        rest?.invalidate()
+        rest = nil
+        pull = .zero
+        state.cursorSettled()
+        parkPointer()
+    }
+
+    /// The hidden pointer drifts with the mouse while held. Once the mouse rests, it is
+    /// set back where it went in, so a two-finger swipe lands on the island and not on
+    /// whatever the pointer wandered over. Pushes never warp, so the push force is untouched.
+    private func parkPointer() {
+        let location = NSEvent.mouseLocation
+        guard hypot(location.x - entry.x, location.y - entry.y) > 2 else { return }
+        CursorControl.warp(to: cgPoint(entry))
+        ignoreNextDelta = true
     }
 
     /// The hidden pointer still moves with the mouse. If it reaches the top of the screen
@@ -155,7 +186,7 @@ final class NotchPanel: NSPanel {
     /// it went in. Pushing up never counts toward a release, so the lost delta costs nothing.
     private func keepOffScreenTop() {
         let location = NSEvent.mouseLocation
-        guard location.y >= frame.maxY - 1 else { return }
+        guard location.y > frame.maxY - Self.topMargin else { return }
         CursorControl.warp(to: cgPoint(CGPoint(x: location.x, y: entry.y)))
         ignoreNextDelta = true
     }
