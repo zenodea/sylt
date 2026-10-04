@@ -8,7 +8,7 @@ struct SettingsView: View {
     @State private var opensAtLogin = LoginItem.isEnabled
 
     enum Pane: String, CaseIterable, Identifiable {
-        case general, builtIn, plugins, huds, about
+        case general, builtIn, plugins, huds, effects, about
 
         var id: String { rawValue }
 
@@ -18,6 +18,7 @@ struct SettingsView: View {
             case .builtIn: "Built in"
             case .plugins: "Plugins"
             case .huds: "Overlays"
+            case .effects: "Effects"
             case .about: "About"
             }
         }
@@ -28,6 +29,7 @@ struct SettingsView: View {
             case .builtIn: "square.grid.2x2.fill"
             case .plugins: "puzzlepiece.extension.fill"
             case .huds: "rectangle.topthird.inset.filled"
+            case .effects: "sparkles"
             case .about: "info.circle.fill"
             }
         }
@@ -48,6 +50,7 @@ struct SettingsView: View {
                 case .builtIn: builtInPane
                 case .plugins: pluginsPane
                 case .huds: huds
+                case .effects: effects
                 case .about: about
                 }
             }
@@ -95,6 +98,49 @@ struct SettingsView: View {
         .onAppear { mediaKeys.refreshAuthorization() }
         Section("Unlock") {
             Toggle("Play a sound when the Mac unlocks", isOn: $preferences.playsUnlockSound)
+        }
+    }
+
+    @ViewBuilder
+    private var effects: some View {
+        Section {
+            Toggle("Take the pointer in", isOn: $preferences.absorbsPointer)
+            if preferences.absorbsPointer {
+                Toggle("Hold it until pushed", isOn: $preferences.holdsPointer)
+                if preferences.holdsPointer {
+                    Slider(value: $preferences.releaseForce, in: 0.4...2, step: 0.2) {
+                        Text("Push needed")
+                    } minimumValueLabel: {
+                        Image(systemName: "hand.point.up.left").imageScale(.small)
+                    } maximumValueLabel: {
+                        Image(systemName: "hand.point.up.left.fill").imageScale(.large)
+                    }
+                    Toggle("Glow at the edge where it would come out", isOn: $preferences.showsRimGlow)
+                }
+            }
+        } header: {
+            Text("Pointer")
+        } footer: {
+            Text(preferences.holdsPointer
+                ? "While the island holds the pointer, moving the mouse leans the island. A firm push lets it out."
+                : "The pointer dips into the island and comes straight back out with the next movement.")
+        }
+        if preferences.absorbsPointer {
+            Section("Letting go") {
+                Picker("Effect", selection: $preferences.releaseEffect) {
+                    ForEach(ReleaseEffect.allCases) { Text($0.title).tag($0) }
+                }
+                if preferences.releaseEffect == .ripple {
+                    Slider(value: $preferences.rippleStrength, in: 0.5...2.5, step: 0.25) {
+                        Text("Ripple strength")
+                    } minimumValueLabel: {
+                        Image(systemName: "water.waves").imageScale(.small)
+                    } maximumValueLabel: {
+                        Image(systemName: "water.waves").imageScale(.large)
+                    }
+                }
+                Toggle("Haptic tap", isOn: $preferences.hapticsOnRelease)
+            }
         }
     }
 

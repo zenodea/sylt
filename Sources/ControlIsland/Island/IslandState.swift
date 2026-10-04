@@ -13,10 +13,14 @@ final class IslandState: ObservableObject {
     @Published private(set) var pullStrength: CGFloat = 0
     /// The lean the push gives the island, -1...1 per axis.
     @Published private(set) var cursorPull: CGVector = .zero
-    /// A one-shot burst of light where the pointer just popped out.
-    @Published private(set) var burst: (point: CGPoint, id: UUID)?
+    /// A one-shot effect where the pointer just popped out, with the push direction.
+    @Published private(set) var burst: (point: CGPoint, direction: CGVector, id: UUID)?
+    /// The liquid surface reacting where the pointer just went in or came out.
+    @Published private(set) var liquid: LiquidEvent?
     /// Mouse travel that frees the pointer, and how quickly the lean saturates.
-    static let releaseDistance: CGFloat = 520
+    static let baseReleaseDistance: CGFloat = 520
+    /// How far the mouse has to travel, net of decay, before the island lets the pointer go.
+    var releaseDistance: CGFloat { Self.baseReleaseDistance * CGFloat(preferences.releaseForce) }
     static let pullSoftness: CGFloat = 320
     @Published private(set) var isHovering = false
     @Published private(set) var layout = IslandLayout()
@@ -55,7 +59,7 @@ final class IslandState: ObservableObject {
     var hitFrame: CGRect { layout.hitFrame(for: mode, hovering: isHovering) }
 
     /// The island takes the cursor in everywhere except the expanded panel, which has controls to click.
-    var absorbsCursor: Bool { isHovering && mode != .expanded && !lock.isLocked }
+    var absorbsCursor: Bool { preferences.absorbsPointer && isHovering && mode != .expanded && !lock.isLocked }
 
     /// Where the island settles when nothing is showing.
     private var restingMode: IslandMode { lock.isLocked ? .locked : .closed }
@@ -178,13 +182,23 @@ final class IslandState: ObservableObject {
     /// leans that way and its rim lights up where the pointer would come out.
     func cursorPushed(_ travel: CGVector) {
         let direction = CGVector(dx: travel.dx, dy: max(0, travel.dy))
-        let strength = min(1, hypot(direction.dx, direction.dy) / Self.releaseDistance)
+        let strength = min(1, hypot(direction.dx, direction.dy) / releaseDistance)
         withAnimation(IslandAnimation.cursor) {
             cursorPull = CGVector(dx: tanh(direction.dx / Self.pullSoftness), dy: tanh(direction.dy / Self.pullSoftness))
             cursor = CGPoint(x: cursorPull.dx * 0.6, y: cursorPull.dy * 0.6)
             pullStrength = strength
             exitPoint = rimPoint(toward: direction, outside: 0)
         }
+    }
+
+    /// The island just took the pointer at this canvas point: the surface ripples there.
+    func cursorAbsorbed(at point: CGPoint) {
+        splash(LiquidEvent(point: point))
+    }
+
+    private func splash(_ event: LiquidEvent) {
+        liquid = event
+        Timer.after(0.7) { [weak self] in if self?.liquid?.id == event.id { self?.liquid = nil } }
     }
 
     /// The mouse stopped: the island settles back with a soft spring.
@@ -212,9 +226,15 @@ final class IslandState: ObservableObject {
     }
 
     func cursorReleased(toward direction: CGVector) {
-        if hypot(direction.dx, max(0, direction.dy)) > 0.001 {
-            burst = (rimPoint(toward: direction, outside: 0), UUID())
-            Haptics.peek()
+        let length = hypot(direction.dx, max(0, direction.dy))
+        if length > 0.001 {
+            let id = UUID()
+            let point = rimPoint(toward: direction, outside: 0)
+            let unit = CGVector(dx: direction.dx / length, dy: max(0, direction.dy) / length)
+            burst = (point, unit, id)
+            if preferences.releaseEffect == .ripple { splash(LiquidEvent(point: point)) }
+            if preferences.hapticsOnRelease { Haptics.peek() }
+            Timer.after(1.1) { [weak self] in if self?.burst?.id == id { self?.burst = nil } }
         }
         withAnimation(IslandAnimation.swipeRebound) {
             cursorPull = .zero
@@ -357,4 +377,11 @@ final class IslandState: ObservableObject {
         }
     }
 
+}
+
+/// One disturbance of the island's liquid surface: where the pointer went in or came out.
+struct LiquidEvent: Equatable {
+    let point: CGPoint
+    let start = Date()
+    let id = UUID()
 }

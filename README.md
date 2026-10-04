@@ -17,7 +17,7 @@ Each wing is sized to its own content. An empty side adds nothing.
 
 | Overlay | Shows |
 | --- | --- |
-| Volume, brightness, mute | Icon and level bar on the right only. Mute draws a slash through the speaker. |
+| Volume, brightness, mute | Icon and level bar on the right only. Mute draws a slash through the speaker. Brightness only for changes made through the keys or the island, never for auto-brightness. |
 | Track change | The wings stay put, the new cover flips in, a title row slides out underneath. |
 | Battery | Percent and a message at 80, 60, 40, 20, 15, 10, 5 and 0 percent, and on charger changes. |
 | Bluetooth | A rune that draws itself in on connect, the device name and a gauge filled to its exact charge. Low-battery warnings at 20 and 10 percent. |
@@ -38,6 +38,15 @@ Each wing is sized to its own content. An empty side adds nothing.
 - Every plugin's section: timer presets, agents waiting first with how long they've waited, the file shelf, clipboard history, the weather.
 
 **Locked** the island shows a padlock and the time, and stays visible over the login window.
+
+**The pointer** is taken in when it enters the island: it disappears, and moving the mouse leans the island instead. A firm push in one direction lets it out through the rim on that side, and it keeps moving in the same motion. Settings has an Effects pane for all of it:
+
+- Hold it until pushed, and how hard the push has to be. Off, the pointer dips in and comes straight back out with the next movement.
+- A glow on the rim where the pointer would come out, growing with the push.
+- What happens when it leaves: a ripple running around the rim from that point, a ring of light, a reflection sweeping across the island as if it were dark glass, or nothing. The ripple's strength is adjustable.
+- A haptic tap on release.
+
+The pointer is kept off the top edge of the screen while held, so the menu bar stays put.
 
 ## Install
 

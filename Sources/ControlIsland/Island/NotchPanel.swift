@@ -116,12 +116,20 @@ final class NotchPanel: NSPanel {
         ignoreNextDelta = true
         lastDrag = CACurrentMediaTime()
         state.cursorPushed(.zero)
+        if state.preferences.releaseEffect == .ripple {
+            state.cursorAbsorbed(at: CGPoint(x: entry.x - frame.minX, y: frame.maxY - entry.y))
+        }
     }
 
     private func dragged(by event: NSEvent) {
         // The warp that parks the pointer can report one large delta; it isn't the user's.
         if ignoreNextDelta { ignoreNextDelta = false; return }
         let now = CACurrentMediaTime()
+        // Not holding: the first real movement takes the pointer straight back out that way.
+        if !state.preferences.holdsPointer {
+            let travel = CGVector(dx: event.deltaX, dy: event.deltaY)
+            return release(toward: hypot(travel.dx, max(0, travel.dy)) > 0.001 ? travel : CGVector(dx: 1, dy: 0))
+        }
         if now - capturedAt < Self.settleAfterCapture { lastDrag = now; pull = .zero; return }
         let dt = max(0.001, now - lastDrag)
         let decay = pow(Self.decayPerSecond, CGFloat(dt))
@@ -129,8 +137,10 @@ final class NotchPanel: NSPanel {
         pull.dx = pull.dx * decay + event.deltaX
         pull.dy = pull.dy * decay + event.deltaY
         let speed = hypot(event.deltaX, max(0, event.deltaY)) / CGFloat(dt)
-        if hypot(pull.dx, max(0, pull.dy)) >= IslandState.releaseDistance || speed >= Self.flickSpeed { return release(toward: pull) }
+        let force = CGFloat(state.preferences.releaseForce)
+        if hypot(pull.dx, max(0, pull.dy)) >= state.releaseDistance || speed >= Self.flickSpeed * force { return release(toward: pull) }
         state.cursorPushed(pull)
+        keepOffScreenTop()
         // When the mouse comes to rest, the island settles back in one spring.
         rest?.invalidate()
         rest = .after(0.12) { [weak self] in
@@ -138,6 +148,16 @@ final class NotchPanel: NSPanel {
             pull = .zero
             state.cursorSettled()
         }
+    }
+
+    /// The hidden pointer still moves with the mouse. If it reaches the top of the screen
+    /// the menu bar would come out from under the island, so it is set back down to where
+    /// it went in. Pushing up never counts toward a release, so the lost delta costs nothing.
+    private func keepOffScreenTop() {
+        let location = NSEvent.mouseLocation
+        guard location.y >= frame.maxY - 1 else { return }
+        CursorControl.warp(to: cgPoint(CGPoint(x: location.x, y: entry.y)))
+        ignoreNextDelta = true
     }
 
     /// Give the pointer back. A shove throws it past the rim where it was pushed;
