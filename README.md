@@ -1,8 +1,8 @@
-# Control Island
+# Sylt
 
 A dynamic island for the MacBook notch. It turns the dead space at the top of the screen into a small, quiet display for the things you glance at: what's playing, your coding agents, the next meeting, a timer, volume and brightness, battery, Bluetooth, network, and more. It lives above every window, full-screen apps included, and it stays on the lock screen.
 
-Website: https://zenodea.github.io/controlisland/
+Website: https://zenodea.github.io/sylt/
 
 ## What it does
 
@@ -39,6 +39,8 @@ Each wing is sized to its own content. An empty side adds nothing.
 
 **Locked** the island shows a padlock and the time, and stays visible over the login window.
 
+**Layout** is yours to arrange. Settings has a Layout pane with the island drawn at the top and three columns under it: left wing, right wing, hidden. Drag any built-in badge or plugin between them, or onto another tile to set the order, and the island above follows. Anything you don't touch keeps its default place.
+
 **The pointer** is taken in when it enters the island: it disappears, and moving the mouse leans the island instead. A firm push in one direction lets it out through the rim on that side, and it keeps moving in the same motion. Settings has an Effects pane for all of it:
 
 - Hold it until pushed, and how hard the push has to be. Off, the pointer dips in and comes straight back out with the next movement.
@@ -53,12 +55,12 @@ The pointer is kept off the top edge of the screen while held, so the menu bar s
 Requires macOS 14 or later on a Mac with a notch. Build from source:
 
 ```sh
-git clone https://github.com/zenodea/controlisland.git
-cd controlisland
+git clone https://github.com/zenodea/sylt.git
+cd sylt
 make open
 ```
 
-`make open` builds a release binary, wraps it in `build/ControlIsland.app` and launches it. Settings are in the island's context menu. Turn on "Open at login" there.
+`make open` builds a release binary, wraps it in `build/Sylt.app` and launches it. Settings are in the island's context menu. Turn on "Open at login" there.
 
 ### Permissions
 
@@ -78,7 +80,7 @@ Each is asked for the first time its plugin needs it, and each plugin can be swi
 
 ## Writing a plugin
 
-A plugin is a folder with a `plugin.json` and a program. Drop it in `~/Library/Application Support/Control Island/Plugins` and it starts; Settings has a button for the folder. The six shipped plugins in `Plugins/` are the reference.
+A plugin is a folder with a `plugin.json` and a program. Drop it in `~/Library/Application Support/Sylt/Plugins` and it starts; Settings has a button for the folder. The six shipped plugins in `Plugins/` are the reference.
 
 ```json
 {
@@ -119,7 +121,7 @@ What a plugin can print:
 
 What the host writes to the plugin's stdin: `start` with `settings` and `dataDir`, `settings` when they change, `click` with a row `id`, `button` with an `id` (and its row), `action` with an `id`, `drop` with `files` when the manifest has `"accepts": ["files"]`, `clipboard` with `text` on every copy when it has `"accepts": ["clipboard"]` (password managers are skipped for you), `remove` with a file path, and `stop`.
 
-Manifests can set `"interval": seconds` to be run once per interval instead of staying running, `"accepts": ["files"]` to receive drops, `"enabledByDefault": false`, and `settings` of type `bool`, `text`, `number` or `choice` (with `options`), which Settings turns into a form. Tints are `white`, `dim`, `green`, `orange`, `red`, `yellow`, `blue`, `indigo`, `purple`, `pink`, `cyan` or a `#hex`.
+Manifests can set `"interval": seconds` to be run once per interval instead of staying running, `"accepts": ["files"]` to receive drops, `"side": "left"` for the wing the badge takes until the user moves it, `"enabledByDefault": false`, and `settings` of type `bool`, `text`, `number` or `choice` (with `options`), which Settings turns into a form. Tints are `white`, `dim`, `green`, `orange`, `red`, `yellow`, `blue`, `indigo`, `purple`, `pink`, `cyan` or a `#hex`.
 
 Plugins run as you, with your permissions. Scripts without an executable bit run through the interpreter their extension implies: `.py`, `.sh`, `.rb`, `.js`, `.swift`.
 
@@ -131,6 +133,6 @@ make test    # unit tests
 make open    # release bundle, relaunch
 ```
 
-Sources are grouped by concern under `Sources/ControlIsland`: `Island` (state, layout, modes, animation), `Monitors` (one folder per domain), `Plugins` (the protocol, process host and registry), `Views` (wings, overlays, expanded sections, badges, plugin renderers), `Settings` and `System`. Shipped plugins live in `Plugins/`, tests in `Tests/ControlIslandTests`. Run a debug build against the repo's plugins with `ISLAND_PLUGINS=Plugins .build/debug/ControlIsland`.
+Sources are grouped by concern under `Sources/Sylt`: `Island` (state, layout, modes, animation), `Monitors` (one folder per domain), `Plugins` (the protocol, process host and registry), `Views` (wings, overlays, expanded sections, badges, plugin renderers), `Settings` and `System`. Shipped plugins live in `Plugins/`, tests in `Tests/SyltTests`. Run a debug build against the repo's plugins with `ISLAND_PLUGINS=Plugins .build/debug/Sylt`.
 
 Private APIs can change between macOS releases. The SkyLight calls and the Focus store are the two places most likely to need attention after an update.

@@ -4,5 +4,6 @@
   "name": "Agents",
   "description": "Coding agents from Herdr, or found by process when Herdr isn't installed.",
   "symbol": "terminal.fill",
-  "run": "agents.py"
+  "run": "agents.py",
+  "side": "left"
 }

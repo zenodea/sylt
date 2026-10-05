@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "ControlIsland",
+    name: "Sylt",
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "MediaRemoteAdapter", type: .dynamic, targets: ["MediaRemoteAdapter"]),
@@ -14,8 +14,8 @@ let package = Package(
             linkerSettings: [.linkedFramework("Foundation"), .linkedFramework("QuartzCore")]
         ),
         .executableTarget(
-            name: "ControlIsland",
-            path: "Sources/ControlIsland",
+            name: "Sylt",
+            path: "Sources/Sylt",
             linkerSettings: [
                 .linkedFramework("AppKit"),
                 .linkedFramework("SwiftUI"),
@@ -28,9 +28,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "ControlIslandTests",
-            dependencies: ["ControlIsland"],
-            path: "Tests/ControlIslandTests"
+            name: "SyltTests",
+            dependencies: ["Sylt"],
+            path: "Tests/SyltTests"
         ),
     ]
 )

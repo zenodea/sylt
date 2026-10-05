@@ -4,10 +4,10 @@ build:
 test:
 	swift test
 run: build
-	.build/debug/ControlIsland
+	.build/debug/Sylt
 bundle:
 	scripts/bundle.sh
 open:
-	pkill -x ControlIsland || true
+	pkill -x Sylt || true
 	$(MAKE) bundle
-	open build/ControlIsland.app
+	open build/Sylt.app

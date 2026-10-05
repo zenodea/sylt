@@ -15,11 +15,15 @@
     --chip: rgba(255,255,255,.08); --panel-hover: #1b2030; --code-bg: #0e1118; --code-fg: #dbeafe;
     --accent: #7dd3fc; --green: #4ade80; --orange: #fb923c; --blue: #60a5fa; --violet: #a78bfa;
     --radius: 18px;
+    --wall: radial-gradient(120% 90% at 30% 10%, #1d2a4a, #0d1120 60%, #090b12); --wall-base: #090b12;
+    --ink: 255,255,255; --cap: rgba(243,244,247,.78);
   }
   :root[data-theme="light"] {
     --bg: #f6f7fb; --bg-2: #ffffff; --panel: #ffffff; --line: rgba(15,23,42,.1);
     --fg: #0f172a; --muted: rgba(15,23,42,.66); --dim: rgba(15,23,42,.45);
     --chip: rgba(15,23,42,.06); --panel-hover: #eef1f7; --code-bg: #0f172a; --code-fg: #e2e8f0;
+    --wall: radial-gradient(120% 90% at 30% 10%, #dbe4ff, #c7d2fe 60%, #e2e8f0); --wall-base: #e2e8f0;
+    --ink: 15,23,42; --cap: rgba(15,23,42,.72);
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -41,7 +45,7 @@
   :root[data-theme="light"] #theme .moon { opacity: 1; transform: none; }
   nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.01em; text-decoration: none; }
-  nav .links { display: flex; gap: 22px; font-size: 14px; color: var(--muted); }
+  nav .links { display: flex; gap: 22px; font-size: 14px; color: var(--muted); align-items: center; }
   nav .links a { text-decoration: none; }
   nav .links a:hover { color: var(--fg); }
 
@@ -58,87 +62,192 @@
   .btn.primary:hover { opacity: .9; }
   code.inline { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: var(--chip); padding: 2px 7px; border-radius: 6px; }
 
-  /* live island demo */
-  .screen { position: relative; margin: 0 auto; width: min(760px, 100%); aspect-ratio: 760/300; border-radius: 22px 22px 0 0; overflow: hidden;
-    background: radial-gradient(120% 90% at 30% 10%, #1d2a4a, #0d1120 60%, #090b12); border: 1px solid var(--line); border-bottom: none; box-shadow: 0 40px 100px rgba(0,0,0,.5); }
-  .screen { display: flex; justify-content: center; align-items: flex-start; }
-  .screen .stars { position: absolute; inset: 0; background-image: radial-gradient(1px 1px at 12% 60%, #fff8 50%, transparent 51%), radial-gradient(1px 1px at 70% 30%, #fff6 50%, transparent 51%), radial-gradient(1.5px 1.5px at 88% 72%, #fff5 50%, transparent 51%), radial-gradient(1px 1px at 40% 85%, #fff4 50%, transparent 51%); }
-  .notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 160px; height: 28px; background: #000; border-radius: 0 0 14px 14px; }
+  /* a piece of screen with the notch at the top */
+  .scene { position: relative; overflow: hidden; background: var(--wall); }
+  .scene .stars { position: absolute; inset: 0; background-image: radial-gradient(1px 1px at 12% 60%, #fff8 50%, transparent 51%), radial-gradient(1px 1px at 70% 30%, #fff6 50%, transparent 51%), radial-gradient(1.5px 1.5px at 88% 72%, #fff5 50%, transparent 51%), radial-gradient(1px 1px at 40% 85%, #fff4 50%, transparent 51%); }
+  :root[data-theme="light"] .scene .stars { display: none; }
+  .stage { position: absolute; inset: 0; transform-origin: 50% 0; transform: scale(var(--z, 1)); }
+  .screen { margin: 0 auto; width: min(760px, 100%); aspect-ratio: 760/330; border-radius: 22px 22px 0 0; border: 1px solid var(--line); border-bottom: none; box-shadow: 0 40px 100px rgba(0,0,0,.5); }
+  :root[data-theme="light"] .screen { box-shadow: 0 30px 80px rgba(15,23,42,.18); }
   .caption { text-align: center; color: var(--muted); font-size: 14px; margin-top: 14px; min-height: 20px; }
-  @keyframes breathe { 0%,100% { transform: scale(1); opacity: .75; } 50% { transform: scale(1.3); opacity: 1; } }
-  @keyframes bar { 0%,100% { height: 5px; } 50% { height: 14px; } }
-  @keyframes ripple { 0%,100% { transform: translateY(0); opacity: .5; } 50% { transform: translateY(-3px); opacity: 1; } }
+  @media (max-width: 600px) { .screen { --z: .78; } }
 
+  /* island: black, square against the screen edge, bottom corners rounding as it grows */
+  .notch { position: absolute; top: 0; left: calc(50% - 92.5px); width: 185px; height: 32px; background: #000; border-radius: 0 0 10px 10px; }
+  .pos { position: absolute; top: 0; left: calc(50% - 92.5px); transform-origin: 50% 0; }
+  .pos .liquid { position: absolute; left: -12px; top: 0; pointer-events: none; }
+  .isl { position: relative; display: flex; flex-wrap: wrap; align-items: flex-start; height: 32px; background: #000; color: #fff; overflow: hidden; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,.4); transform-origin: 0 0;
+    font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, Inter, sans-serif; font-size: 13px; font-weight: 500; line-height: 1.2; white-space: nowrap; -webkit-font-smoothing: antialiased; }
+  .isl.probe { position: absolute; left: -9999px; top: -9999px; visibility: hidden; width: auto; }
+  .isl .w { height: 32px; display: flex; align-items: center; flex: none; overflow: hidden; transition: height .25s; }
+  .isl.hud .w { height: 34px; }
+  .isl .w.l { justify-content: flex-end; } .isl .w.r { justify-content: flex-start; }
+  .isl .gap { width: 185px; height: 32px; flex: none; }
+  .isl .c { display: flex; align-items: center; gap: 8px; padding: 0 6px; height: 100%; flex: none; }
+  .isl .c:empty { padding: 0; }
+  .isl .w.l .c.h { padding: 0 4px 0 8px; } .isl .w.r .c.h { padding: 0 8px 0 4px; }
+  .isl .row { width: 100%; height: 18px; margin-bottom: 4px; padding: 0 12px; font-size: 11px; font-weight: 500; line-height: 18px; color: rgba(255,255,255,.85); overflow: hidden; }
+  .isl .row .c { display: block; padding: 0; }
+  .isl .card { position: absolute; left: 0; top: 0; }
+  .isl .fx { position: absolute; inset: 0; pointer-events: none; -webkit-mask-image: linear-gradient(transparent, #000 12px); mask-image: linear-gradient(transparent, #000 12px); }
+  .isl .fx svg { position: absolute; left: 0; top: 0; overflow: visible; }
+  .isl .fx .rim { fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; filter: blur(1.5px); opacity: 0; transition: opacity .22s; }
+  .isl .fx .thread { fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; filter: blur(.6px); opacity: 0; }
+  .isl .fx .ringfx { position: absolute; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%; border: 3px solid rgba(255,255,255,.7); background: rgba(255,255,255,.25); opacity: 0; }
+  .isl .fx .sheen { position: absolute; width: 220px; height: 56px; margin: -28px 0 0 -110px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,255,255,.7), rgba(255,255,255,.16) 45%, transparent); filter: blur(8px); opacity: 0; }
 
-
-  /* island */
-  .isl { position: relative; z-index: 2; display: flex; flex-wrap: wrap; align-items: flex-start; background: #000; border-radius: 0 0 16px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.6); color: #fff; font-size: 12px; font-weight: 600; overflow: hidden; }
-  .isl .w .c, .isl .below .c { display: flex; align-items: center; gap: 7px; }
-  .isl .agent { width: 14px; height: 14px; border-radius: 4px; position: relative; flex: none; }
-  .isl .agent::after { content: ""; position: absolute; right: -2px; bottom: -2px; width: 5px; height: 5px; border-radius: 50%; border: 1px solid #000; }
-  .isl .agent.claude { background: #d97757; } .isl .agent.claude::after { background: var(--green); animation: breathe 1.6s ease-in-out infinite; }
-  .isl .agent.pi { background: #2a2a2e; opacity: .5; } .isl .agent.pi::after { background: var(--orange); }
-  .isl .art { width: 20px; height: 20px; border-radius: 6px; background: linear-gradient(135deg, #f472b6, #8b5cf6 60%, #22d3ee); flex: none; }
-  .isl .art.b { background: linear-gradient(135deg, #fbbf24, #f97316 55%, #ef4444); }
-  .isl .art.flip { animation: flip .7s cubic-bezier(.3,1.2,.4,1); }
-  @keyframes flip { 0% { transform: perspective(60px) rotateY(0) scale(1); } 50% { transform: perspective(60px) rotateY(180deg) scale(1.18); } 100% { transform: perspective(60px) rotateY(360deg) scale(1); } }
-  .isl svg.rune path { stroke-dasharray: 60; stroke-dashoffset: 60; animation: draw .55s .15s ease-in-out forwards; }
+  /* wing items */
+  .isl .t { font-size: 11px; font-weight: 600; }
+  .isl .w85 { color: rgba(255,255,255,.85); } .isl .dim { color: rgba(255,255,255,.6); }
+  .isl .num { font-variant-numeric: tabular-nums; }
+  .isl .orange { color: #ff9f0a; } .isl .red { color: #ff453a; } .isl .green { color: #30d158; } .isl .blue { color: #0a84ff; } .isl .indigo { color: #5e5ce6; }
+  .isl svg.ic { width: 1em; height: 1em; fill: currentColor; flex: none; }
+  .isl .g { display: inline-grid; place-items: center; width: 16px; height: 16px; flex: none; }
+  .isl .g.hg { width: 18px; }
+  .isl .cal, .isl .hp, .isl .pi { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,.85); font-variant-numeric: tabular-nums; }
+  .isl .cal svg { font-size: 12px; } .isl .hp svg { font-size: 12px; }
+  .isl .pi svg.ic { font-size: 14px; }
+  .isl .ag { display: inline-flex; gap: 3px; }
+  .isl .ai { position: relative; width: 14px; height: 14px; flex: none; }
+  .isl .ai .f { position: absolute; inset: 0; border-radius: 3.5px; display: grid; place-items: center; }
+  .isl .ai svg { width: 10px; height: 10px; fill: #fff; }
+  .isl .ai.claude .f { background: #d97757; }
+  .isl .ai.pi .f { background: #26262a; color: #8f8cff; font: 700 10px/1 ui-rounded, system-ui, sans-serif; }
+  .isl .ai.wait .f { filter: saturate(.2); opacity: .45; }
+  .isl .ai b { position: absolute; right: -2px; bottom: -2px; width: 6px; height: 6px; border-radius: 50%; background: #000; display: grid; place-items: center; }
+  .isl .ai b::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #ff9f0a; }
+  .isl .ai b.on::after { background: #30d158; animation: breathe 1.6s ease-in-out infinite; }
+  .isl .ai b.done::after { background: #0a84ff; }
+  @keyframes breathe { 0%, 100% { transform: scale(1); opacity: .7; } 50% { transform: scale(1.3); opacity: 1; } }
+  .isl .art { position: relative; width: 20px; height: 20px; border-radius: 4.4px; overflow: hidden; flex: none; background: linear-gradient(135deg, #f472b6, #8b5cf6 60%, #22d3ee); }
+  .isl .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, #fbbf24, #f97316 55%, #ef4444); opacity: 0; transition: opacity .25s ease-in-out .2s; }
+  .isl .art.b::after { opacity: 1; }
+  .isl .bars { display: flex; gap: 2px; align-items: center; height: 14px; width: 16px; }
+  .isl .bars i { width: 2.5px; height: 3.5px; border-radius: 2px; background: #fff; }
+  .isl .bars.ca i:nth-child(1) { background: #f472b6; } .isl .bars.ca i:nth-child(2) { background: #c084fc; } .isl .bars.ca i:nth-child(3) { background: #818cf8; } .isl .bars.ca i:nth-child(4) { background: #22d3ee; }
+  .isl .bars.cb i:nth-child(1) { background: #fbbf24; } .isl .bars.cb i:nth-child(2) { background: #fb923c; } .isl .bars.cb i:nth-child(3) { background: #f97316; } .isl .bars.cb i:nth-child(4) { background: #ef4444; }
+  .isl .bars i { transition: background .3s; }
+  .isl .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none; }
+  .isl .dot.o { background: #ff9f0a; box-shadow: 0 0 6px rgba(255,159,10,.8); } .isl .dot.gn { background: #30d158; box-shadow: 0 0 6px rgba(48,209,88,.8); } .isl .dot.bl { background: #0a84ff; }
+  .isl .dots { display: inline-flex; gap: 3px; }
+  .isl .ring { width: 12px; height: 12px; flex: none; transform: rotate(-90deg); }
+  .isl .ring circle { fill: none; stroke-width: 2; } .isl .ring .tr { stroke: rgba(255,255,255,.25); } .isl .ring .ar { stroke: #ff9f0a; stroke-linecap: round; stroke-dasharray: 31.4; stroke-dashoffset: calc(31.4 * (1 - var(--f))); }
+  /* level glyphs: waves and rays fill with the level */
+  .isl .spk { font-size: 13px; width: 20px; height: 14px; }
+  .isl .spk .v { opacity: .35; transition: opacity .3s; } .isl .spk .v.on { opacity: 1; }
+  .isl .spk .sl { stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset .3s ease-out; }
+  .isl .spk.muted .sl { stroke-dashoffset: 0; }
+  .isl .sun { width: 14px; height: 14px; }
+  .isl .sun .v { opacity: .35; } .isl .sun .v.on { opacity: 1; }
+  .isl .bar { width: 72px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.2); overflow: hidden; flex: none; }
+  .isl .bar i { display: block; height: 100%; width: calc(100% * var(--v)); background: #fff; border-radius: 3px; transition: width .3s cubic-bezier(.2,.9,.3,1); }
+  .isl .gauge { position: relative; width: 20px; height: 10px; border: 1px solid rgba(255,255,255,.45); border-radius: 3px; margin-right: 2.5px; flex: none; }
+  .isl .gauge::after { content: ""; position: absolute; right: -4px; top: 2px; width: 1.5px; height: 4px; background: rgba(255,255,255,.45); border-radius: 1px; }
+  .isl .gauge i { position: absolute; left: 1px; top: 1px; bottom: 1px; width: calc((100% - 2px) * var(--p)); background: #30d158; border-radius: 1.5px; animation: gfill .6s .2s cubic-bezier(.3,1.1,.4,1) both; }
+  .isl .gauge.low i { background: #ff453a; } .isl .gauge.mid i { background: #ffd60a; }
+  @keyframes gfill { from { width: 1.5px; } }
+  .isl .bt { display: inline-flex; align-items: center; gap: 8px; }
+  .isl .bt .name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .isl .rune { width: 18px; height: 18px; position: relative; display: grid; place-items: center; }
+  .isl .rune svg { width: 8px; height: 15px; overflow: visible; }
+  .isl .rune path { fill: none; stroke: #0a84ff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 60; stroke-dashoffset: 60; animation: draw .55s .15s ease-in-out forwards; }
+  .isl .rune i { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(10,132,255,.6); animation: bring .9s ease-out forwards; }
+  .isl .rune i + i { animation-delay: .25s; }
   @keyframes draw { to { stroke-dashoffset: 0; } }
-  .isl .bars { display: flex; gap: 2px; align-items: center; height: 14px; }
-  .isl .bars i { width: 3px; border-radius: 2px; background: #f0abfc; animation: bar 1s ease-in-out infinite; height: 6px; }
-  .isl .bars i:nth-child(2) { animation-delay: .15s; background: #c084fc; } .isl .bars i:nth-child(3) { animation-delay: .3s; background: #818cf8; } .isl .bars i:nth-child(4) { animation-delay: .45s; background: #67e8f9; }
-  .isl .card { display: flex; gap: 12px; margin: 6px 12px 8px; padding: 10px; border-radius: 14px; background: linear-gradient(135deg, rgba(167,139,250,.22), rgba(167,139,250,.06)); border: 1px solid rgba(192,132,252,.5); width: 400px; max-width: calc(100vw - 80px); }
-  .isl .card .cover { width: 60px; height: 60px; border-radius: 14px; background: linear-gradient(135deg, #f472b6, #8b5cf6 60%, #22d3ee); flex: none; }
-  .isl .card .meta { flex: 1; min-width: 0; font-size: 12px; font-weight: 500; }
-  .isl .card .meta b { display: block; font-size: 13px; }
-  .isl .card .meta small { color: rgba(255,255,255,.6); }
-  .isl .card .seek { margin: 8px 0; height: 6px; border-radius: 3px; background: rgba(255,255,255,.2); } .isl .card .seek i { display: block; width: 38%; height: 100%; border-radius: 3px; background: #fff; }
-  .isl .card .ctl { display: flex; gap: 22px; justify-content: center; font-size: 13px; }
-  .isl .dots { display: inline-flex; gap: 3px; margin-left: auto; } .isl .dots i { width: 4px; height: 4px; border-radius: 50%; background: var(--green); animation: ripple 1.2s ease-in-out infinite; } .isl .dots i:nth-child(2) { animation-delay: .15s; } .isl .dots i:nth-child(3) { animation-delay: .3s; }
-  .isl .below { width: 100%; } .isl .below:empty { display: none; }
-  .isl .below .c { flex-direction: column; align-items: stretch; gap: 0; }
-  .isl .n { width: 160px; height: 28px; flex: none; }
-  .isl .w { display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 8px 0 0; white-space: nowrap; }
-  .isl .w.l { padding: 0 4px 0 8px; } .isl .w.r { padding: 0 8px 0 4px; }
-  .isl .w:empty { padding: 0; }
-  .isl .row { padding: 0 12px 8px; font-size: 11px; color: rgba(255,255,255,.85); font-weight: 500; }
-  .isl .g { display: inline-grid; place-items: center; width: 18px; height: 18px; font-size: 13px; }
-  .isl .dim { color: rgba(255,255,255,.6); }
-  .isl .amber { color: var(--orange); } .isl .red { color: #f87171; } .isl .green { color: var(--green); } .isl .blue { color: var(--blue); } .isl .violet { color: var(--violet); }
-  .isl .bar { width: 72px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.2); overflow: hidden; } .isl .bar i { display: block; height: 100%; width: 65%; background: #fff; border-radius: 3px; animation: grow .8s cubic-bezier(.3,1.2,.4,1); }
-  .isl .bar.off i { width: 0; }
-  .isl .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; } .dot.o { background: var(--orange); box-shadow: 0 0 6px var(--orange); } .dot.gn { background: var(--green); box-shadow: 0 0 6px var(--green); }
-  .isl .gauge { position: relative; width: 20px; height: 10px; border: 1px solid rgba(255,255,255,.45); border-radius: 3px; } .isl .gauge::after { content: ""; position: absolute; right: -4px; top: 3px; width: 2px; height: 4px; background: rgba(255,255,255,.45); border-radius: 1px; }
-  .isl .gauge i { position: absolute; left: 2px; top: 2px; bottom: 2px; width: calc((100% - 4px) * var(--p)); background: var(--green); border-radius: 1.5px; animation: grow .9s cubic-bezier(.3,1.2,.4,1); } .isl .gauge.low i { background: #f87171; }
-  .isl .ring { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); border-top-color: var(--orange); border-right-color: var(--orange); }
-  .isl .lock { width: 11px; height: 8px; background: #ddd; border-radius: 2.5px; position: relative; margin-top: 6px; } .isl .lock::before { content: ""; position: absolute; left: 2px; top: -6px; width: 7px; height: 7px; border: 2px solid #ddd; border-bottom: none; border-radius: 5px 5px 0 0; box-sizing: border-box; }
-  .isl .lock, .isl .lock::before { transition: background .35s, border-color .35s, transform .45s cubic-bezier(.3,1.5,.4,1); transform-origin: left bottom; }
-  .isl .lock.open { background: var(--green); } .isl .lock.open::before { border-color: var(--green); transform: translate(-1px, -2px) rotate(-28deg); }
-  .isl .sec { margin: 0 12px; padding: 6px 10px; border-radius: 10px; background: rgba(255,255,255,.06); font-size: 11px; display: flex; align-items: center; gap: 8px; }
-  .isl .sec + .sec { margin-top: 6px; } .isl .sec:last-child { margin-bottom: 10px; }
-  .isl .sec .sp { margin-left: auto; color: rgba(255,255,255,.5); }
-  .isl .file { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 9px; font-weight: 500; width: 52px; } .isl .file b { width: 26px; height: 30px; border-radius: 4px; background: linear-gradient(#f8fafc, #cbd5e1); }
-  .isl .pill { padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.1); font-size: 11px; }
-  .isl .hdr { padding: 8px 12px 4px; font-size: 11px; color: rgba(255,255,255,.5); display: flex; gap: 8px; }
-  .isl .hdr .sp { margin-left: auto; }
-  @keyframes grow { from { width: 0; } }
+  @keyframes bring { from { transform: scale(.6); opacity: .8; } to { transform: scale(1.8); opacity: 0; } }
+  .isl .wifi .a { opacity: .35; animation: lit .25s ease-out forwards; }
+  .isl .wifi .a:nth-child(2) { animation-delay: .18s; } .isl .wifi .a:nth-child(3) { animation-delay: .36s; }
+  @keyframes lit { to { opacity: 1; } }
+  .isl .bounce { animation: bounce .5s ease-out; }
+  @keyframes bounce { 0% { transform: scale(1); } 35% { transform: scale(1.22); } 70% { transform: scale(.96); } 100% { transform: scale(1); } }
+  .isl .pop { animation: pop .5s .25s cubic-bezier(.3,1.6,.4,1) both; }
+  @keyframes pop { from { transform: scale(.4); opacity: 0; } }
+  .isl .batt { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .isl .batt svg { width: 16px; height: 12px; }
+  .isl .lock { position: relative; width: 11px; height: 8px; border-radius: 2.5px; background: rgba(255,255,255,.85); margin: 7px 1px 0; flex: none; transition: background .3s; }
+  .isl .lock::before { content: ""; position: absolute; left: 2px; top: -5px; width: 7px; height: 6.5px; border: 2px solid rgba(255,255,255,.85); border-bottom: none; border-radius: 3.5px 3.5px 0 0; transform-origin: 0 100%; transition: transform .55s cubic-bezier(.3,1.7,.4,1), border-color .3s; }
+  .isl .lock.open { background: #30d158; } .isl .lock.open::before { border-color: #30d158; transform: translateY(-2.5px) rotate(-28deg); }
+  .isl .time { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.85); font-variant-numeric: tabular-nums; }
+  .isl .greet { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.85); }
+  .isl .trunc { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+  .isl .evt { display: inline-flex; gap: 6px; align-items: center; }
 
-  /* two-layer plugin section */
-  .layer { display: grid; grid-template-columns: 1.15fr 1fr; gap: 28px; align-items: center; margin: 22px 0 34px; }
-  .layer .mini { position: relative; height: 200px; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); display: flex; justify-content: center; align-items: flex-start; background: radial-gradient(120% 90% at 30% 10%, #1d2a4a, #0d1120 60%, #090b12); }
-  .layer .mini .notch { z-index: 1; }
-  .layer .mini .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; font-size: 13px; color: var(--muted); background: linear-gradient(transparent, rgba(9,11,18,.9) 50%); }
-  .layer h3 { font-size: 22px; letter-spacing: -.02em; margin: 0 0 8px; }
-  .layer p { color: var(--muted); margin: 0 0 10px; font-size: 15px; }
-  .layer ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
-  .layer ul li { margin: 4px 0; }
+  /* notification card */
+  .isl .note { position: absolute; left: 16px; right: 16px; top: 34px; height: 34px; display: flex; align-items: center; gap: 10px; }
+  .isl .note .app { width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(#5af07a, #1fc846); display: grid; place-items: center; flex: none; }
+  .isl .note .app svg { width: 18px; height: 18px; fill: #fff; }
+  .isl .note b { display: block; font-weight: 500; font-size: 13px; } .isl .note small { display: block; font-size: 11px; color: rgba(255,255,255,.6); }
+
+  /* expanded panel */
+  .isl .exp { position: absolute; left: 0; top: 0; padding: 24px 14px 12px; display: flex; flex-direction: column; gap: 10px; font-size: 12px; font-weight: 500; }
+  .isl .exp > * { animation: stg .45s cubic-bezier(.2,.9,.3,1) both; animation-delay: calc(.12s + var(--i, 0) * .06s); }
+  @keyframes stg { from { opacity: 0; transform: translateY(-6px); } }
+  .isl .mc { position: relative; height: 138px; padding: 10px; border-radius: 14px; display: flex; flex-direction: column; gap: 8px; background: linear-gradient(135deg, rgba(167,139,250,.22), rgba(167,139,250,.08)), rgba(255,255,255,.04); }
+  .isl .mc::before { content: ""; position: absolute; inset: 0; border-radius: 14px; padding: 1px; background: linear-gradient(90deg, #f472b6, #c084fc, #818cf8, #22d3ee); opacity: .75; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude; pointer-events: none; }
+  .isl .mc .top { display: flex; gap: 12px; }
+  .isl .mc .cover { position: relative; width: 60px; height: 60px; border-radius: 13px; background: linear-gradient(135deg, #f472b6, #8b5cf6 60%, #22d3ee); flex: none; }
+  .isl .mc .src { position: absolute; right: -5px; bottom: -5px; width: 21px; height: 21px; border-radius: 6.3px; background: #000; display: grid; place-items: center; }
+  .isl .mc .src i { width: 18px; height: 18px; border-radius: 5.4px; background: linear-gradient(#fd5e7b, #f52a5a); display: grid; place-items: center; }
+  .isl .mc .src svg { width: 11px; height: 11px; fill: #fff; }
+  .isl .mc .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .isl .mc .ti { font-size: 14px; font-weight: 600; } .isl .mc .ar { font-size: 12px; color: rgba(255,255,255,.6); margin-top: 2px; }
+  .isl .mc .prog { display: flex; align-items: center; gap: 8px; height: 14px; font-size: 10px; color: rgba(255,255,255,.6); font-variant-numeric: tabular-nums; }
+  .isl .mc .prog .bar { flex: 1; width: auto; }
+  .isl .mc .ctl { display: flex; justify-content: center; gap: 22px; }
+  .isl .mc .ctl span { width: 30px; height: 30px; display: grid; place-items: center; }
+  .isl .mc .ctl svg { width: 14px; height: 14px; fill: #fff; } .isl .mc .ctl .big svg { width: 18px; height: 18px; }
+  .isl .mc .out { display: flex; align-items: center; gap: 8px; padding: 0 2px; font-size: 10px; color: rgba(255,255,255,.5); }
+  .isl .mc .out svg { width: 14px; height: 14px; fill: #fff; }
+  .isl .mc .sl { flex: 1; position: relative; height: 4px; border-radius: 2px; background: rgba(255,255,255,.2); }
+  .isl .mc .sl::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 65%; border-radius: 2px; background: #fff; }
+  .isl .mc .sl::after { content: ""; position: absolute; left: 65%; top: -4px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  .isl .mc .out .dev { margin-left: auto; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+  .isl .ev { height: 34px; padding: 0 10px; display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.06); border-radius: 10px; }
+  .isl .ev .tm { width: 40px; display: flex; flex-direction: column; gap: 1px; font-variant-numeric: tabular-nums; }
+  .isl .ev .tm b { font-size: 12px; font-weight: 600; } .isl .ev .tm small { font-size: 10px; color: rgba(255,255,255,.5); }
+  .isl .ev .join { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 999px; background: rgba(48,209,88,.9); font-size: 11px; font-weight: 600; }
+  .isl .ev .join svg { width: 11px; height: 11px; fill: #fff; }
+  .isl .sec { display: flex; flex-direction: column; gap: 4px; }
+  .isl .sec .hd { height: 18px; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,.5); }
+  .isl .sec .hd svg { width: 12px; height: 12px; fill: currentColor; }
+  .isl .sec .hd .sp { margin-left: auto; display: inline-flex; gap: 8px; align-items: center; }
+  .isl .sec .hd .tl { display: inline-flex; gap: 3px; align-items: center; color: rgba(255,255,255,.85); font-variant-numeric: tabular-nums; }
+  .isl .sec .rows { display: flex; flex-direction: column; gap: 3px; }
+  .isl .rw { height: 21px; padding: 0 8px; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.06); border-radius: 8px; font-size: 12px; font-weight: 500; }
+  .isl .rw.hi { background: rgba(255,255,255,.12); }
+  .isl .rw.lg { height: 29px; font-size: 15px; font-weight: 600; }
+  .isl .rw .ic { width: 16px; height: 16px; } .isl .rw.lg .ic { width: 20px; height: 20px; }
+  .isl .rw .ttl { overflow: hidden; text-overflow: ellipsis; }
+  .isl .rw .dtl { font-size: 10px; font-weight: 400; color: rgba(255,255,255,.5); }
+  .isl .rw .tr { margin-left: auto; font-size: 11px; color: rgba(255,255,255,.6); font-variant-numeric: tabular-nums; }
+  .isl .rw .st { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+  .isl .rw .st.w { background: #30d158; animation: breathe 1.6s ease-in-out infinite; } .isl .rw .st.d { background: #0a84ff; } .isl .rw .st.a { background: #ff9f0a; }
+  .isl .rw .wd { display: inline-flex; gap: 3px; align-items: flex-end; height: 10px; margin-left: auto; }
+  .isl .rw .wd i { width: 4px; height: 4px; border-radius: 50%; background: #30d158; animation: lift 1.2s linear infinite; }
+  .isl .rw .wd i:nth-child(2) { animation-delay: -.17s; } .isl .rw .wd i:nth-child(3) { animation-delay: -.34s; }
+  @keyframes lift { 0%, 50%, 100% { transform: translateY(0); opacity: .5; } 25% { transform: translateY(-3px); opacity: 1; } }
+  .isl .rw .pill, .isl .btns .pill { padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.12); font-size: 11px; font-weight: 600; }
+  .isl .rw .pill { margin-left: auto; }
+  .isl .btns { height: 26px; display: flex; align-items: center; gap: 8px; }
+  .isl .btns .pill { background: rgba(255,255,255,.1); }
+  .isl .btns > svg { width: 13px; height: 13px; fill: rgba(255,255,255,.6); margin-right: 2px; }
+  .isl .files { height: 52px; display: flex; align-items: center; gap: 10px; }
+  .isl .file { width: 52px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 9px; font-weight: 400; }
+  .isl .file i { width: 22px; height: 28px; border-radius: 3px; background: linear-gradient(#fff, #d9dee7); position: relative; }
+  .isl .file i::after { content: ""; position: absolute; right: 0; top: 0; width: 7px; height: 7px; background: linear-gradient(225deg, transparent 50%, #b8c0cc 50%); border-radius: 0 3px 0 0; }
+  .isl .file i.img { background: linear-gradient(135deg, #60a5fa, #a78bfa); } .isl .file i.img::after { display: none; }
+
+  /* two-layer sections: a piece of screen beside clickable blocks */
+  .layer { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; margin: 8px 0 10px; }
+  .layer .mini { height: 240px; border-radius: 18px; border: 1px solid var(--line); }
+  .layer .mini .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; font-size: 13px; color: var(--cap); background: linear-gradient(transparent, var(--wall-base) 55%); z-index: 2; }
   .layer.flip .mini { order: 2; }
   @media (max-width: 760px) { .layer { grid-template-columns: 1fr; } .layer.flip .mini { order: 0; } }
-
-  /* showcase: island left, clickable blocks right */
+  @media (max-width: 520px) { .layer .mini { --z: .8; } }
   .blocks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .block { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: inherit; font-size: 13px; font-weight: 600; text-align: left; cursor: pointer; transition: background .15s, border-color .15s, transform .15s; }
-  .block .ico { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; font-size: 15px; background: var(--chip); }
+  .block .ico { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: var(--chip); }
+  .block .ico svg { width: 15px; height: 15px; fill: currentColor; }
   .block:hover { background: var(--panel-hover); transform: translateY(-1px); }
   .block[aria-selected="true"] { background: var(--fg); color: var(--bg); border-color: transparent; }
   .block[aria-selected="true"] .ico { background: rgba(127,127,127,.2); }
@@ -146,35 +255,10 @@
   .layer .text p.lead { margin: 0; font-size: 15px; }
   @media (max-width: 560px) { .blocks { grid-template-columns: repeat(2, 1fr); } }
 
-  /* two-layer plugin section */
-  .layer { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; margin: 8px 0 10px; }
-  .layer .mini { position: relative; height: 240px; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); display: flex; justify-content: center; align-items: flex-start; background: radial-gradient(120% 90% at 30% 10%, #1d2a4a, #0d1120 60%, #090b12); }
-  .layer .mini .notch { z-index: 1; }
-  .layer .mini .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; font-size: 13px; color: rgba(243,244,247,.75); background: linear-gradient(transparent, rgba(9,11,18,.9) 50%); }
-  .layer h3 { font-size: 22px; letter-spacing: -.02em; margin: 0 0 8px; }
-  .layer p { color: var(--muted); margin: 0 0 10px; font-size: 15px; }
-  .layer ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
-  .layer ul li { margin: 4px 0; }
-  .layer.flip .mini { order: 2; }
-  @media (max-width: 760px) { .layer { grid-template-columns: 1fr; } .layer.flip .mini { order: 0; } }
-
   /* sections */
   section { padding: 72px 0; border-top: 1px solid var(--line); }
   h2 { font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -.03em; margin: 0 0 10px; }
   .lead { color: var(--muted); max-width: 640px; margin: 0 0 36px; font-size: 16px; }
-  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
-  .feature { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; transition: transform .2s ease, border-color .2s ease; }
-  .feature:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.16); }
-  .feature .ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 17px; margin-bottom: 12px; background: rgba(255,255,255,.07); }
-  .feature h3 { margin: 0 0 6px; font-size: 15px; }
-  .feature p { margin: 0; color: var(--muted); font-size: 13.5px; }
-
-  .shots { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); }
-  @media (max-width: 520px) { .shots { grid-template-columns: 1fr; } }
-  .shot { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-  .shot img { display: block; width: 100%; height: auto; }
-  .shot figcaption { padding: 10px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
-
   .steps { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
   .step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; overflow: hidden; }
   .step b { display: block; margin-bottom: 6px; }
@@ -182,67 +266,61 @@
   pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow: auto; font-size: 13.5px; line-height: 1.6; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--code-fg); }
   pre .c { color: rgba(226,232,240,.5); }
 
-  /* how-it-works demos */
-  .step .demo { position: relative; height: 92px; margin: -6px -6px 14px; border-radius: 12px; overflow: hidden; background: radial-gradient(120% 100% at 30% 0%, #1d2a4a, #0d1120 60%, #090b12); }
-  .step .d-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 56px; height: 16px; background: #000; border-radius: 0 0 8px 8px; z-index: 1; }
-  .step .d-isl { position: absolute; top: 0; left: 50%; transform: translateX(-50%); display: flex; align-items: center; height: 18px; background: #000; border-radius: 0 0 9px 9px; z-index: 2; box-shadow: 0 6px 16px rgba(0,0,0,.5); }
-  .step .d-n { width: 56px; flex: none; }
-  .step .d-l, .step .d-r { display: flex; align-items: center; gap: 4px; padding: 0 6px; }
-  .step .d-dot { width: 7px; height: 7px; border-radius: 2px; background: #d97757; } .step .d-dot + .d-dot { background: #2a2a2e; }
-  .step .d-ico { width: 8px; height: 8px; border-radius: 50%; background: #fff; }
-  .step .d-bar { width: 0; height: 4px; border-radius: 2px; background: #fff; animation: dbar 3.2s ease-in-out infinite; }
-  @keyframes dbar { 0%, 20% { width: 0; margin-left: -4px; } 35%, 70% { width: 42px; margin-left: 0; } 85%, 100% { width: 0; margin-left: -4px; } }
-  .step .stack .d-win { position: absolute; left: 50%; border-radius: 6px 6px 0 0; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); }
-  .step .stack .w1 { width: 150px; height: 70px; top: 36px; transform: translateX(-50%); animation: rise 4s ease-in-out infinite; }
-  .step .stack .w2 { width: 170px; height: 70px; top: 44px; transform: translateX(-50%); animation: rise 4s 1.3s ease-in-out infinite; }
-  .step .stack .w3 { width: 190px; height: 70px; top: 52px; transform: translateX(-50%); background: rgba(96,165,250,.12); animation: rise 4s 2.6s ease-in-out infinite; }
-  @keyframes rise { 0%, 100% { top: 46px; } 50% { top: 22px; } }
-  .step .d-cursor { position: absolute; top: 34px; left: 12px; width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(0,0,0,.5); animation: cursor 4s ease-in-out infinite; }
-  @keyframes cursor { 0% { left: 12px; top: 40px; } 25% { left: 42%; top: 10px; } 50% { left: 58%; top: 10px; } 75% { left: calc(100% - 22px); top: 40px; } 100% { left: 12px; top: 40px; } }
-  .step .d-isl.pass { animation: passglow 4s ease-in-out infinite; }
-  @keyframes passglow { 0%, 20%, 55%, 100% { box-shadow: 0 6px 16px rgba(0,0,0,.5); } 30%, 45% { box-shadow: 0 0 0 2px rgba(96,165,250,.8), 0 6px 16px rgba(0,0,0,.5); } }
-  .step .d-ripple { position: absolute; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.7); opacity: 0; animation: ripple2 4s ease-out infinite; }
-  @keyframes ripple2 { 0%, 72% { opacity: 0; transform: scale(.4); left: calc(100% - 24px); top: 38px; } 76% { opacity: 1; transform: scale(.4); } 92%, 100% { opacity: 0; transform: scale(2.2); left: calc(100% - 24px); top: 38px; } }
-  .step .d-lock { position: relative; width: 8px; height: 6px; border-radius: 2px; background: #ddd; margin-top: 4px; animation: lockbody 3.6s ease-in-out infinite; }
-  .step .d-lock::before { content: ""; position: absolute; left: 1.5px; top: -4.5px; width: 5px; height: 5px; border: 1.5px solid #ddd; border-bottom: none; border-radius: 4px 4px 0 0; box-sizing: border-box; transform-origin: left bottom; animation: shackle 3.6s ease-in-out infinite; }
-  @keyframes lockbody { 0%, 40% { background: #ddd; } 50%, 90% { background: #4ade80; } 100% { background: #ddd; } }
-  @keyframes shackle { 0%, 40% { transform: none; border-color: #ddd; } 50%, 90% { transform: translate(-1px, -1.5px) rotate(-28deg); border-color: #4ade80; } 100% { transform: none; border-color: #ddd; } }
-  .step .d-time { width: 22px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.8); animation: timew 3.6s ease-in-out infinite; }
-  @keyframes timew { 0%, 40% { width: 22px; } 50%, 90% { width: 54px; } 100% { width: 22px; } }
-  .step .d-isl.morph { animation: morphw 3.6s ease-in-out infinite; }
-  :root[data-theme="light"] .step .demo { background: radial-gradient(120% 100% at 30% 0%, #dbe4ff, #c7d2fe 60%, #e2e8f0); }
-  /* Customise */
-  .step .d-cursor.c-in { animation: cin 5s ease-in-out infinite; }
-  @keyframes cin { 0% { left: 14px; top: 56px; opacity: 1; } 30% { left: calc(50% + 34px); top: 8px; opacity: 1; } 34% { opacity: 0; } 72% { left: calc(50% + 62px); top: 8px; opacity: 0; } 76% { opacity: 1; left: calc(50% + 70px); top: 12px; } 100% { left: calc(100% - 20px); top: 50px; opacity: 1; } }
-  .step .d-isl.c-lean { animation: clean 5s ease-in-out infinite; }
-  @keyframes clean { 0%, 34% { transform: translateX(-50%); } 50% { transform: translateX(-50%) translateX(6px) scaleX(1.06); } 62% { transform: translateX(-50%) translateX(13px) scaleX(1.1); } 74% { transform: translateX(-50%); } 100% { transform: translateX(-50%); } }
-  .step .d-glow { position: absolute; right: -1px; top: 0; height: 100%; width: 14px; border-radius: 0 0 9px 0; background: radial-gradient(60% 80% at 100% 50%, rgba(255,255,255,.9), transparent 70%); opacity: 0; animation: cglow 5s ease-in-out infinite; }
-  @keyframes cglow { 0%, 40% { opacity: 0; } 62%, 70% { opacity: 1; } 76%, 100% { opacity: 0; } }
-  .step .d-isl.c-glass { overflow: hidden; }
-  .step .d-sheen { position: absolute; top: -4px; bottom: -4px; width: 46px; background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent); opacity: 0; left: 100%; animation: csheen 4s ease-out infinite; }
-  @keyframes csheen { 0%, 20% { left: 100%; opacity: 0; } 24% { opacity: 1; } 55% { left: -50px; opacity: .9; } 60%, 100% { left: -50px; opacity: 0; } }
-  .step .d-ring { position: absolute; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.8); opacity: 0; left: calc(50% + 66px); top: 8px; animation: cring 4s ease-out infinite; }
-  @keyframes cring { 0%, 18% { opacity: 0; transform: scale(.3); } 22% { opacity: 1; transform: scale(.3); } 42%, 100% { opacity: 0; transform: scale(2.4); } }
-  .step .d-cursor.c-out { left: calc(50% + 68px); top: 10px; animation: cout 4s ease-out infinite; }
-  @keyframes cout { 0%, 18% { opacity: 0; left: calc(50% + 50px); top: 8px; } 22% { opacity: 1; left: calc(50% + 70px); top: 10px; } 60% { left: calc(100% - 26px); top: 52px; } 100% { opacity: 1; left: calc(100% - 26px); top: 52px; } }
-  .step .d-slider { position: absolute; left: 24px; right: 24px; bottom: 18px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.18); }
-  .step .d-slider::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: #fff; animation: cfill 5s ease-in-out infinite; }
-  .step .d-knob { position: absolute; top: -5px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.4); margin-left: -7px; animation: cknob 5s ease-in-out infinite; }
-  @keyframes cfill { 0%, 10% { width: 20%; } 45%, 60% { width: 85%; } 90%, 100% { width: 20%; } }
-  @keyframes cknob { 0%, 10% { left: 20%; } 45%, 60% { left: 85%; } 90%, 100% { left: 20%; } }
-  .step .d-isl.c-force .d-glow { animation: cforce 5s ease-in-out infinite; }
-  @keyframes cforce { 0%, 10% { opacity: .25; width: 10px; } 45%, 60% { opacity: 1; width: 24px; } 90%, 100% { opacity: .25; width: 10px; } }
-  .step .d-pad { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); width: 64px; height: 36px; border-radius: 8px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.06); }
-  .step .d-finger { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: rgba(255,255,255,.85); animation: cfinger 5s ease-in-out infinite; }
-  @keyframes cfinger { 0%, 12% { opacity: 0; transform: scale(.6); } 18%, 64% { opacity: 1; transform: scale(1); } 70%, 100% { opacity: 0; transform: scale(.6); } }
-  .step .d-isl.c-hold { animation: chold 5s ease-in-out infinite; }
-  @keyframes chold { 0%, 18% { transform: translateX(-50%); } 32%, 64% { transform: translateX(-50%) translateX(-12px) scaleX(1.1); } 76%, 100% { transform: translateX(-50%); } }
+  /* small demos in the step cards: the same island at two thirds size */
+  .step .demo { height: 118px; margin: -6px -6px 14px; border-radius: 12px; --z: .66; }
+  .step .demo .stage { transform-origin: 50% 0; }
+  .demo .cursor { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px rgba(0,0,0,.55), 0 1px 3px rgba(0,0,0,.4); z-index: 3; pointer-events: none; }
+  .demo .tag { position: absolute; right: 10px; bottom: 8px; font-size: 11px; font-weight: 600; color: var(--cap); font-family: Inter, system-ui, sans-serif; }
+  .demo .win { position: absolute; left: 50%; border-radius: 6px 6px 0 0; border: 1px solid rgba(var(--ink), .16); background: rgba(var(--ink), .06); transform: translateX(-50%); }
+  .demo .w1 { width: 150px; height: 70px; animation: rise 4s ease-in-out infinite; }
+  .demo .w2 { width: 170px; height: 70px; animation: rise 4s 1.3s ease-in-out infinite; }
+  .demo .w3 { width: 190px; height: 70px; background: rgba(96,165,250,.14); animation: rise 4s 2.6s ease-in-out infinite; }
+  @keyframes rise { 0%, 100% { top: 70px; } 50% { top: 44px; } }
+  .demo .click { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 1.5px solid rgba(var(--ink), .7); opacity: 0; }
+  .demo .slider { position: absolute; left: 24px; right: 24px; bottom: 16px; height: 4px; border-radius: 2px; background: rgba(var(--ink), .18); }
+  .demo .slider i { position: absolute; left: 0; top: 0; bottom: 0; width: calc(100% * var(--k)); border-radius: 2px; background: rgba(var(--ink), .9); transition: width .6s cubic-bezier(.3,1,.4,1); }
+  .demo .slider b { position: absolute; top: -5px; left: calc(100% * var(--k)); width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); transition: left .6s cubic-bezier(.3,1,.4,1); }
+  .demo .pad { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); width: 64px; height: 38px; border-radius: 8px; border: 1px solid rgba(var(--ink), .22); background: rgba(var(--ink), .06); }
+  .demo .finger { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: rgba(var(--ink), .8); opacity: 0; transform: scale(.6); transition: opacity .25s, transform .25s; }
+  .demo .finger.down { opacity: 1; transform: scale(1); }
   footer { padding: 36px 0 56px; color: var(--dim); font-size: 13px; text-align: center; border-top: 1px solid var(--line); }
   @media (max-width: 640px) { .hero { padding-top: 48px; } nav .links a { display: none; } }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <radialGradient id="g-glow"><stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#fff" stop-opacity=".5"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <symbol id="i-cal" viewBox="0 0 16 16"><path d="M3.5 1.5A2.5 2.5 0 0 0 1 4v9a2.5 2.5 0 0 0 2.5 2.5h9A2.5 2.5 0 0 0 15 13V4a2.5 2.5 0 0 0-2.5-2.5zM2.6 6h10.8v7a.9.9 0 0 1-.9.9h-9a.9.9 0 0 1-.9-.9z"/><path d="M4 7.5h1.6v1.4H4zm3.2 0h1.6v1.4H7.2zm3.2 0H12v1.4h-1.6zM4 10h1.6v1.4H4zm3.2 0h1.6v1.4H7.2zm3.2 0H12v1.4h-1.6z"/></symbol>
+  <symbol id="i-spk" viewBox="0 0 20 14"><path d="M1 4.6h2.6L7.3 1.3v11.4L3.6 9.4H1z"/><path class="v" d="M9.8 4.6a3.3 3.3 0 0 1 0 4.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="v" d="M12.3 2.5a6.4 6.4 0 0 1 0 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="v" d="M14.8.6a9.4 9.4 0 0 1 0 12.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="sl" d="M2 .5L17 13.5" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><path class="sl" d="M2 .5L17 13.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.4"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path class="v" d="M8 1v1.8M8 13.2V15"/><path class="v" d="M1 8h1.8M13.2 8H15"/><path class="v" d="M3.05 3.05l1.27 1.27M11.68 11.68l1.27 1.27"/><path class="v" d="M12.95 3.05l-1.27 1.27M4.32 11.68l-1.27 1.27"/></g></symbol>
+  <symbol id="i-wifi" viewBox="0 0 16 16"><circle cx="8" cy="13" r="1.7"/><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path class="a" d="M5.2 10.4a4 4 0 0 1 5.6 0"/><path class="a" d="M2.9 7.9a7.3 7.3 0 0 1 10.2 0"/><path class="a" d="M.7 5.3a10.5 10.5 0 0 1 14.6 0"/></g></symbol>
+  <symbol id="i-batt" viewBox="0 0 16 12"><rect x=".8" y="1.8" width="12.4" height="8.4" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="14" y="4.2" width="1.6" height="3.6" rx=".7"/><rect x="2.4" y="3.4" width="9.2" height="5.2" rx="1.2" style="transform-origin:2.4px 0;transform:scaleX(var(--l,1))"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 16 16"><path d="M10.2 1.2a7 7 0 1 0 4.6 10.4 6.2 6.2 0 0 1-4.6-10.4z"/></symbol>
+  <symbol id="i-caps" viewBox="0 0 16 16"><path d="M8 1L14.5 7.8h-3.2v4.2H4.7V7.8H1.5z"/><rect x="4.7" y="13.3" width="6.6" height="1.8" rx=".9"/></symbol>
+  <symbol id="i-kbd" viewBox="0 0 16 16"><path d="M2 3.5h12A1.5 1.5 0 0 1 15.5 5v6a1.5 1.5 0 0 1-1.5 1.5H2A1.5 1.5 0 0 1 .5 11V5A1.5 1.5 0 0 1 2 3.5zm1 2v1.3h1.3V5.5zm2.8 0v1.3h1.3V5.5zm2.8 0v1.3h1.3V5.5zm2.8 0v1.3h1.3V5.5zM3 8v1.3h1.3V8zm2.8 0v1.3h1.3V8zm2.8 0v1.3h1.3V8zm2.8 0v1.3h1.3V8zM4.5 10.4v1.2h7v-1.2z" fill-rule="evenodd"/></symbol>
+  <symbol id="i-term" viewBox="0 0 16 16"><rect width="16" height="16" rx="3.6" fill="#2b2b2e"/><path d="M3.6 4.8l3.2 3.2-3.2 3.2" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.2 11.4h4.2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.5"/><path d="M8 4v7.2M5 8.4l3 3 3-3" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.5"/><path d="M4.6 8.3l2.3 2.3 4.6-4.9" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pods" viewBox="0 0 16 16"><path d="M4.3 1.2a2.6 2.6 0 0 1 2.6 2.6v1.5A1.7 1.7 0 0 1 5.2 7h-.6v6.3a1.1 1.1 0 0 1-2.2 0V3.8a2.6 2.6 0 0 1 1.9-2.6zm7.4 0a2.6 2.6 0 0 1 1.9 2.6v9.5a1.1 1.1 0 0 1-2.2 0V7h-.6a1.7 1.7 0 0 1-1.7-1.7V3.8a2.6 2.6 0 0 1 2.6-2.6z"/></symbol>
+  <symbol id="i-note" viewBox="0 0 16 16"><path d="M13.5.8a.8.8 0 0 1 .3.7v8.9a2.7 2.7 0 1 1-1.6-2.5V4.2L6.4 5.6v6.8a2.7 2.7 0 1 1-1.6-2.5V3.5a.8.8 0 0 1 .6-.8l7.4-1.9a.8.8 0 0 1 .7 0z"/></symbol>
+  <symbol id="i-timer" viewBox="0 0 16 16"><circle cx="8" cy="9" r="5.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 9V5.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="6.2" y=".6" width="3.6" height="1.8" rx=".9"/><path d="M12.6 3.6l1 1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-cloudsun" viewBox="0 0 16 16"><circle cx="11" cy="5" r="3.2" fill="#ffd60a"/><g stroke="#ffd60a" stroke-width="1.3" stroke-linecap="round"><path d="M11 .5V1.3M15.5 5h-.8M14.2 1.8l-.6.6M14.2 8.2l-.6-.6M7.8 1.8l.6.6"/></g><path d="M4.5 14.5A3.2 3.2 0 0 1 4 8.1a4 4 0 0 1 7.7-.3 2.7 2.7 0 0 1 .3 5.4H4.5z" fill="#fff"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 16 16"><path d="M5.5 1.5h5a1 1 0 0 1 1 1v.7h1A1.5 1.5 0 0 1 14 4.7v8.8a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V4.7a1.5 1.5 0 0 1 1.5-1.5h1v-.7a1 1 0 0 1 1-1zm.5 1.4v1.4h4V2.9z"/></symbol>
+  <symbol id="i-docs" viewBox="0 0 16 16"><path d="M5 1h5.5L14 4.5V11a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V2.5A1.5 1.5 0 0 1 5 1z"/><path d="M2 5v8.5A1.5 1.5 0 0 0 3.5 15h7.5v-1.3H3.6a.3.3 0 0 1-.3-.3V5z"/></symbol>
+  <symbol id="i-tray" viewBox="0 0 16 16"><path d="M2.5 2h11A1.5 1.5 0 0 1 15 3.5V13a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 13V3.5A1.5 1.5 0 0 1 2.5 2zm.1 7.5V13h10.8V9.5h-2.3a3.2 3.2 0 0 1-6.2 0z"/><path d="M4 5h8v1.3H4zM4 7.2h8v1.3H4z" fill="#000"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 16 16"><path d="M8 1.2a4.5 4.5 0 0 1 4.5 4.5v2.6l1.3 2.3a.8.8 0 0 1-.7 1.2H2.9a.8.8 0 0 1-.7-1.2l1.3-2.3V5.7A4.5 4.5 0 0 1 8 1.2zM6.2 13h3.6a1.8 1.8 0 0 1-3.6 0z"/></symbol>
+  <symbol id="i-video" viewBox="0 0 16 16"><rect x="1" y="3.5" width="9.5" height="9" rx="2"/><path d="M11.5 7l3.5-2.5v7L11.5 9z"/></symbol>
+  <symbol id="i-back" viewBox="0 0 16 16"><path d="M8.4 8L15 3.5v9zM1 8l6.6-4.5v9z"/></symbol>
+  <symbol id="i-fwd" viewBox="0 0 16 16"><path d="M7.6 8L1 12.5v-9zM15 8l-6.6 4.5v-9z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 16 16"><rect x="2.5" y="2" width="4" height="12" rx="1.2"/><rect x="9.5" y="2" width="4" height="12" rx="1.2"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 16 16"><path d="M8 2c3.9 0 7 2.5 7 5.6s-3.1 5.6-7 5.6c-.8 0-1.6-.1-2.3-.3L2.6 14l.6-2.6C1.9 10.4 1 9.1 1 7.6 1 4.5 4.1 2 8 2z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 16 16"><path d="M8 0l1 5.4L13.7 2 10.6 6.6 16 8l-5.4 1.4L13.7 14 9 10.6 8 16l-1-5.4L2.3 14l3.1-4.6L0 8l5.4-1.4L2.3 2 7 5.4z"/></symbol>
+  <symbol id="i-puzzle" viewBox="0 0 16 16"><path d="M6 1.5a1.8 1.8 0 0 1 1.7 2.4H10a1 1 0 0 1 1 1v2.3a1.8 1.8 0 1 1 0 3.4V13a1 1 0 0 1-1 1H7.7a1.8 1.8 0 1 0-3.4 0H2a1 1 0 0 1-1-1v-2.4a1.8 1.8 0 1 0 0-3.4V4.9a1 1 0 0 1 1-1h2.3A1.8 1.8 0 0 1 6 1.5z"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 16 16"><rect x="5.5" y="1" width="5" height="8.5" rx="2.5"/><path d="M3.5 7.5a4.5 4.5 0 0 0 9 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 12v3M5.5 15h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 16 16"><path d="M4.5 6.5V5a3.5 3.5 0 0 1 7 0v1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="2.5" y="6.5" width="11" height="8.5" rx="2.2"/></symbol>
+  <symbol id="i-bt" viewBox="0 0 16 16"><path d="M4 4.5L12 11.5 8 15V1l4 3.5L4 11.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
 <nav>
   <div class="wrap">
     <a class="brand" href="#"><img src="assets/icon.png" alt="" width="26" height="26" style="border-radius:7px"> Control Island</a>
@@ -263,11 +341,7 @@
 
 <header class="hero">
   <div class="wrap">
-    <div class="screen" aria-hidden="true">
-      <div class="stars"></div>
-      <div class="notch"></div>
-      <div class="isl" id="hero"><div class="w l"><span class="c"></span></div><div class="n"></div><div class="w r"><span class="c"></span></div><div class="below"><span class="c"></span></div></div>
-    </div>
+    <div class="screen scene" id="heroScene" aria-hidden="true"><div class="stars"></div></div>
     <div class="caption" id="caption">Closed</div>
     <h1>Control Island</h1>
     <p>A dynamic island for the MacBook notch. Status in two wings, short overlays for changes, and an expanded view with controls. It stays above every window, including the lock screen.</p>
@@ -283,7 +357,7 @@
     <h2>Built in</h2>
     <p class="lead">Twelve sources are part of the app because they use system APIs. Select one to see it on the island.</p>
     <div class="layer">
-      <div class="mini"><div class="notch"></div><div class="isl" id="baseIsland"><div class="w l"><span class="c"></span></div><div class="n"></div><div class="w r"><span class="c"></span></div><div class="below"><span class="c"></span></div></div><div class="cap" id="baseCap"></div></div>
+      <div class="mini scene" id="baseScene"><div class="cap" id="baseCap"></div></div>
       <div class="blocks" id="baseBlocks"></div>
     </div>
   </div>
@@ -294,7 +368,7 @@
     <h2>Plugins</h2>
     <p class="lead">Everything else is a program that prints JSON, in any language. Six are included.</p>
     <div class="layer flip">
-      <div class="mini"><div class="notch"></div><div class="isl" id="extIsland"><div class="w l"><span class="c"></span></div><div class="n"></div><div class="w r"><span class="c"></span></div><div class="below"><span class="c"></span></div></div><div class="cap" id="extCap"></div></div>
+      <div class="mini scene" id="extScene"><div class="cap" id="extCap"></div></div>
       <div class="text">
         <div class="blocks" id="extBlocks"></div>
         <p class="lead">Settings declared in the manifest appear as a form in the app. Clicks, buttons, file drops and clipboard changes are delivered as events. Each plugin can be switched off, and its overlays can be switched off separately. Plugins run with your user permissions.</p>
@@ -319,19 +393,19 @@ echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup
     <h2>How it works</h2>
     <div class="steps">
       <div class="step">
-        <div class="demo"><div class="d-notch"></div><div class="d-isl wings"><span class="d-l"><i class="d-dot"></i><i class="d-dot"></i></span><span class="d-n"></span><span class="d-r"><i class="d-ico"></i><i class="d-bar"></i></span></div></div>
+        <div class="demo scene" id="dWings"></div>
         <b>Two independent wings</b><p>An overlay uses one side or both. The other side keeps its content and its width.</p>
       </div>
       <div class="step">
-        <div class="demo stack"><div class="d-win w1"></div><div class="d-win w2"></div><div class="d-win w3"></div><div class="d-notch"></div><div class="d-isl top"><span class="d-l"><i class="d-dot"></i></span><span class="d-n"></span><span class="d-r"><i class="d-ico"></i></span></div></div>
+        <div class="demo scene" id="dAbove"><div class="win w1"></div><div class="win w2"></div><div class="win w3"></div></div>
         <b>Above every window</b><p>The panel lives in its own WindowServer space at the lock-screen level, so it stays over full-screen apps and the login window.</p>
       </div>
       <div class="step">
-        <div class="demo"><div class="d-notch"></div><div class="d-isl pass"><span class="d-l"><i class="d-dot"></i></span><span class="d-n"></span><span class="d-r"><i class="d-ico"></i></span></div><div class="d-cursor"></div><div class="d-ripple"></div></div>
+        <div class="demo scene" id="dClick"><div class="click"></div><div class="cursor"></div></div>
         <b>Click-through</b><p>The panel accepts the mouse only while the cursor is over the island. Everywhere else, clicks reach the window underneath.</p>
       </div>
       <div class="step">
-        <div class="demo"><div class="d-notch"></div><div class="d-isl morph"><span class="d-l"><i class="d-lock"></i></span><span class="d-n"></span><span class="d-r"><i class="d-time"></i></span></div></div>
+        <div class="demo scene" id="dLock"></div>
         <b>On the lock screen</b><p>The island stays visible while the Mac is locked, showing a padlock and the time. On unlock the padlock opens and a greeting replaces the time.</p>
       </div>
     </div>
@@ -344,19 +418,19 @@ echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup
     <p class="lead">Settings has an Effects pane. Everything the island does with the pointer is a choice.</p>
     <div class="steps">
       <div class="step">
-        <div class="demo"><div class="d-notch"></div><div class="d-isl c-lean"><span class="d-l"><i class="d-dot"></i></span><span class="d-n"></span><span class="d-r"><i class="d-ico"></i></span><i class="d-glow"></i></div><div class="d-cursor c-in"></div></div>
+        <div class="demo scene" id="dHold"><div class="cursor"></div></div>
         <b>Takes the pointer in</b><p>Move into the island and the pointer disappears. Moving the mouse leans the island instead, and the rim lights up where it would come out. Turn it off and the island is just a panel.</p>
       </div>
       <div class="step">
-        <div class="demo"><div class="d-notch"></div><div class="d-isl c-glass"><span class="d-l"><i class="d-dot"></i></span><span class="d-n"></span><span class="d-r"><i class="d-ico"></i></span><i class="d-sheen"></i></div><div class="d-ring"></div><div class="d-cursor c-out"></div></div>
+        <div class="demo scene" id="dOut"><div class="cursor"></div><div class="tag"></div></div>
         <b>Lets it out your way</b><p>A firm push frees the pointer through the rim on that side. Choose what marks the spot: a ripple around the rim, a ring of light, a reflection across dark glass, or nothing.</p>
       </div>
       <div class="step">
-        <div class="demo"><div class="d-notch"></div><div class="d-isl c-force"><span class="d-l"><i class="d-dot"></i></span><span class="d-n"></span><span class="d-r"><i class="d-ico"></i></span><i class="d-glow"></i></div><div class="d-slider"><i class="d-knob"></i></div></div>
+        <div class="demo scene" id="dForce"><div class="slider" style="--k:.85"><i></i><b></b></div></div>
         <b>Push as hard as you like</b><p>A slider sets how much travel it takes to get out. Or skip the hold, and the pointer comes straight back out with the next movement.</p>
       </div>
       <div class="step">
-        <div class="demo"><div class="d-notch"></div><div class="d-isl c-hold"><span class="d-l"><i class="d-dot"></i></span><span class="d-n"></span><span class="d-r"><i class="d-ico"></i></span></div><div class="d-pad"><i class="d-finger"></i></div></div>
+        <div class="demo scene" id="dPad"><div class="pad"><i class="finger"></i></div></div>
         <b>Knows when you let go</b><p>On the trackpad the island keeps its lean while a finger is down and settles when it lifts. The menu bar stays put the whole time the pointer is held.</p>
       </div>
     </div>
@@ -383,103 +457,304 @@ make test</pre>
 </footer>
 
 <script>
+(() => {
+  const NOTCH = 185, NH = 32;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // ---- One island engine for the hero and the plugin previews.
-  // A region that doesn't change is left alone; one that does blurs out and in, while the island springs to its new size.
-  const spring = 'cubic-bezier(.3,1.35,.4,1)';
-  function island(el) {
-    const regions = { l: el.querySelector('.w.l .c'), r: el.querySelector('.w.r .c'), below: el.querySelector('.below .c') };
-    return {
-      render(v) {
-        const before = { w: el.offsetWidth, h: el.offsetHeight };
-        for (const key of ['l', 'r', 'below']) {
-          const node = regions[key], incoming = v[key] ?? '';
-          if (node.innerHTML === incoming) continue;
-          // The padlock morphs rather than swapping, like the app's drawn lock.
-          const lock = node.querySelector('.lock');
-          if (lock && /class="lock( open)?"/.test(incoming) && node.innerHTML.replace(' open', '') === incoming.replace(' open', '')) {
-            lock.classList.toggle('open', incoming.includes('lock open'));
-            continue;
+  // ---- SwiftUI springs, sampled into keyframes. response is the period, dampingFraction the damping ratio.
+  const SPRINGS = { peek: [.28, .7], expand: [.48, .72], collapse: [.36, .95], hud: [.4, .68], cursor: [.22, .78], press: [.2, .6], value: [.3, .85], unlock: [.45, .5], rebound: [.38, .55], follow: [.2, .8], flip: [.7, .75], pop: [.3, .5], unpop: [.4, .6] };
+  const curves = {};
+  function curve(name) {
+    if (curves[name]) return curves[name];
+    const [response, z] = SPRINGS[name], w = 2 * Math.PI / response, wd = w * Math.sqrt(1 - z * z);
+    const T = Math.log(1000) / (z * w), n = Math.max(24, Math.round(T * 90)), s = [];
+    for (let i = 0; i <= n; i++) { const t = T * i / n; s.push(1 - Math.exp(-z * w * t) * (Math.cos(wd * t) + z * w / wd * Math.sin(wd * t))); }
+    return curves[name] = { s, T };
+  }
+  // Runs one spring on an element: `frame(k)` gives the style at progress k, which overshoots past 1.
+  function tween(el, key, name, frame, delay = 0) {
+    const anims = el._anims || (el._anims = {});
+    if (anims[key]) anims[key].cancel();
+    const { s, T } = curve(name);
+    const frames = s.map((k, i) => Object.assign({ offset: i / (s.length - 1) }, frame(k)));
+    Object.assign(el.style, frame(1));
+    if (reduced) return;
+    anims[key] = el.animate(frames, { duration: T * 1000, delay, easing: 'linear', fill: 'none' });
+  }
+  const px = v => v + 'px';
+  const num = v => parseFloat(v) || 0;
+  const radius = h => Math.min(10 + Math.max(0, h - NH) * .35, 28, h / 2);
+
+  // ---- The island. Two wings around the notch, each sized to its own content, plus a row below or a card over everything.
+  function island(scene) {
+    const stage = document.createElement('div'); stage.className = 'stage';
+    stage.innerHTML = '<div class="notch"></div><div class="pos"><svg class="liquid"><path fill="#000"/></svg><div class="isl"><div class="w l"><span class="c"></span></div><div class="gap"></div><div class="w r"><span class="c"></span></div><div class="row"><span class="c"></span></div><div class="card"><span class="c"></span></div><div class="fx"><svg><defs><mask><circle fill="url(#g-glow)"/></mask><mask><circle fill="url(#g-glow)"/></mask></defs><path class="rim"/><path class="thread"/></svg><i class="ringfx"></i><i class="sheen"></i></div></div></div><div class="isl probe"><div class="w"><span class="c"></span></div></div>';
+    scene.appendChild(stage);
+    const pos = stage.querySelector('.pos'), isl = stage.querySelector('.isl'), fx = isl.querySelector('.fx'), liquid = stage.querySelector('.liquid');
+    const wing = { l: isl.querySelector('.w.l'), r: isl.querySelector('.w.r') };
+    const region = { l: wing.l.firstChild, r: wing.r.firstChild, row: isl.querySelector('.row .c'), card: isl.querySelector('.card .c') };
+    const probe = stage.querySelector('.probe .c');
+    const id = 'm' + Math.random().toString(36).slice(2, 7);
+    const masks = fx.querySelectorAll('mask');
+    masks[0].id = id + 'a'; masks[1].id = id + 'b';
+    fx.querySelector('.rim').setAttribute('mask', `url(#${id}a)`);
+    fx.querySelector('.thread').setAttribute('mask', `url(#${id}b)`);
+    const size = { wl: 0, wr: 0, h: NH };
+    const lean = { x: 0, y: 0, press: 0 };
+    let mode = 'closed', frameId = 0;
+
+    function measure(html, hud) {
+      probe.className = 'c' + (hud ? ' h' : ''); probe.innerHTML = html;
+      const w = probe.getBoundingClientRect().width; probe.innerHTML = '';
+      return w;
+    }
+    // Content changes blur out and in, like the app's blur-replace transition; a view that only
+    // changed attributes (padlock opening, cover swapping, speaker muting) morphs in place instead.
+    const strip = s => s.replace(/\s(class|style)="[^"]*"/g, '');
+    const scratch = document.createElement('template');
+    const norm = html => { scratch.innerHTML = html; return scratch.innerHTML; };
+    function swap(node, html, cls) {
+      html = norm(html);
+      clearTimeout(node._swap);
+      if (node._pending != null) { if (node._pending === html) return; node._pending = null; }
+      if (node.innerHTML === html) { node.getAnimations().forEach(a => a.cancel()); return; }
+      node._pending = html;
+      if (node.innerHTML && html && strip(node.innerHTML) === strip(html)) {
+        const tpl = document.createElement('template'); tpl.innerHTML = html;
+        const a = node.querySelectorAll('*'), b = tpl.content.querySelectorAll('*');
+        a.forEach((el, i) => {
+          if (el.className !== b[i].className) {
+            if (el.classList.contains('art')) flip(el);
+            el.className = b[i].className;
           }
-          // A new cover flips the existing tile over.
-          const art = node.querySelector('.art');
-          if (art && /class="art( b)?"/.test(incoming) && node.innerHTML.replace(' b', '') === incoming.replace(' b', '')) {
-            art.classList.toggle('b', incoming.includes('art b'));
-            art.classList.remove('flip'); void art.offsetWidth; art.classList.add('flip');
-            continue;
-          }
-          node.animate([{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(4px)' }], { duration: 120, easing: 'ease-in', fill: 'none' }).onfinish = () => {
-            node.innerHTML = incoming;
-            node.animate([{ opacity: 0, filter: 'blur(6px)', transform: 'translateY(3px)' }, { opacity: 1, filter: 'blur(0)', transform: 'none' }], { duration: 280, delay: 60, easing: 'ease-out', fill: 'backwards' });
-          };
-        }
-        const probe = el.cloneNode(true);
-        for (const key of ['l', 'r', 'below']) probe.querySelector(key === 'below' ? '.below .c' : `.w.${key} .c`).innerHTML = v[key] ?? '';
-        probe.style.cssText = 'position:absolute;visibility:hidden;left:0;top:0';
-        el.parentElement.appendChild(probe);
-        const after = { w: probe.offsetWidth, h: probe.offsetHeight };
-        probe.remove();
-        if (before.w !== after.w || before.h !== after.h) {
-          el.animate([{ width: before.w + 'px', height: before.h + 'px' }, { width: after.w + 'px', height: after.h + 'px' }], { duration: 520, easing: spring, fill: 'none' });
-        }
+          if (el.style.cssText !== b[i].style.cssText) el.style.cssText = b[i].style.cssText;
+        });
+        node._pending = null;
+        return;
       }
-    };
+      const enter = () => {
+        node.innerHTML = html; node._pending = null;
+        if (cls !== undefined) node.classList.toggle('h', cls);
+        if (html && !reduced) node.animate([{ opacity: 0, filter: 'blur(6px)', transform: 'scale(.9)' }, { opacity: 1, filter: 'blur(0)', transform: 'none' }], { duration: 280, easing: 'ease-out' });
+        node.querySelectorAll('.bars').forEach(startBars);
+      };
+      if (!node.innerHTML || reduced) return enter();
+      node.animate([{ opacity: 1, filter: 'blur(0)', transform: 'none' }, { opacity: 0, filter: 'blur(4px)', transform: 'scale(.9)' }], { duration: 120, easing: 'ease-in', fill: 'forwards' });
+      node._swap = setTimeout(enter, 110);
+    }
+    function flip(art) {
+      const a = curve('flip'), b = curve('pop'), c = curve('unpop');
+      const T = Math.max(a.T, .3 + c.T), n = 60, frames = [];
+      const at = (cv, t) => t <= 0 ? 0 : t >= cv.T ? 1 : cv.s[Math.round(t / cv.T * (cv.s.length - 1))];
+      for (let i = 0; i <= n; i++) {
+        const t = T * i / n, scale = t < .3 ? 1 + .18 * at(b, t) : 1.18 - .18 * at(c, t - .3);
+        frames.push({ offset: i / n, transform: `perspective(60px) rotateY(${360 * at(a, t)}deg) scale(${scale})` });
+      }
+      if (!reduced) art.animate(frames, { duration: T * 1000, easing: 'linear' });
+    }
+
+    function set(v, spring) {
+      const hud = v.mode === 'hud' || v.mode === 'locked', card = v.mode === 'card' || v.mode === 'expanded';
+      let wl, wr, h;
+      if (card) { wl = wr = (v.w - NOTCH) / 2; h = v.h; }
+      else {
+        wl = (v.l ? measure(v.l, v.hudL) : 0) + (v.hover ? 7 : 0);
+        wr = (v.r ? measure(v.r, v.hudR) : 0) + (v.hover ? 7 : 0);
+        h = (v.row ? NH + 24 : hud ? NH + 2 : NH) + (v.hover ? 6 : 0);
+      }
+      const name = spring || (v.mode === 'expanded' ? 'expand' : v.mode === 'closed' ? 'collapse' : 'hud');
+      swap(region.l, card ? '' : v.l || '', !!v.hudL);
+      swap(region.r, card ? '' : v.r || '', !!v.hudR);
+      swap(region.row, card ? '' : v.row || '');
+      swap(region.card, card ? v.card : '');
+      if (card) region.card.parentElement.style.width = px(v.w);
+      isl.classList.toggle('hud', hud);
+      const from = { wl: num(getComputedStyle(wing.l).width), wr: num(getComputedStyle(wing.r).width), h: num(getComputedStyle(isl).height) };
+      Object.assign(size, { wl, wr, h });
+      mode = v.mode;
+      tween(wing.l, 'w', name, k => ({ width: px(from.wl + (wl - from.wl) * k) }));
+      tween(wing.r, 'w', name, k => ({ width: px(from.wr + (wr - from.wr) * k) }));
+      tween(pos, 't', name, k => ({ transform: `translateX(${-(from.wl + (wl - from.wl) * k)}px)` }));
+      tween(isl, 'h', name, k => { const hh = from.h + (h - from.h) * k, r = radius(hh), g = Math.max(0, hh - NH); return { height: px(hh), borderRadius: `0 0 ${r}px ${r}px`, boxShadow: `0 ${2 + g * .03}px ${10 + g * .12}px rgba(0,0,0,.4)` }; });
+      frameId++;
+    }
+
+    const width = () => size.wl + NOTCH + size.wr;
+    // The lean: the pull scales the island from its top, and the far edge stretches toward the push.
+    function applyLean(name) {
+      const w = width(), f = { x: lean.x, y: lean.y, p: lean.press };
+      return (tx, ty, tp) => tween(isl, 'lean', name, k => {
+        const x = f.x + (tx - f.x) * k, y = f.y + (ty - f.y) * k, p = f.p + (tp - f.p) * k;
+        const sx = 1 + Math.abs(x) * .6 * .015, sy = 1 + y * .6 * .06, ex = 1 + Math.abs(x) * .04, ey = 1 + Math.max(0, y) * .08, ax = x > 0 ? 0 : w;
+        return { transform: `translate(${w / 2}px,0) scale(${sx},${sy}) translate(${-w / 2}px,0) translate(${ax}px,0) scale(${ex},${ey}) translate(${-ax}px,0) scale(1,${1 - p * .05})` };
+      });
+    }
+    function setLean(x, y, name) { applyLean(name)(x, y, lean.press); Object.assign(lean, { x, y }); }
+    function press(down) { applyLean('press')(lean.x, lean.y, down ? 1 : 0); lean.press = down ? 1 : 0; }
+
+    // Where a push in this direction meets the rim, in island coordinates.
+    function rim(dx, dy) {
+      const w = width() + 12, h = size.h + 6, cx = w / 2, cy = h / 2;
+      dy = Math.max(0, dy);
+      let s = Infinity;
+      if (dx) s = Math.min(s, ((dx > 0 ? w : 0) - cx) / dx);
+      if (dy > 0) s = Math.min(s, (h - cy) / dy);
+      return { x: cx + dx * s - 6, y: cy + dy * s };
+    }
+    // The visible outline: down the left side, around the bottom, up the right side.
+    function outline(step) {
+      const w = width(), h = size.h, r = radius(h), side = h - r, pts = [];
+      for (let y = 0; y <= side; y += step) pts.push([0, y, -1, 0]);
+      const arc = (cx, cy, a0, a1) => { const n = Math.max(1, Math.round(Math.abs(a1 - a0) * r / step)); for (let i = 0; i <= n; i++) { const a = a0 + (a1 - a0) * i / n; pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r, Math.cos(a), Math.sin(a)]); } };
+      arc(r, side, Math.PI, Math.PI / 2);
+      for (let x = r; x <= w - r; x += step) pts.push([x, h, 0, 1]);
+      arc(w - r, side, Math.PI / 2, 0);
+      for (let y = side; y >= 0; y -= step) pts.push([w, y, 1, 0]);
+      return pts;
+    }
+    function rimPath(svg) {
+      svg.setAttribute('width', width()); svg.setAttribute('height', size.h);
+      return 'M' + outline(2).map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L');
+    }
+    function glow(point, strength) {
+      const svg = fx.querySelector('svg'), rimEl = fx.querySelector('.rim'), c = masks[0].firstChild;
+      rimEl.setAttribute('d', rimPath(svg));
+      c.setAttribute('cx', point.x); c.setAttribute('cy', point.y); c.setAttribute('r', 46);
+      rimEl.style.opacity = strength > .03 ? .15 + strength * .85 : 0;
+    }
+    function ring(point) {
+      const el = fx.querySelector('.ringfx');
+      el.style.left = px(point.x); el.style.top = px(point.y);
+      el.animate([{ transform: 'scale(.4)', opacity: 1, borderWidth: '3px', borderColor: 'rgba(255,255,255,.7)', background: 'rgba(255,255,255,.25)' }, { transform: 'scale(3.2)', opacity: 0, borderWidth: '1px', borderColor: 'rgba(255,255,255,0)', background: 'rgba(255,255,255,0)' }], { duration: 450, easing: 'ease-out' });
+    }
+    function glass(point, dir) {
+      const svg = fx.querySelector('svg'), thread = fx.querySelector('.thread'), c = masks[1].firstChild, sheen = fx.querySelector('.sheen');
+      thread.setAttribute('d', rimPath(svg));
+      c.setAttribute('cx', point.x); c.setAttribute('cy', point.y);
+      const t0 = performance.now();
+      const angle = Math.atan2(dir.y, dir.x) * .3;
+      sheen.style.left = px(point.x); sheen.style.top = px(point.y);
+      sheen.animate([{ transform: `translate(${-dir.x * 10}px,${-dir.y * 4}px) rotate(${angle}rad)`, opacity: 1 }, { transform: `translate(${-dir.x * 150}px,${-dir.y * 60}px) rotate(${angle}rad)`, opacity: 0 }], { duration: 600, easing: 'ease-out' });
+      const step = now => {
+        const k = Math.min(1, (now - t0) / 600), e = 1 - Math.pow(1 - k, 3);
+        c.setAttribute('r', 80 * (.6 + 1.8 * e));
+        thread.style.opacity = .95 * (1 - e);
+        if (k < 1) requestAnimationFrame(step); else thread.style.opacity = 0;
+      };
+      requestAnimationFrame(step);
+    }
+    // The surface bulges outward in a damped wave running along the rim from the point.
+    function ripple(point, strength = 1) {
+      const path = liquid.firstChild, w = width(), h = size.h;
+      liquid.setAttribute('width', w + 24); liquid.setAttribute('height', h + 12);
+      const pts = outline(1);
+      let nearest = 0, best = Infinity;
+      pts.forEach((p, i) => { const d = Math.hypot(p[0] - point.x, p[1] - point.y); if (d < best) { best = d; nearest = i; } });
+      const t0 = performance.now(), run = ++liquid._run;
+      const step = now => {
+        const t = (now - t0) / 1000, decay = Math.exp(-2.8 * t);
+        if (decay < .04 || liquid._run !== run) { path.setAttribute('d', ''); return; }
+        let d = '';
+        pts.forEach((p, i) => {
+          const dist = Math.abs(i - nearest), wave = Math.sin(dist / 9 - t * 18) * Math.exp(-dist / 24), swell = Math.max(0, wave) * 3.6 * strength * decay - .5;
+          d += (i ? 'L' : 'M') + (p[0] + p[2] * swell + 12).toFixed(1) + ' ' + (p[1] + p[3] * swell).toFixed(1);
+        });
+        path.setAttribute('d', d + 'L' + (w + 12) + ' 0L12 0Z');
+        requestAnimationFrame(step);
+      };
+      liquid._run = run;
+      requestAnimationFrame(step);
+    }
+    return { set, lean: setLean, settle: () => setLean(0, 0, 'rebound'), press, rim, glow, ring, glass, ripple, width, size, stage, get mode() { return mode; } };
   }
 
-  const agents = '<span class="agent claude"></span><span class="agent pi"></span><span class="agent pi"></span>';
-  const music = '<span class="art"></span><span class="bars"><i></i><i></i><i></i><i></i></span>';
-  const meeting = '<span class="g">📅</span><span>12m</span>';
-  const rune = '<svg class="rune" width="12" height="18" viewBox="0 0 12 18" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4.5 L11 13.5 L6 17 L6 1 L11 4.5 L1 13.5"/></svg>';
-  const card = '<div class="card"><div class="cover"></div><div class="meta"><b>Sundown</b><small>Tidal Lines</small><div class="seek"><i></i></div><div class="ctl"><span>◀◀</span><span>❚❚</span><span>▶▶</span></div></div></div>';
-
-  // ---- Hero: cycles through the everyday states.
-  const hero = island(document.getElementById('hero'));
-  const caption = document.getElementById('caption');
-  const musicB = '<span class="art b"></span><span class="bars"><i></i><i></i><i></i><i></i></span>';
-  const states = [
-    ['Closed', { l: meeting, r: music }, 2400],
-    ['Volume', { l: meeting, r: '<span class="g">🔊</span><span class="bar"><i></i></span>' }, 2400],
-    ['Closed', { l: meeting, r: music }, 1200],
-    ['Track change', { l: meeting, r: musicB, below: '<div class="row">Sundown &nbsp;·&nbsp; Tidal Lines</div>' }, 2800],
-    ['Closed', { l: meeting, r: musicB }, 1200],
-    ['Bluetooth device connected', { l: rune, r: '<span>AirPods Pro</span><span>72%</span><span class="gauge" style="--p:.72"><i></i></span>' }, 2800],
-    ['Closed', { l: meeting, r: musicB }, 1200],
-    ['Locked', { l: '<span class="lock"></span>', r: '<span>20:12</span>' }, 2200],
-    ['Unlocked', { l: '<span class="lock open"></span>', r: '<span>Welcome back, Alex</span>' }, 2400],
-    ['Closed', { l: meeting, r: musicB }, 1200],
-    ['Expanded', { l: '', r: '', below: card + '<div class="sec" style="margin-bottom:10px"><span class="g">☀️</span><b>12°</b><span class="dim">Clear</span><span class="sp">H 18° L 11°</span></div>' }, 3400],
-  ];
-  // Runs an island through a list of [caption, view, hold] forever.
-  function cycle(engine, captionEl, list, delay) {
-    let i = 0;
-    engine.render(list[0][1]);
-    captionEl.textContent = list[0][0];
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const step = () => {
-      const [text, view, wait] = list[i];
-      engine.render(view);
-      captionEl.textContent = text;
-      i = (i + 1) % list.length;
-      setTimeout(step, wait);
-    };
-    setTimeout(step, delay);
-  }
-
-  (function heroCycle() {
-    let i = 0;
-    hero.render(states[0][1]); caption.textContent = states[0][0];
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const step = () => { const [text, view, wait] = states[i]; hero.render(view); caption.textContent = text; i = (i + 1) % states.length; setTimeout(step, wait); };
-    setTimeout(step, 1600);
+  // ---- Audio bars move on a sum of sines, like the app's.
+  const bars = new Set();
+  function startBars(el) { bars.add(el); }
+  (function tickBars() {
+    const t = performance.now() / 1000;
+    bars.forEach(el => {
+      if (!el.isConnected) return bars.delete(el);
+      const playing = !el.classList.contains('paused');
+      [...el.children].forEach((bar, i) => {
+        const phase = i * 1.3, wave = (Math.sin(t * 7 + phase) + Math.sin(t * 11.3 + phase * 2.1)) / 4 + .5;
+        bar.style.height = px(playing ? 14 * (.25 + .75 * wave) : 3.5);
+      });
+    });
+    if (!reduced) requestAnimationFrame(tickBars);
   })();
 
-  // A showcase: an island plus clickable blocks. It cycles on its own; a click takes over for a while.
-  function showcase(islandEl, capEl, blocksEl, items, delay) {
-    const engine = island(islandEl);
+  // ---- Content.
+  const ic = (name, cls = '') => `<svg class="ic ${cls}"><use href="#${name}"/></svg>`;
+  const calendar = `<span class="cal">${ic('i-cal')}13m</span>`;
+  const agentIcon = (kind, status) => `<i class="ai ${kind}${status === 'waiting' ? ' wait' : ''}"><span class="f">${kind === 'claude' ? ic('i-star') : 'π'}</span><b class="${status === 'working' ? 'on' : status === 'done' ? 'done' : ''}"></b></i>`;
+  const agents = `<span class="ag">${agentIcon('claude', 'working')}${agentIcon('claude', 'waiting')}${agentIcon('pi', 'waiting')}</span>`;
+  const music = (b, playing = true) => `<span class="art${b ? ' b' : ''}"></span><span class="bars ${b ? 'cb' : 'ca'}${playing ? '' : ' paused'}"><i></i><i></i><i></i><i></i></span>`;
+  const headphones = `<span class="hp">${ic('i-pods')}72</span>`;
+  const weather = `<span class="pi">${ic('i-cloudsun')}12°</span>`;
+  const timerWing = `<span class="pi"><svg class="ring" viewBox="0 0 12 12" style="--f:.83"><circle class="tr" cx="6" cy="6" r="5"/><circle class="ar" cx="6" cy="6" r="5"/></svg>24:59</span>`;
+  const speaker = (level, muted) => { const on = Math.ceil(level * 3 - .001); return `<span class="g"><svg class="spk ic${muted ? ' muted' : ''}" viewBox="0 0 20 14"><path d="M1 4.6h2.6L7.3 1.3v11.4L3.6 9.4H1z"/><path class="v${on >= 1 ? ' on' : ''}" d="M9.8 4.6a3.3 3.3 0 0 1 0 4.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="v${on >= 2 ? ' on' : ''}" d="M12.3 2.5a6.4 6.4 0 0 1 0 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="v${on >= 3 ? ' on' : ''}" d="M14.8.6a9.4 9.4 0 0 1 0 12.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="sl" d="M2 .5L17 13.5" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><path class="sl" d="M2 .5L17 13.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>`; };
+  const volume = (level, muted) => `${speaker(level, muted)}<span class="bar"><i style="--v:${muted ? 0 : level}"></i></span>`;
+  const sun = level => { const on = Math.ceil(level * 4 - .001); return `<span class="g"><svg class="sun ic" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.4"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path class="v${on >= 1 ? ' on' : ''}" d="M8 1v1.8M8 13.2V15"/><path class="v${on >= 2 ? ' on' : ''}" d="M1 8h1.8M13.2 8H15"/><path class="v${on >= 3 ? ' on' : ''}" d="M3.05 3.05l1.27 1.27M11.68 11.68l1.27 1.27"/><path class="v${on >= 4 ? ' on' : ''}" d="M12.95 3.05l-1.27 1.27M4.32 11.68l-1.27 1.27"/></g></svg></span>`; };
+  const brightness = level => `${sun(level)}<span class="bar"><i style="--v:${level}"></i></span>`;
+  const glyph = (name, cls = '') => `<span class="g hg bounce ${cls}" style="font-size:14px">${ic(name)}</span>`;
+  const wifi = `<span class="g hg bounce wifi" style="font-size:14px"><svg class="ic" viewBox="0 0 16 16"><circle cx="8" cy="13" r="1.7"/><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path class="a" d="M5.2 10.4a4 4 0 0 1 5.6 0"/><path class="a" d="M2.9 7.9a7.3 7.3 0 0 1 10.2 0"/><path class="a" d="M.7 5.3a10.5 10.5 0 0 1 14.6 0"/></g></svg></span>`;
+  const battery = `<span class="batt">18%<svg class="ic" style="--l:.18"><use href="#i-batt"/></svg></span>`;
+  const rune = `<span class="rune"><i></i><i></i><svg viewBox="0 0 8 15"><path d="M0 3.75L8 11.25 4 15V0l4 3.75L0 11.25"/></svg></span>`;
+  const bluetooth = `<span class="bt"><span class="t name">AirPods Pro</span><span class="t w85 num">72%</span><span class="gauge" style="--p:.72"><i></i></span></span>`;
+  const label = (text, cls = '') => `<span class="t ${cls}">${text}</span>`;
+  const lock = open => `<span class="lock${open ? ' open' : ''}"></span>`;
+  const time = `<span class="time">12:19</span>`, greeting = `<span class="greet">Welcome back, Alex</span>`;
+  const track = `Harbour Lights &nbsp;·&nbsp; Tidal Lines`;
+  const note = `<div class="note"><span class="app">${ic('i-msg')}</span><span><b>Alex</b><small>Running five minutes late</small></span></div>`;
+  const mediaCard = `<div class="mc" style="--i:0"><div class="top"><span class="cover"><span class="src"><i>${ic('i-note')}</i></span></span><div class="meta"><div><div class="ti">Sundown</div><div class="ar">Tidal Lines</div></div><div class="prog"><span>1:22</span><span class="bar"><i style="--v:.38"></i></span><span>3:34</span></div><div class="ctl"><span>${ic('i-back')}</span><span class="big">${ic('i-pause')}</span><span>${ic('i-fwd')}</span></div></div></div><div class="out">${ic('i-spk')}<span class="sl"></span><span class="dev">AirPods Pro</span></div></div>`;
+  const eventRow = `<div class="ev" style="--i:1"><span class="tm"><b>14:30</b><small>15:00</small></span><span>Design review</span><span class="join">${ic('i-video')}Join</span></div>`;
+  const weatherSection = i => `<div class="sec" style="--i:${i}"><div class="rows"><div class="rw lg">${ic('i-cloudsun')}<span class="ttl">12°&nbsp; Clear<div class="dtl">H 18° · L 11° · wind 9 km/h</div></span></div></div></div>`;
+  const expanded = (sections, heights) => ({ mode: 'expanded', w: 440, h: 46 + heights.reduce((a, b) => a + b, 0) + (heights.length - 1) * 10, card: `<div class="exp" style="width:440px">${sections}</div>` });
+  const herdr = `<div class="sec" style="--i:2"><div class="hd">🐑 Herdr<span class="sp"><span class="tl"><i class="dot gn"></i>1</span><span class="tl"><i class="dot bl"></i>1</span><span class="tl"><i class="dot o"></i>1</span></span></div><div class="rows"><div class="rw hi">${agentIcon('claude', 'working')}<span class="ttl">Refactor the parser</span><span class="wd"><i></i><i></i><i></i></span></div><div class="rw">${agentIcon('claude', 'done')}<span class="ttl">Write the release notes</span><span class="tr">4m</span><span class="st d"></span></div><div class="rw">${agentIcon('pi', 'waiting')}<span class="ttl">π · bundle</span><span class="tr">15m</span><span class="st a"></span></div></div></div>`;
+  const clipboard = `<div class="sec" style="--i:0"><div class="hd">${ic('i-clip')}Clipboard</div><div class="rows"><div class="rw">${ic('i-docs')}<span class="ttl">git rebase -i HEAD~3</span></div><div class="rw">${ic('i-docs')}<span class="ttl">https://example.com/notes</span></div><div class="rw">${ic('i-docs')}<span class="ttl">Meeting moved to 15:00</span></div></div></div>`;
+  const shelf = `<div class="sec" style="--i:0"><div class="hd">${ic('i-tray')}Shelf<span class="sp">Clear</span></div><div class="files"><span class="file"><i></i>brief.pdf</span><span class="file"><i class="img"></i>logo.png</span><span class="file"><i></i>notes.md</span></div></div>`;
+  const timerSection = `<div class="sec" style="--i:0"><div class="rows"><div class="rw">${ic('i-timer')}<span class="ttl">24:59</span><span class="pill">Cancel</span></div></div></div>`;
+
+  const heroClosed = (b, playing = true) => ({ mode: 'closed', l: `${calendar}${agents}`, r: `${weather}${music(b, playing)}` });
+
+  // ---- Runs a list of [hold ms, fn] forever.
+  function loop(steps, start = 0) {
+    let i = 0;
+    const run = () => { const [hold, fn] = steps[i]; fn(); i = (i + 1) % steps.length; setTimeout(run, hold); };
+    setTimeout(run, start);
+  }
+
+  // ---- Hero: a day on the island.
+  const hero = island(document.getElementById('heroScene'));
+  const caption = document.getElementById('caption');
+  const say = text => caption.textContent = text;
+  hero.set(heroClosed(false));
+  if (!reduced) loop([
+    [1400, () => { say('Volume'); hero.set({ mode: 'hud', l: `${calendar}${agents}`, r: volume(.65), hudR: true }); }],
+    [1200, () => { say('Closed'); hero.set(heroClosed(false)); }],
+    [2200, () => { say('Track change'); hero.set({ mode: 'hud', l: `${calendar}${agents}`, r: `${weather}${music(true)}`, row: track }); }],
+    [1200, () => { say('Closed'); hero.set(heroClosed(true)); }],
+    [2400, () => { say('Bluetooth device connected'); hero.set({ mode: 'hud', l: rune, r: bluetooth, hudL: true, hudR: true }); }],
+    [1200, () => { say('Closed'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}` }); }],
+    [3000, () => { say('Notification'); hero.set({ mode: 'card', w: 381, h: 76, card: note }); }],
+    [1200, () => { say('Closed'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}` }); }],
+    [2200, () => { say('Locked'); hero.set({ mode: 'locked', l: lock(false), r: time, hudL: true, hudR: true }); }],
+    [1400, () => { say('Unlocked'); hero.set({ mode: 'locked', l: lock(true), r: greeting, hudL: true, hudR: true }); }],
+    [1400, () => { say('Closed'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}` }); }],
+    [500, () => { say('Pointer over'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}`, hover: true }, 'peek'); }],
+    [160, () => { hero.press(true); }],
+    [3600, () => { say('Expanded'); hero.press(false); hero.set(expanded(mediaCard + eventRow + weatherSection(2), [138, 34, 32])); }],
+    [2400, () => { say('Closed'); hero.set(heroClosed(false)); }],
+  ], 2400);
+
+  // ---- A showcase: an island plus clickable blocks. It cycles on its own; a click takes over for a while.
+  function showcase(sceneId, capId, blocksId, items, delay) {
+    const engine = island(document.getElementById(sceneId)), capEl = document.getElementById(capId), blocksEl = document.getElementById(blocksId);
     let index = 0, alt = false, pausedUntil = 0;
     const blocks = items.map((item, i) => {
       const b = document.createElement('button');
-      b.className = 'block'; b.innerHTML = `<span class="ico">${item.icon}</span>${item.name}`;
+      b.className = 'block'; b.innerHTML = `<span class="ico">${ic(item.icon)}</span>${item.name}`;
       b.onclick = () => { alt = index === i && item.alt ? !alt : false; show(i); pausedUntil = Date.now() + 12000; };
       blocksEl.appendChild(b);
       return b;
@@ -488,46 +763,160 @@ make test</pre>
       index = i;
       const item = items[i], v = alt && item.alt ? item.alt : item;
       blocks.forEach((b, j) => b.setAttribute('aria-selected', j === i));
-      engine.render(v);
+      engine.set(v.view);
       capEl.textContent = v.caption;
     }
     show(0);
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (reduced) return;
     setInterval(() => { if (Date.now() >= pausedUntil) { alt = false; show((index + 1) % items.length); } }, delay);
   }
 
-  const weather = '<span class="g">☀️</span><span>12°</span>';
-  showcase(document.getElementById('baseIsland'), document.getElementById('baseCap'), document.getElementById('baseBlocks'), [
-    { icon: '🔊', name: 'Volume', l: meeting, r: '<span class="g">🔊</span><span class="bar"><i></i></span>', caption: 'Volume: the right wing shows the level; the left wing is unchanged.' },
-    { icon: '☀️', name: 'Brightness', l: meeting, r: '<span class="g">☀️</span><span class="bar"><i style="width:45%"></i></span>', caption: 'Brightness uses the same layout as volume.' },
-    { icon: '🔇', name: 'Mute', l: meeting, r: '<span class="g">🔇</span><span class="bar off"><i></i></span>', caption: 'Mute: a slash is drawn over the speaker and the bar empties.' },
-    { icon: '🎵', name: 'Now Playing', l: meeting, r: musicB, below: '<div class="row">Sundown &nbsp;·&nbsp; Tidal Lines</div>', caption: 'Track change: the cover flips and the title appears below the notch.' },
-    { icon: '🔋', name: 'Battery', l: '<span>18%</span><span class="g">🔋</span>', r: '<span class="red">Low battery</span>', caption: 'Battery alerts at set levels and when the charger is connected or removed.' },
-    { icon: '🎧', name: 'Bluetooth', l: rune, r: '<span>AirPods Pro</span><span>72%</span><span class="gauge" style="--p:.72"><i></i></span>', caption: 'Bluetooth: device name and a gauge showing its charge.' },
-    { icon: '📶', name: 'Network', l: '<span class="g">📶</span>', r: '<span>Wi-Fi</span>', caption: 'Network: Wi-Fi, Ethernet or offline.' },
-    { icon: '📅', name: 'Calendar', l: '<span class="g amber">📅</span>', r: '<span>Design review</span><span class="amber">in 4m</span>', caption: 'Calendar: the next event, five minutes before it starts. The expanded view has a Join button for calls.' },
-    { icon: '⌨️', name: 'Keyboard', l: meeting, r: '<span class="g">⇪</span><span>Caps Lock on</span>', caption: 'Keyboard: Caps Lock and input source changes.' },
-    { icon: '🎙️', name: 'Mic & camera', l: '<span class="dot o"></span><span class="dot gn"></span>', r: '<span>Mic and camera on</span>', caption: 'Mic and camera: an orange dot while the microphone is in use, green for the camera.' },
-    { icon: '🌙', name: 'Focus', l: '<span class="g violet">🌙</span>', r: '<span>Work</span>', caption: 'Focus: the mode name when it changes, then a moon in the wing while it is on.' },
-    { icon: '🔒', name: 'Lock screen', l: '<span class="lock"></span>', r: '<span>20:12</span>', caption: 'Lock screen: a padlock and the time. Select again to see the unlock.',
-      alt: { l: '<span class="lock open"></span>', r: '<span>Welcome back, Alex</span>', caption: 'Unlock: the padlock opens and a greeting replaces the time.' } },
+  const baseL = `${calendar}${agents}`, baseR = `${headphones}${music(false)}`;
+  const hudBoth = (l, r) => ({ mode: 'hud', l, r, hudL: true, hudR: true });
+  showcase('baseScene', 'baseCap', 'baseBlocks', [
+    { icon: 'i-spk', name: 'Volume', view: { mode: 'hud', l: baseL, r: volume(.65), hudR: true }, caption: 'Volume: the right wing shows the level; the left wing is unchanged.' },
+    { icon: 'i-sun', name: 'Brightness', view: { mode: 'hud', l: baseL, r: brightness(.45), hudR: true }, caption: 'Brightness uses the same layout as volume.' },
+    { icon: 'i-spk', name: 'Mute', view: { mode: 'hud', l: baseL, r: volume(.65, true), hudR: true }, caption: 'Mute: a slash is drawn over the speaker and the bar empties. Select again to unmute.',
+      alt: { view: { mode: 'hud', l: baseL, r: volume(.65), hudR: true }, caption: 'Unmute: the slash wipes away and the bar fills back to the level.' } },
+    { icon: 'i-note', name: 'Now Playing', view: { mode: 'hud', l: baseL, r: `${headphones}${music(true)}`, row: track }, caption: 'Track change: the cover flips and the title appears below the notch. Both wings stay as they are.' },
+    { icon: 'i-batt', name: 'Battery', view: hudBoth(battery, label('Low battery', 'red')), caption: 'Battery alerts at set levels and when the charger is connected or removed.' },
+    { icon: 'i-bt', name: 'Bluetooth', view: hudBoth(rune, bluetooth), caption: 'Bluetooth: the rune draws itself in, then the device name and a gauge filling to its charge.' },
+    { icon: 'i-wifi', name: 'Network', view: hudBoth(wifi, label('Wi-Fi')), caption: 'Network: the Wi-Fi arcs light up one by one. Ethernet and offline look the same way.' },
+    { icon: 'i-cal', name: 'Calendar', view: hudBoth(glyph('i-cal', 'orange'), `<span class="evt">${label('Design review')}${label('in 4m', 'orange num')}</span>`), caption: 'Calendar: the next event, five minutes before it starts. The expanded view has a Join button for calls.' },
+    { icon: 'i-kbd', name: 'Keyboard', view: { mode: 'hud', l: baseL, r: `<span class="g">${ic('i-caps')}</span>${label('Caps Lock on')}`, hudR: true }, caption: 'Keyboard: Caps Lock and input source changes, on the right only.' },
+    { icon: 'i-mic', name: 'Mic & camera', view: hudBoth('<span class="dots"><i class="dot o"></i><i class="dot gn"></i></span>', label('Mic and camera on')), caption: 'Mic and camera: an orange dot while the microphone is in use, green for the camera.' },
+    { icon: 'i-moon', name: 'Focus', view: hudBoth(glyph('i-moon', 'indigo'), label('Work')), caption: 'Focus: the mode name when it changes, then a moon in the wing while it is on.' },
+    { icon: 'i-lock', name: 'Lock screen', view: { mode: 'locked', l: lock(false), r: time, hudL: true, hudR: true }, caption: 'Lock screen: a padlock and the time. Select again to see the unlock.',
+      alt: { view: { mode: 'locked', l: lock(true), r: greeting, hudL: true, hudR: true }, caption: 'Unlock: the padlock springs open and a greeting replaces the time.' } },
   ], 2800);
 
-  showcase(document.getElementById('extIsland'), document.getElementById('extCap'), document.getElementById('extBlocks'), [
-    { icon: '🌤️', name: 'Weather', l: agents, r: weather + music, caption: 'Weather: temperature in the wing; conditions and the day\'s range when expanded. Data from Open-Meteo.' },
-    { icon: '⏱️', name: 'Timer', l: '<span class="ring"></span><span>24:59</span>', r: weather, caption: 'Timer: presets in the expanded view, a ring with the remaining time in the wing, a sound at the end.' },
-    { icon: '⬇️', name: 'Downloads', l: '<span class="g blue">⬇︎</span>', r: '<span>report-final.pdf</span>', caption: 'Downloads: an overlay when a browser download starts and when it finishes.' },
-    { icon: '📋', name: 'Clipboard', l: '', r: '', below: '<div class="hdr">📋 Clipboard</div><div class="sec">git rebase -i HEAD~3 <span class="sp">⧉</span></div><div class="sec">https://example.com/notes <span class="sp">⧉</span></div>', caption: 'Clipboard: recent text copies; selecting one copies it again. Password managers are excluded.' },
-    { icon: '🗂️', name: 'File shelf', l: '', r: '', below: '<div class="hdr">🗂️ Shelf <span class="sp">Clear</span></div><div class="sec" style="gap:14px"><span class="file"><b></b>brief.pdf</span><span class="file"><b></b>logo.png</span><span class="file"><b></b>notes.md</span></div>', caption: 'File shelf: drop files onto the island; drag them out when needed.' },
-    { icon: '🐑', name: 'Agents', l: agents, r: weather, below: '<div class="hdr">🐑 Herdr <span class="sp">●&nbsp;1 &nbsp; ●&nbsp;2</span></div><div class="sec"><span class="agent claude"></span>Refactor the parser<span class="dots"><i></i><i></i><i></i></span></div><div class="sec"><span class="agent pi"></span>π · bundle<span class="sp">4m</span></div>', caption: 'Agents: working first, then done, then waiting, with the time since the last change. Selecting one raises its terminal.' },
+  showcase('extScene', 'extCap', 'extBlocks', [
+    { icon: 'i-cloudsun', name: 'Weather', view: { mode: 'closed', l: agents, r: `${weather}${music(false)}` }, caption: 'Weather: temperature in the wing; conditions and the day\'s range when expanded. Data from Open-Meteo. Select again to expand.',
+      alt: { view: expanded(weatherSection(0), [32]), caption: 'Expanded: the weather row with the day\'s range.' } },
+    { icon: 'i-timer', name: 'Timer', view: { mode: 'closed', l: `${timerWing}${agents}`, r: weather }, caption: 'Timer: a ring draining with the time left, in the left wing. Select again for the end.',
+      alt: { view: { mode: 'hud', l: glyph('i-timer', 'orange'), r: label('25 min timer done'), hudL: true, hudR: true }, caption: 'When it ends: an overlay with a chime, and the ring leaves the wing.' } },
+    { icon: 'i-down', name: 'Downloads', view: { mode: 'hud', l: glyph('i-down', 'blue'), r: label('report-final.pdf'), hudL: true, hudR: true }, caption: 'Downloads: an overlay when a browser download starts. Select again for the finish.',
+      alt: { view: { mode: 'hud', l: glyph('i-check', 'green'), r: label('report-final.pdf'), hudL: true, hudR: true }, caption: 'Finished: the same overlay with a green tick.' } },
+    { icon: 'i-clip', name: 'Clipboard', view: expanded(clipboard, [22 + 72]), caption: 'Clipboard: recent text copies in the expanded view; selecting one copies it again. Password managers are excluded.' },
+    { icon: 'i-tray', name: 'File shelf', view: expanded(shelf, [22 + 56]), caption: 'File shelf: drop files onto the island; drag them out when needed.' },
+    { icon: 'i-term', name: 'Agents', view: expanded(herdr, [22 + 72]), caption: 'Agents: working first, then done, then waiting, with the time since the last change. Selecting one raises its terminal. Select again for a finished agent.',
+      alt: { view: { mode: 'hud', l: `<span class="g" style="font-size:14px">${ic('i-term')}</span>${label('Refactor the pars…')}<span class="pop green" style="display:inline-grid">${ic('i-check')}</span>`, r: `${weather}`, hudL: true }, caption: 'An agent finishing: its title and a tick on the left; the right wing stays as it is.' } },
   ], 3000);
 
-  // Theme: follows the system, with a manual toggle remembered per browser.
+  // ---- The small demos.
+  const demo = id => { const scene = document.getElementById(id); const engine = island(scene); return { scene, engine, cursor: scene.querySelector('.cursor') }; };
+  function moveCursor(cursor, x, y, ms) {
+    cursor.animate([{ left: cursor.style.left || px(x), top: cursor.style.top || px(y) }, { left: px(x), top: px(y) }], { duration: ms, easing: 'ease-in-out', fill: 'forwards' });
+    cursor.style.left = px(x); cursor.style.top = px(y);
+  }
+  const dL = agents, dR = `${headphones}${music(false)}`;
+  const dClosed = (hover) => ({ mode: 'closed', l: dL, r: dR, hover });
+  const z = .66;
+
+  const wings = demo('dWings');
+  wings.engine.set(dClosed());
+  if (!reduced) loop([
+    [1600, () => wings.engine.set({ mode: 'hud', l: dL, r: volume(.65), hudR: true })],
+    [1400, () => wings.engine.set(dClosed())],
+    [2200, () => wings.engine.set({ mode: 'hud', l: `<span class="g" style="font-size:14px">${ic('i-term')}</span>${label('Refactor the pars…')}<span class="pop green" style="display:inline-grid">${ic('i-check')}</span>`, r: dR, hudL: true })],
+    [1400, () => wings.engine.set(dClosed())],
+  ], 1200);
+
+  demo('dAbove').engine.set(dClosed());
+
+  const click = demo('dClick');
+  click.engine.set(dClosed());
+  const clickScene = click.scene, clickMark = clickScene.querySelector('.click');
+  const centre = scene => scene.clientWidth / 2;
+  if (!reduced) loop([
+    [900, () => { moveCursor(click.cursor, centre(clickScene) - 60, 24, 900); }],
+    [50, () => { click.engine.set(dClosed(true), 'peek'); }],
+    [1000, () => { moveCursor(click.cursor, centre(clickScene) + 10, 16, 1000); }],
+    [100, () => { click.engine.set(dClosed(false), 'peek'); }],
+    [900, () => { moveCursor(click.cursor, centre(clickScene) + 110, 70, 900); }],
+    [500, () => { clickMark.style.left = click.cursor.style.left; clickMark.style.top = click.cursor.style.top; clickMark.animate([{ opacity: 1, transform: 'scale(.4)' }, { opacity: 0, transform: 'scale(2)' }], { duration: 600, easing: 'ease-out' }); }],
+    [900, () => { moveCursor(click.cursor, 20, 90, 900); }],
+  ], 400);
+  moveCursor(click.cursor, 20, 90, 0);
+
+  const lockDemo = demo('dLock');
+  lockDemo.engine.set(dClosed());
+  if (!reduced) loop([
+    [2200, () => lockDemo.engine.set({ mode: 'locked', l: lock(false), r: time, hudL: true, hudR: true })],
+    [1600, () => lockDemo.engine.set({ mode: 'locked', l: lock(true), r: greeting, hudL: true, hudR: true })],
+    [2000, () => lockDemo.engine.set(dClosed())],
+  ], 1500);
+
+  // The pointer goes in at the left side, pushes right, and the rim lights up where it would come out.
+  const hold = demo('dHold');
+  hold.engine.set(dClosed());
+  if (!reduced) loop([
+    [1000, () => { hold.cursor.style.opacity = 1; moveCursor(hold.cursor, centre(hold.scene) - 70, 12, 1000); }],
+    [50, () => { hold.cursor.style.opacity = 0; hold.engine.set(dClosed(true), 'peek'); const p = hold.engine.rim(-1, .4); hold.engine.ripple(p); }],
+    [700, () => {}],
+    [900, () => { const s = .55; hold.engine.lean(Math.tanh(220 / 320), .1, 'cursor'); hold.engine.glow(hold.engine.rim(1, .15), s); }],
+    [700, () => { hold.engine.lean(Math.tanh(380 / 320), .15, 'cursor'); hold.engine.glow(hold.engine.rim(1, .2), .85); }],
+    [800, () => { hold.engine.settle(); hold.engine.glow(hold.engine.rim(1, .2), 0); }],
+    [600, () => { hold.engine.lean(-Math.tanh(260 / 320), .1, 'cursor'); hold.engine.glow(hold.engine.rim(-1, .15), .6); }],
+    [800, () => { hold.engine.settle(); hold.engine.glow(hold.engine.rim(-1, .15), 0); }],
+    [600, () => { hold.engine.set(dClosed(false), 'peek'); hold.cursor.style.opacity = 1; moveCursor(hold.cursor, centre(hold.scene) + 130, 90, 0); }],
+    [900, () => { moveCursor(hold.cursor, 16, 92, 900); }],
+  ], 400);
+  moveCursor(hold.cursor, 16, 92, 0);
+
+  // A push pops the pointer out through the rim; each release effect in turn.
+  const out = demo('dOut'), tag = out.scene.querySelector('.tag');
+  out.engine.set(dClosed(true));
+  const effects = ['Ripple', 'Ring of light', 'Liquid glass'];
+  let effect = 0;
+  out.cursor.style.opacity = 0;
+  if (!reduced) loop([
+    [700, () => { tag.textContent = effects[effect]; out.engine.lean(.5, .1, 'cursor'); out.engine.glow(out.engine.rim(1, .2), .45); }],
+    [500, () => { out.engine.lean(.9, .15, 'cursor'); out.engine.glow(out.engine.rim(1, .2), 1); }],
+    [120, () => {
+      const p = out.engine.rim(1, .2);
+      out.engine.glow(p, 0); out.engine.settle();
+      if (effect === 0) out.engine.ripple(p); else if (effect === 1) out.engine.ring(p); else out.engine.glass(p, { x: .98, y: .2 });
+      out.engine.set(dClosed(false), 'peek');
+      const sx = centre(out.scene) + (p.x - out.engine.size.wl - 92.5 + 4) * z;
+      out.cursor.style.opacity = 1; moveCursor(out.cursor, sx, p.y * z, 0); moveCursor(out.cursor, sx + 70, 60, 700);
+    }],
+    [1500, () => { out.cursor.style.opacity = 0; out.engine.set(dClosed(true), 'peek'); effect = (effect + 1) % effects.length; }],
+  ], 600);
+
+  // The slider sets how far the push has to go: a short lean at low force, a long one at high.
+  const force = demo('dForce'), slider = force.scene.querySelector('.slider');
+  force.engine.set(dClosed(true));
+  if (!reduced) loop([
+    [600, () => { slider.style.setProperty('--k', .85); }],
+    [500, () => { force.engine.lean(.45, .1, 'cursor'); force.engine.glow(force.engine.rim(1, .2), .3); }],
+    [500, () => { force.engine.lean(.75, .15, 'cursor'); force.engine.glow(force.engine.rim(1, .2), .6); }],
+    [500, () => { force.engine.lean(.95, .2, 'cursor'); force.engine.glow(force.engine.rim(1, .2), 1); }],
+    [120, () => { force.engine.ripple(force.engine.rim(1, .2)); force.engine.glow(force.engine.rim(1, .2), 0); force.engine.settle(); }],
+    [1200, () => { slider.style.setProperty('--k', .2); }],
+    [500, () => { force.engine.lean(.45, .1, 'cursor'); force.engine.glow(force.engine.rim(1, .2), 1); }],
+    [120, () => { force.engine.ripple(force.engine.rim(1, .2)); force.engine.glow(force.engine.rim(1, .2), 0); force.engine.settle(); }],
+    [1200, () => {}],
+  ], 800);
+
+  // A finger down keeps the lean; lifting it lets the island settle.
+  const pad = demo('dPad'), finger = pad.scene.querySelector('.finger');
+  pad.engine.set(dClosed(true));
+  if (!reduced) loop([
+    [600, () => { finger.classList.add('down'); }],
+    [400, () => { pad.engine.lean(-.6, .2, 'cursor'); pad.engine.glow(pad.engine.rim(-1, .3), .5); }],
+    [1600, () => { pad.engine.lean(-.75, .25, 'cursor'); pad.engine.glow(pad.engine.rim(-1, .3), .6); }],
+    [600, () => { finger.classList.remove('down'); pad.engine.settle(); pad.engine.glow(pad.engine.rim(-1, .3), 0); }],
+    [1400, () => {}],
+  ], 800);
+
+  // ---- Theme: follows the system, with a manual toggle remembered per browser.
   const root = document.documentElement, themeButton = document.getElementById('theme');
   function applyTheme(mode) { root.dataset.theme = mode; }
   let stored = null; try { stored = localStorage.getItem('theme'); } catch (e) {}
   applyTheme(stored || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
   themeButton.onclick = () => { const next = root.dataset.theme === 'light' ? 'dark' : 'light'; applyTheme(next); try { localStorage.setItem('theme', next); } catch (e) {} };
+})();
 </script>
 </body>
 </html>

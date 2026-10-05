@@ -2,12 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key><string>ControlIsland</string>
-    <key>CFBundleDisplayName</key><string>Control Island</string>
-    <key>CFBundleIdentifier</key><string>dev.zenodea.controlisland</string>
+    <key>CFBundleName</key><string>Sylt</string>
+    <key>CFBundleDisplayName</key><string>Sylt</string>
+    <key>CFBundleIdentifier</key><string>dev.zenodea.sylt</string>
     <key>CFBundleVersion</key><string>1</string>
     <key>CFBundleShortVersionString</key><string>0.1.0</string>
-    <key>CFBundleExecutable</key><string>ControlIsland</string>
+    <key>CFBundleExecutable</key><string>Sylt</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
@@ -15,12 +15,12 @@
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
-    <string>Control Island shows your next event and reminds you before it starts.</string>
+    <string>Sylt shows your next event and reminds you before it starts.</string>
     <key>NSCameraUsageDescription</key>
-    <string>Control Island only checks whether the camera is in use, to show an indicator.</string>
+    <string>Sylt only checks whether the camera is in use, to show an indicator.</string>
     <key>NSBluetoothAlwaysUsageDescription</key>
-    <string>Control Island shows which Bluetooth devices connect and how much battery they have.</string>
+    <string>Sylt shows which Bluetooth devices connect and how much battery they have.</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Control Island asks Spotify and Music for the current album artwork.</string>
+    <string>Sylt asks Spotify and Music for the current album artwork.</string>
 </dict>
 </plist>

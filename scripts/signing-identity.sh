@@ -2,7 +2,7 @@
 # Creates a self-signed code-signing identity so every build has the same identity
 # and macOS keeps the Accessibility grant across rebuilds. Run once.
 set -euo pipefail
-NAME="Control Island Dev"
+NAME="Sylt Dev"
 if security find-identity -v -p codesigning | grep -q "$NAME"; then
   echo "Identity '$NAME' already exists."
   exit 0
