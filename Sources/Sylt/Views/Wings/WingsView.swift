@@ -25,8 +25,7 @@ struct WingsView: View {
     }
 
     private var wingsHeight: CGFloat {
-        if case .hud(let kind) = mode, case .compact = kind.style { return layout.notchHeight + 2 }
-        return layout.notchHeight
+        layout.notchHeight + IslandLayout.notchOverlap
     }
 
     /// Content hugs the notch; the slack sits at the island's outer end.

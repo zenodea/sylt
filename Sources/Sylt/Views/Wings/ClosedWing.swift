@@ -22,15 +22,17 @@ struct ClosedWing: View {
         .animation(IslandAnimation.value, value: layout)
     }
 
-    private var leading: some View {
-        HStack(spacing: 8) {
-            ForEach(layout.wings.left, id: \.id) { item in badge(for: item) }
-        }
-    }
+    private var leading: some View { row(layout.wings.left) }
+    private var trailing: some View { row(layout.wings.right) }
 
-    private var trailing: some View {
-        HStack(spacing: 8) {
-            ForEach(layout.wings.right, id: \.id) { item in badge(for: item) }
+    /// The visible items with the chosen gap, and perhaps a thin line, between neighbours.
+    private func row(_ items: [WingItem]) -> some View {
+        let visible = layout.visibleItems(items)
+        return HStack(spacing: 0) {
+            ForEach(Array(visible.enumerated()), id: \.element.id) { index, item in
+                if index > 0 { WingGapView(gap: layout.wings.gap(between: visible[index - 1], and: item)) }
+                badge(for: item)
+            }
         }
     }
 

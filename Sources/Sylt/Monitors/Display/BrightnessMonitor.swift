@@ -5,7 +5,7 @@ import Foundation
 
 @MainActor
 final class BrightnessMonitor: ObservableObject {
-    @Published var level: Float = 0
+    @Published private(set) var level: Float = 0
     @Published private(set) var available = false
     /// Only changes made through the island. Auto-brightness and other
     /// sources update the level without an overlay.

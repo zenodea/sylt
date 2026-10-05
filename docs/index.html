@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Control Island</title>
+<title>Sylt</title>
 <meta name="description" content="A dynamic island for the MacBook notch: media, agents, meetings, timers, levels and alerts, with a plugin system.">
 <link rel="icon" type="image/png" href="assets/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -36,21 +36,24 @@
   .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
 
   /* nav */
-  nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(16px); background: color-mix(in srgb, var(--bg) 72%, transparent); border-bottom: 1px solid var(--line); }
-  #theme { margin-left: 8px; width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer; display: grid; place-items: center; transition: background .15s, color .15s, transform .15s; }
-  #theme:hover { background: var(--panel-hover); color: var(--fg); transform: translateY(-1px); }
+  nav { position: sticky; top: 8px; z-index: 10; padding: 0 12px; margin-bottom: -52px; pointer-events: none; }
+  nav .bar { pointer-events: auto; width: min(1080px, 100%); height: 52px; margin: 0 auto; padding: 0 10px 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-radius: 999px; color: #fff;
+    background: rgba(0,0,0,.7); -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4); border: 1px solid rgba(255,255,255,.12); box-shadow: 0 12px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06); }
+  :root[data-theme="light"] nav .bar { color: #0f172a; background: rgba(255,255,255,.8); border-color: rgba(15,23,42,.1); box-shadow: 0 12px 32px rgba(15,23,42,.14), inset 0 1px 0 rgba(255,255,255,.7); }
+  #theme { margin-left: 4px; width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: inherit; cursor: pointer; display: grid; place-items: center; transition: background .15s, transform .15s; }
+  :root[data-theme="light"] #theme { border-color: rgba(15,23,42,.12); background: rgba(15,23,42,.05); }
+  #theme:hover { background: rgba(127,127,127,.2); transform: translateY(-1px); }
   #theme svg { grid-area: 1 / 1; transition: opacity .2s, transform .3s; }
   #theme .moon { opacity: 0; transform: rotate(-40deg) scale(.6); }
   :root[data-theme="light"] #theme .sun { opacity: 0; transform: rotate(40deg) scale(.6); }
   :root[data-theme="light"] #theme .moon { opacity: 1; transform: none; }
-  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.01em; text-decoration: none; }
-  nav .links { display: flex; gap: 22px; font-size: 14px; color: var(--muted); align-items: center; }
-  nav .links a { text-decoration: none; }
-  nav .links a:hover { color: var(--fg); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; letter-spacing: -.01em; text-decoration: none; }
+  nav .links { display: flex; gap: 20px; font-size: 13px; font-weight: 500; align-items: center; }
+  nav .links a { text-decoration: none; opacity: .82; transition: opacity .15s; }
+  nav .links a:hover { opacity: 1; }
 
   /* hero */
-  .hero { padding: 72px 0 40px; text-align: center; position: relative; overflow: hidden; }
+  .hero { padding: 112px 0 40px; text-align: center; position: relative; overflow: hidden; }
   .hero::before { content: ""; position: absolute; inset: -40% -20% auto; height: 520px; background: radial-gradient(ellipse at top, rgba(96,165,250,.18), transparent 60%); pointer-events: none; }
   .hero h1 { font-size: clamp(38px, 6vw, 64px); line-height: 1.02; letter-spacing: -.035em; margin: 26px 0 16px; font-weight: 800; }
   .hero h1 span { background: linear-gradient(90deg, var(--fg), #60a5fa 60%, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -75,6 +78,8 @@
   /* island: black, square against the screen edge, bottom corners rounding as it grows */
   .notch { position: absolute; top: 0; left: calc(50% - 92.5px); width: 185px; height: 32px; background: #000; border-radius: 0 0 10px 10px; }
   .pos { position: absolute; top: 0; left: calc(50% - 92.5px); transform-origin: 50% 0; }
+  .notchline { position: absolute; top: -1px; left: calc(50% - 92.5px); width: 185px; height: 33px; border: 1px dashed var(--notchline, rgba(255,255,255,.14)); border-top: none; border-radius: 0 0 10px 10px; pointer-events: none; z-index: 2; }
+  :root[data-theme="light"] .notchline { --notchline: rgba(255,255,255,.22); }
   .pos .liquid { position: absolute; left: -12px; top: 0; pointer-events: none; }
   .isl { position: relative; display: flex; flex-wrap: wrap; align-items: flex-start; height: 32px; background: #000; color: #fff; overflow: hidden; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,.4); transform-origin: 0 0;
     font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, Inter, sans-serif; font-size: 13px; font-weight: 500; line-height: 1.2; white-space: nowrap; -webkit-font-smoothing: antialiased; }
@@ -83,7 +88,7 @@
   .isl.hud .w { height: 34px; }
   .isl .w.l { justify-content: flex-end; } .isl .w.r { justify-content: flex-start; }
   .isl .gap { width: 185px; height: 32px; flex: none; }
-  .isl .c { display: flex; align-items: center; gap: 8px; padding: 0 6px; height: 100%; flex: none; }
+  .isl .c { display: flex; align-items: center; gap: 8px; padding: 0 6px; height: 100%; flex: none; will-change: opacity, filter, transform; }
   .isl .c:empty { padding: 0; }
   .isl .w.l .c.h { padding: 0 4px 0 8px; } .isl .w.r .c.h { padding: 0 8px 0 4px; }
   .isl .row { width: 100%; height: 18px; margin-bottom: 4px; padding: 0 12px; font-size: 11px; font-weight: 500; line-height: 18px; color: rgba(255,255,255,.85); overflow: hidden; }
@@ -108,6 +113,8 @@
   .isl .cal svg { font-size: 12px; } .isl .hp svg { font-size: 12px; }
   .isl .pi svg.ic { font-size: 14px; }
   .isl .ag { display: inline-flex; gap: 3px; }
+  .isl .ws { display: inline-flex; gap: 6px; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .isl .ws span { color: rgba(255,255,255,.6); } .isl .ws b { font-weight: 600; }
   .isl .ai { position: relative; width: 14px; height: 14px; flex: none; }
   .isl .ai .f { position: absolute; inset: 0; border-radius: 3.5px; display: grid; place-items: center; }
   .isl .ai svg { width: 10px; height: 10px; fill: #fff; }
@@ -169,7 +176,6 @@
   .isl .lock.open { background: #30d158; } .isl .lock.open::before { border-color: #30d158; transform: translateY(-2.5px) rotate(-28deg); }
   .isl .time { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.85); font-variant-numeric: tabular-nums; }
   .isl .greet { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.85); }
-  .isl .trunc { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
   .isl .evt { display: inline-flex; gap: 6px; align-items: center; }
 
   /* notification card */
@@ -267,8 +273,9 @@
   pre .c { color: rgba(226,232,240,.5); }
 
   /* small demos in the step cards: the same island at two thirds size */
-  .step .demo { height: 118px; margin: -6px -6px 14px; border-radius: 12px; --z: .66; }
+  .step .demo { height: 124px; margin: -20px -20px 16px; border-radius: 18px 18px 0 0; --z: .6; }
   .step .demo .stage { transform-origin: 50% 0; }
+  #dLock { --z: .56; } #dWings { --z: .54; }
   .demo .cursor { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px rgba(0,0,0,.55), 0 1px 3px rgba(0,0,0,.4); z-index: 3; pointer-events: none; }
   .demo .tag { position: absolute; right: 10px; bottom: 8px; font-size: 11px; font-weight: 600; color: var(--cap); font-family: Inter, system-ui, sans-serif; }
   .demo .win { position: absolute; left: 50%; border-radius: 6px 6px 0 0; border: 1px solid rgba(var(--ink), .16); background: rgba(var(--ink), .06); transform: translateX(-50%); }
@@ -283,8 +290,34 @@
   .demo .pad { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); width: 64px; height: 38px; border-radius: 8px; border: 1px solid rgba(var(--ink), .22); background: rgba(var(--ink), .06); }
   .demo .finger { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: rgba(var(--ink), .8); opacity: 0; transform: scale(.6); transition: opacity .25s, transform .25s; }
   .demo .finger.down { opacity: 1; transform: scale(1); }
+  #customise .steps { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 860px) { #customise .steps { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { #customise .steps { grid-template-columns: 1fr; } }
+  .demo .pane { position: absolute; left: 16px; right: 16px; top: 34px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-family: Inter, system-ui, sans-serif; }
+  .demo .pane.one { display: block; width: 170px; left: 50%; transform: translateX(-50%); }
+  .demo .pane h6 { margin: 0 0 4px; font-size: 9px; font-weight: 600; color: var(--cap); }
+  .demo .tile { height: 19px; margin-bottom: 4px; padding: 0 5px 0 4px; display: flex; align-items: center; gap: 5px; border-radius: 5px; border: 1px solid rgba(var(--ink), .14); background: rgba(var(--ink), .07); font-size: 9px; font-weight: 500; color: var(--cap); overflow: hidden; transition: opacity .3s, transform .3s, height .3s, margin .3s, border-color .2s, background .2s; }
+  .demo .tile i.ic { width: 11px; height: 11px; border-radius: 3px; background: #0a84ff; flex: none; }
+  .demo .tile i.ic.ext { background: #bf5af2; }
+  .demo .tile .sp { margin-left: auto; display: flex; gap: 5px; }
+  .demo .tile svg { width: 9px; height: 9px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .7; }
+  .demo .tile.press { background: rgba(10,132,255,.22); border-color: rgba(10,132,255,.55); }
+  .demo .tile.gone { opacity: 0; transform: translateX(-14px); height: 0; margin: 0; border-color: transparent; }
+  .demo .handle { height: 24px; margin: 2px 0 6px; display: flex; align-items: center; gap: 7px; font-size: 9px; color: var(--cap); font-variant-numeric: tabular-nums; }
+  .demo .handle b { font-weight: 600; width: 50px; white-space: nowrap; }
+  .demo .handle .sl { position: relative; flex: 1; height: 3px; border-radius: 2px; background: rgba(var(--ink), .18); }
+  .demo .handle .sl i { position: absolute; left: 0; top: 0; bottom: 0; width: calc(100% * var(--k)); border-radius: 2px; background: rgba(var(--ink), .85); transition: width .5s cubic-bezier(.3,1,.4,1); }
+  .demo .handle .sl u { position: absolute; top: -4px; left: calc(100% * var(--k)); width: 11px; height: 11px; margin-left: -5.5px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); transition: left .5s cubic-bezier(.3,1,.4,1); }
+  .demo .handle label { display: flex; align-items: center; gap: 4px; }
+  .demo .handle .box { width: 9px; height: 9px; border-radius: 2.5px; border: 1px solid rgba(var(--ink), .4); display: grid; place-items: center; transition: background .2s, border-color .2s; }
+  .demo .handle .box::after { content: ""; width: 3px; height: 5px; border: solid #fff; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg) translate(-1px, -1px); opacity: 0; transition: opacity .2s; }
+  .demo .handle .box.on { background: #0a84ff; border-color: #0a84ff; } .demo .handle .box.on::after { opacity: 1; }
+  .isl .cw { display: inline-flex; align-items: center; }
+  .isl .gp { width: calc(var(--s) + var(--l, 0px)); height: 14px; display: grid; place-items: center; flex: none; transition: width .3s cubic-bezier(.2,.9,.3,1); }
+  .isl .gp::after { content: ""; width: 1px; height: 12px; border-radius: .5px; background: rgba(255,255,255,.28); opacity: 0; transition: opacity .25s; }
+  .isl .gp.ln { --l: 1px; } .isl .gp.ln::after { opacity: 1; }
   footer { padding: 36px 0 56px; color: var(--dim); font-size: 13px; text-align: center; border-top: 1px solid var(--line); }
-  @media (max-width: 640px) { .hero { padding-top: 48px; } nav .links a { display: none; } }
+  @media (max-width: 640px) { .hero { padding-top: 88px; } nav .links a { display: none; } }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -309,28 +342,27 @@
   <symbol id="i-clip" viewBox="0 0 16 16"><path d="M5.5 1.5h5a1 1 0 0 1 1 1v.7h1A1.5 1.5 0 0 1 14 4.7v8.8a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V4.7a1.5 1.5 0 0 1 1.5-1.5h1v-.7a1 1 0 0 1 1-1zm.5 1.4v1.4h4V2.9z"/></symbol>
   <symbol id="i-docs" viewBox="0 0 16 16"><path d="M5 1h5.5L14 4.5V11a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V2.5A1.5 1.5 0 0 1 5 1z"/><path d="M2 5v8.5A1.5 1.5 0 0 0 3.5 15h7.5v-1.3H3.6a.3.3 0 0 1-.3-.3V5z"/></symbol>
   <symbol id="i-tray" viewBox="0 0 16 16"><path d="M2.5 2h11A1.5 1.5 0 0 1 15 3.5V13a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 13V3.5A1.5 1.5 0 0 1 2.5 2zm.1 7.5V13h10.8V9.5h-2.3a3.2 3.2 0 0 1-6.2 0z"/><path d="M4 5h8v1.3H4zM4 7.2h8v1.3H4z" fill="#000"/></symbol>
-  <symbol id="i-bell" viewBox="0 0 16 16"><path d="M8 1.2a4.5 4.5 0 0 1 4.5 4.5v2.6l1.3 2.3a.8.8 0 0 1-.7 1.2H2.9a.8.8 0 0 1-.7-1.2l1.3-2.3V5.7A4.5 4.5 0 0 1 8 1.2zM6.2 13h3.6a1.8 1.8 0 0 1-3.6 0z"/></symbol>
   <symbol id="i-video" viewBox="0 0 16 16"><rect x="1" y="3.5" width="9.5" height="9" rx="2"/><path d="M11.5 7l3.5-2.5v7L11.5 9z"/></symbol>
   <symbol id="i-back" viewBox="0 0 16 16"><path d="M8.4 8L15 3.5v9zM1 8l6.6-4.5v9z"/></symbol>
   <symbol id="i-fwd" viewBox="0 0 16 16"><path d="M7.6 8L1 12.5v-9zM15 8l-6.6 4.5v-9z"/></symbol>
   <symbol id="i-pause" viewBox="0 0 16 16"><rect x="2.5" y="2" width="4" height="12" rx="1.2"/><rect x="9.5" y="2" width="4" height="12" rx="1.2"/></symbol>
   <symbol id="i-msg" viewBox="0 0 16 16"><path d="M8 2c3.9 0 7 2.5 7 5.6s-3.1 5.6-7 5.6c-.8 0-1.6-.1-2.3-.3L2.6 14l.6-2.6C1.9 10.4 1 9.1 1 7.6 1 4.5 4.1 2 8 2z"/></symbol>
   <symbol id="i-star" viewBox="0 0 16 16"><path d="M8 0l1 5.4L13.7 2 10.6 6.6 16 8l-5.4 1.4L13.7 14 9 10.6 8 16l-1-5.4L2.3 14l3.1-4.6L0 8l5.4-1.4L2.3 2 7 5.4z"/></symbol>
-  <symbol id="i-puzzle" viewBox="0 0 16 16"><path d="M6 1.5a1.8 1.8 0 0 1 1.7 2.4H10a1 1 0 0 1 1 1v2.3a1.8 1.8 0 1 1 0 3.4V13a1 1 0 0 1-1 1H7.7a1.8 1.8 0 1 0-3.4 0H2a1 1 0 0 1-1-1v-2.4a1.8 1.8 0 1 0 0-3.4V4.9a1 1 0 0 1 1-1h2.3A1.8 1.8 0 0 1 6 1.5z"/></symbol>
   <symbol id="i-mic" viewBox="0 0 16 16"><rect x="5.5" y="1" width="5" height="8.5" rx="2.5"/><path d="M3.5 7.5a4.5 4.5 0 0 0 9 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 12v3M5.5 15h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
   <symbol id="i-lock" viewBox="0 0 16 16"><path d="M4.5 6.5V5a3.5 3.5 0 0 1 7 0v1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="2.5" y="6.5" width="11" height="8.5" rx="2.2"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 16 16"><path d="M1 1h4v4H1zM6 1h4v4H6zM11 1h4v4h-4zM1 6h4v4H1zM6 6h4v4H6zM11 6h4v4h-4zM1 11h4v4H1zM6 11h4v4H6zM11 11h4v4h-4z"/></symbol>
   <symbol id="i-bt" viewBox="0 0 16 16"><path d="M4 4.5L12 11.5 8 15V1l4 3.5L4 11.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 <nav>
-  <div class="wrap">
-    <a class="brand" href="#"><img src="assets/icon.png" alt="" width="26" height="26" style="border-radius:7px"> Control Island</a>
+  <div class="bar">
+    <a class="brand" href="#"><img src="assets/icon.png" alt="" width="26" height="26" style="border-radius:7px"> Sylt</a>
     <div class="links">
       <a href="#builtin">Built in</a>
       <a href="#plugins">Plugins</a>
       <a href="#how">How it works</a>
       <a href="#customise">Customise</a>
       <a href="#install">Install</a>
-      <a href="https://github.com/zenodea/controlisland">GitHub</a>
+      <a href="https://github.com/zenodea/sylt">GitHub</a>
       <button id="theme" aria-label="Toggle light and dark" title="Light / dark">
         <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
         <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -343,11 +375,11 @@
   <div class="wrap">
     <div class="screen scene" id="heroScene" aria-hidden="true"><div class="stars"></div></div>
     <div class="caption" id="caption">Closed</div>
-    <h1>Control Island</h1>
+    <h1>Sylt</h1>
     <p>A dynamic island for the MacBook notch. Status in two wings, short overlays for changes, and an expanded view with controls. It stays above every window, including the lock screen.</p>
     <div class="cta">
       <a class="btn primary" href="#install">Install</a>
-      <a class="btn" href="https://github.com/zenodea/controlisland">View on GitHub</a>
+      <a class="btn" href="https://github.com/zenodea/sylt">View on GitHub</a>
     </div>
   </div>
 </header>
@@ -366,7 +398,7 @@
 <section id="plugins">
   <div class="wrap">
     <h2>Plugins</h2>
-    <p class="lead">Everything else is a program that prints JSON, in any language. Six are included.</p>
+    <p class="lead">Everything else is a program that prints JSON, in any language. Seven are included.</p>
     <div class="layer flip">
       <div class="mini scene" id="extScene"><div class="cap" id="extCap"></div></div>
       <div class="text">
@@ -384,7 +416,7 @@ read start
 echo '{"wing": {"side": "right", "items": [{"symbol": "cup.and.saucer.fill", "text": "2"}]}}'
 echo '{"hud": {"symbol": "cup.and.saucer.fill", "tint": "orange", "text": "Coffee logged"}}'
 echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup"}]}}'</pre>
-    <p class="lead" style="margin-top:18px">The full protocol is in the <a href="https://github.com/zenodea/controlisland#writing-a-plugin">README</a>.</p>
+    <p class="lead" style="margin-top:18px">The full protocol is in the <a href="https://github.com/zenodea/sylt#writing-a-plugin">README</a>.</p>
   </div>
 </section>
 
@@ -415,7 +447,7 @@ echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup
 <section id="customise">
   <div class="wrap">
     <h2>Make it yours</h2>
-    <p class="lead">Settings has an Effects pane. Everything the island does with the pointer is a choice.</p>
+    <p class="lead">Settings has an Effects pane for the pointer and a Layout pane for the wings. All of it is a choice.</p>
     <div class="steps">
       <div class="step">
         <div class="demo scene" id="dHold"><div class="cursor"></div></div>
@@ -433,6 +465,21 @@ echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup
         <div class="demo scene" id="dPad"><div class="pad"><i class="finger"></i></div></div>
         <b>Knows when you let go</b><p>On the trackpad the island keeps its lean while a finger is down and settles when it lifts. The menu bar stays put the whole time the pointer is held.</p>
       </div>
+      <div class="step">
+        <div class="demo scene" id="dArrange"><div class="pane">
+          <div><h6>Left wing</h6><div class="tile"><i class="ic"></i>Next event<span class="sp"><svg viewBox="0 0 10 10"><path d="M2 5h6M5.5 2.5 8 5 5.5 7.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div><div class="tile wx gone"><i class="ic ext"></i>Weather<span class="sp"><svg viewBox="0 0 10 10"><path d="M2 5h6M5.5 2.5 8 5 5.5 7.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div></div>
+          <div><h6>Right wing</h6><div class="tile hp"><i class="ic"></i>Headphones<span class="sp"><svg viewBox="0 0 10 10"><path d="M8 5H2M4.5 2.5 2 5l2.5 2.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div><div class="tile wx"><i class="ic ext"></i>Weather<span class="sp"><svg viewBox="0 0 10 10"><path d="M8 5H2M4.5 2.5 2 5l2.5 2.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div></div>
+        </div></div>
+        <b>Arrange the wings</b><p>Settings has a Layout pane with the island drawn live. Each item sits in the list for its wing: an arrow sends it to the other side, an eye hides it, and dragging a tile onto another reorders them. The island follows every change.</p>
+      </div>
+      <div class="step">
+        <div class="demo scene" id="dGap"><div class="pane one">
+          <div class="tile"><i class="ic"></i>Headphones<span class="sp"><svg viewBox="0 0 10 10"><path d="M8 5H2M4.5 2.5 2 5l2.5 2.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div>
+          <div class="handle"><b>8 pt</b><span class="sl" style="--k:.2"><i></i><u></u></span><label><i class="box"></i>Line</label></div>
+          <div class="tile"><i class="ic ext"></i>Weather<span class="sp"><svg viewBox="0 0 10 10"><path d="M8 5H2M4.5 2.5 2 5l2.5 2.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div>
+        </div></div>
+        <b>Space them out</b><p>Between any two items a thin handle opens a slider for the gap, 2 to 32 points, and a switch for a hairline in it. The island shows the result as you drag.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -442,8 +489,8 @@ echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup
     <h2>Install</h2>
     <p class="lead">macOS 14 or later, on a Mac with a notch.</p>
 <pre><span class="c"># clone, build a release bundle and launch it</span>
-git clone https://github.com/zenodea/controlisland.git
-cd controlisland
+git clone https://github.com/zenodea/sylt.git
+cd sylt
 make open
 
 <span class="c"># run the tests</span>
@@ -453,7 +500,7 @@ make test</pre>
 </section>
 
 <footer>
-  <div class="wrap">Control Island · built with SwiftUI · <a href="https://github.com/zenodea/controlisland">Source on GitHub</a></div>
+  <div class="wrap">Sylt · built with SwiftUI · <a href="https://github.com/zenodea/sylt">Source on GitHub</a></div>
 </footer>
 
 <script>
@@ -488,7 +535,7 @@ make test</pre>
   // ---- The island. Two wings around the notch, each sized to its own content, plus a row below or a card over everything.
   function island(scene) {
     const stage = document.createElement('div'); stage.className = 'stage';
-    stage.innerHTML = '<div class="notch"></div><div class="pos"><svg class="liquid"><path fill="#000"/></svg><div class="isl"><div class="w l"><span class="c"></span></div><div class="gap"></div><div class="w r"><span class="c"></span></div><div class="row"><span class="c"></span></div><div class="card"><span class="c"></span></div><div class="fx"><svg><defs><mask><circle fill="url(#g-glow)"/></mask><mask><circle fill="url(#g-glow)"/></mask></defs><path class="rim"/><path class="thread"/></svg><i class="ringfx"></i><i class="sheen"></i></div></div></div><div class="isl probe"><div class="w"><span class="c"></span></div></div>';
+    stage.innerHTML = '<div class="notch"></div><div class="pos"><svg class="liquid"><path fill="#000"/></svg><div class="isl"><div class="w l"><span class="c"></span></div><div class="gap"></div><div class="w r"><span class="c"></span></div><div class="row"><span class="c"></span></div><div class="card"><span class="c"></span></div><div class="fx"><svg><defs><mask><circle fill="url(#g-glow)"/></mask><mask><circle fill="url(#g-glow)"/></mask></defs><path class="rim"/><path class="thread"/></svg><i class="ringfx"></i><i class="sheen"></i></div></div></div><div class="isl probe"><div class="w"><span class="c"></span></div></div><div class="notchline"></div>';
     scene.appendChild(stage);
     const pos = stage.querySelector('.pos'), isl = stage.querySelector('.isl'), fx = isl.querySelector('.fx'), liquid = stage.querySelector('.liquid');
     const wing = { l: isl.querySelector('.w.l'), r: isl.querySelector('.w.r') };
@@ -505,7 +552,8 @@ make test</pre>
 
     function measure(html, hud) {
       probe.className = 'c' + (hud ? ' h' : ''); probe.innerHTML = html;
-      const w = probe.getBoundingClientRect().width; probe.innerHTML = '';
+      // The stage may be scaled down for a small scene; the island's own units are unscaled.
+      const w = probe.getBoundingClientRect().width / (stage.getBoundingClientRect().width / stage.offsetWidth); probe.innerHTML = '';
       return w;
     }
     // Content changes blur out and in, like the app's blur-replace transition; a view that only
@@ -515,10 +563,8 @@ make test</pre>
     const norm = html => { scratch.innerHTML = html; return scratch.innerHTML; };
     function swap(node, html, cls) {
       html = norm(html);
-      clearTimeout(node._swap);
-      if (node._pending != null) { if (node._pending === html) return; node._pending = null; }
+      if (node._leaving) { node._pending = [html, cls]; return; }
       if (node.innerHTML === html) { node.getAnimations().forEach(a => a.cancel()); return; }
-      node._pending = html;
       if (node.innerHTML && html && strip(node.innerHTML) === strip(html)) {
         const tpl = document.createElement('template'); tpl.innerHTML = html;
         const a = node.querySelectorAll('*'), b = tpl.content.querySelectorAll('*');
@@ -533,14 +579,18 @@ make test</pre>
         return;
       }
       const enter = () => {
-        node.innerHTML = html; node._pending = null;
+        node._leaving = false;
+        if (node._pending) { [html, cls] = node._pending; node._pending = null; }
+        node.getAnimations().forEach(a => a.cancel());
+        if (node.innerHTML === html) return;
+        node.innerHTML = html;
         if (cls !== undefined) node.classList.toggle('h', cls);
         if (html && !reduced) node.animate([{ opacity: 0, filter: 'blur(6px)', transform: 'scale(.9)' }, { opacity: 1, filter: 'blur(0)', transform: 'none' }], { duration: 280, easing: 'ease-out' });
         node.querySelectorAll('.bars').forEach(startBars);
       };
       if (!node.innerHTML || reduced) return enter();
-      node.animate([{ opacity: 1, filter: 'blur(0)', transform: 'none' }, { opacity: 0, filter: 'blur(4px)', transform: 'scale(.9)' }], { duration: 120, easing: 'ease-in', fill: 'forwards' });
-      node._swap = setTimeout(enter, 110);
+      node._leaving = true;
+      node.animate([{ opacity: 1, filter: 'blur(0)', transform: 'none' }, { opacity: 0, filter: 'blur(4px)', transform: 'scale(.9)' }], { duration: 110, easing: 'ease-in', fill: 'forwards' }).onfinish = enter;
     }
     function flip(art) {
       const a = curve('flip'), b = curve('pop'), c = curve('unpop');
@@ -569,13 +619,14 @@ make test</pre>
       swap(region.card, card ? v.card : '');
       if (card) region.card.parentElement.style.width = px(v.w);
       isl.classList.toggle('hud', hud);
-      const from = { wl: num(getComputedStyle(wing.l).width), wr: num(getComputedStyle(wing.r).width), h: num(getComputedStyle(isl).height) };
+      const from = { wl: num(getComputedStyle(wing.l).width), wr: num(getComputedStyle(wing.r).width), h: num(getComputedStyle(isl).height), w: num(getComputedStyle(isl).width) };
+      const w = wl + NOTCH + wr;
       Object.assign(size, { wl, wr, h });
       mode = v.mode;
       tween(wing.l, 'w', name, k => ({ width: px(from.wl + (wl - from.wl) * k) }));
       tween(wing.r, 'w', name, k => ({ width: px(from.wr + (wr - from.wr) * k) }));
       tween(pos, 't', name, k => ({ transform: `translateX(${-(from.wl + (wl - from.wl) * k)}px)` }));
-      tween(isl, 'h', name, k => { const hh = from.h + (h - from.h) * k, r = radius(hh), g = Math.max(0, hh - NH); return { height: px(hh), borderRadius: `0 0 ${r}px ${r}px`, boxShadow: `0 ${2 + g * .03}px ${10 + g * .12}px rgba(0,0,0,.4)` }; });
+      tween(isl, 'h', name, k => { const hh = from.h + (h - from.h) * k, r = radius(hh), g = Math.max(0, hh - NH); return { width: px(from.w + (w - from.w) * k), height: px(hh), borderRadius: `0 0 ${r}px ${r}px`, boxShadow: `0 ${2 + g * .03}px ${10 + g * .12}px rgba(0,0,0,.4)` }; });
       frameId++;
     }
 
@@ -612,9 +663,10 @@ make test</pre>
       for (let y = side; y >= 0; y -= step) pts.push([w, y, 1, 0]);
       return pts;
     }
+    // The rim, a pixel inside the edge so the whole stroke survives the clip.
     function rimPath(svg) {
       svg.setAttribute('width', width()); svg.setAttribute('height', size.h);
-      return 'M' + outline(2).map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L');
+      return 'M' + outline(2).map(p => (p[0] - p[2]).toFixed(1) + ' ' + (p[1] - p[3]).toFixed(1)).join('L');
     }
     function glow(point, strength) {
       const svg = fx.querySelector('svg'), rimEl = fx.querySelector('.rim'), c = masks[0].firstChild;
@@ -650,7 +702,7 @@ make test</pre>
       const pts = outline(1);
       let nearest = 0, best = Infinity;
       pts.forEach((p, i) => { const d = Math.hypot(p[0] - point.x, p[1] - point.y); if (d < best) { best = d; nearest = i; } });
-      const t0 = performance.now(), run = ++liquid._run;
+      const t0 = performance.now(), run = (liquid._run || 0) + 1;
       const step = now => {
         const t = (now - t0) / 1000, decay = Math.exp(-2.8 * t);
         if (decay < .04 || liquid._run !== run) { path.setAttribute('d', ''); return; }
@@ -714,15 +766,18 @@ make test</pre>
   const herdr = `<div class="sec" style="--i:2"><div class="hd">🐑 Herdr<span class="sp"><span class="tl"><i class="dot gn"></i>1</span><span class="tl"><i class="dot bl"></i>1</span><span class="tl"><i class="dot o"></i>1</span></span></div><div class="rows"><div class="rw hi">${agentIcon('claude', 'working')}<span class="ttl">Refactor the parser</span><span class="wd"><i></i><i></i><i></i></span></div><div class="rw">${agentIcon('claude', 'done')}<span class="ttl">Write the release notes</span><span class="tr">4m</span><span class="st d"></span></div><div class="rw">${agentIcon('pi', 'waiting')}<span class="ttl">π · bundle</span><span class="tr">15m</span><span class="st a"></span></div></div></div>`;
   const clipboard = `<div class="sec" style="--i:0"><div class="hd">${ic('i-clip')}Clipboard</div><div class="rows"><div class="rw">${ic('i-docs')}<span class="ttl">git rebase -i HEAD~3</span></div><div class="rw">${ic('i-docs')}<span class="ttl">https://example.com/notes</span></div><div class="rw">${ic('i-docs')}<span class="ttl">Meeting moved to 15:00</span></div></div></div>`;
   const shelf = `<div class="sec" style="--i:0"><div class="hd">${ic('i-tray')}Shelf<span class="sp">Clear</span></div><div class="files"><span class="file"><i></i>brief.pdf</span><span class="file"><i class="img"></i>logo.png</span><span class="file"><i></i>notes.md</span></div></div>`;
+  const workspaces = `<span class="ws"><b>0</b><span>1</span><span>2</span></span>`;
+  const aerospace = `<div class="sec" style="--i:0"><div class="rows"><div class="rw hi" style="height:29px"><span class="ttl">Workspace 0<div class="dtl">Firefox, Sylt</div></span><span class="tr">current</span></div><div class="rw" style="height:29px"><span class="ttl">Workspace 1<div class="dtl">Ghostty</div></span></div></div></div>`;
   const timerSection = `<div class="sec" style="--i:0"><div class="rows"><div class="rw">${ic('i-timer')}<span class="ttl">24:59</span><span class="pill">Cancel</span></div></div></div>`;
 
   const heroClosed = (b, playing = true) => ({ mode: 'closed', l: `${calendar}${agents}`, r: `${weather}${music(b, playing)}` });
 
   // ---- Runs a list of [hold ms, fn] forever.
+  const timers = new Set();
   function loop(steps, start = 0) {
     let i = 0;
-    const run = () => { const [hold, fn] = steps[i]; fn(); i = (i + 1) % steps.length; setTimeout(run, hold); };
-    setTimeout(run, start);
+    const run = () => { const [hold, fn] = steps[i]; fn(); i = (i + 1) % steps.length; timers.add(setTimeout(run, hold)); };
+    timers.add(setTimeout(run, start));
   }
 
   // ---- Hero: a day on the island.
@@ -756,6 +811,7 @@ make test</pre>
       const b = document.createElement('button');
       b.className = 'block'; b.innerHTML = `<span class="ico">${ic(item.icon)}</span>${item.name}`;
       b.onclick = () => { alt = index === i && item.alt ? !alt : false; show(i); pausedUntil = Date.now() + 12000; };
+      b.onmousedown = e => e.preventDefault();
       blocksEl.appendChild(b);
       return b;
     });
@@ -799,6 +855,8 @@ make test</pre>
       alt: { view: { mode: 'hud', l: glyph('i-check', 'green'), r: label('report-final.pdf'), hudL: true, hudR: true }, caption: 'Finished: the same overlay with a green tick.' } },
     { icon: 'i-clip', name: 'Clipboard', view: expanded(clipboard, [22 + 72]), caption: 'Clipboard: recent text copies in the expanded view; selecting one copies it again. Password managers are excluded.' },
     { icon: 'i-tray', name: 'File shelf', view: expanded(shelf, [22 + 56]), caption: 'File shelf: drop files onto the island; drag them out when needed.' },
+    { icon: 'i-grid', name: 'AeroSpace', view: { mode: 'closed', l: `${workspaces}${agents}`, r: weather }, caption: 'AeroSpace workspaces, the current one bright. Click a row to switch. Select again to expand.',
+      alt: { view: expanded(aerospace, [64]), caption: 'Expanded: each workspace with its apps; the current row is highlighted.' } },
     { icon: 'i-term', name: 'Agents', view: expanded(herdr, [22 + 72]), caption: 'Agents: working first, then done, then waiting, with the time since the last change. Selecting one raises its terminal. Select again for a finished agent.',
       alt: { view: { mode: 'hud', l: `<span class="g" style="font-size:14px">${ic('i-term')}</span>${label('Refactor the pars…')}<span class="pop green" style="display:inline-grid">${ic('i-check')}</span>`, r: `${weather}`, hudL: true }, caption: 'An agent finishing: its title and a tick on the left; the right wing stays as it is.' } },
   ], 3000);
@@ -809,16 +867,16 @@ make test</pre>
     cursor.animate([{ left: cursor.style.left || px(x), top: cursor.style.top || px(y) }, { left: px(x), top: px(y) }], { duration: ms, easing: 'ease-in-out', fill: 'forwards' });
     cursor.style.left = px(x); cursor.style.top = px(y);
   }
-  const dL = agents, dR = `${headphones}${music(false)}`;
+  const dL = agents, dR = headphones;
   const dClosed = (hover) => ({ mode: 'closed', l: dL, r: dR, hover });
-  const z = .66;
+  const z = .6;
 
   const wings = demo('dWings');
   wings.engine.set(dClosed());
   if (!reduced) loop([
     [1600, () => wings.engine.set({ mode: 'hud', l: dL, r: volume(.65), hudR: true })],
     [1400, () => wings.engine.set(dClosed())],
-    [2200, () => wings.engine.set({ mode: 'hud', l: `<span class="g" style="font-size:14px">${ic('i-term')}</span>${label('Refactor the pars…')}<span class="pop green" style="display:inline-grid">${ic('i-check')}</span>`, r: dR, hudL: true })],
+    [2200, () => wings.engine.set({ mode: 'hud', l: `<span class="g" style="font-size:14px">${ic('i-term')}</span>${label('Tests passed')}<span class="pop green" style="display:inline-grid">${ic('i-check')}</span>`, r: dR, hudL: true })],
     [1400, () => wings.engine.set(dClosed())],
   ], 1200);
 
@@ -852,13 +910,13 @@ make test</pre>
   hold.engine.set(dClosed());
   if (!reduced) loop([
     [1000, () => { hold.cursor.style.opacity = 1; moveCursor(hold.cursor, centre(hold.scene) - 70, 12, 1000); }],
-    [50, () => { hold.cursor.style.opacity = 0; hold.engine.set(dClosed(true), 'peek'); const p = hold.engine.rim(-1, .4); hold.engine.ripple(p); }],
+    [50, () => { hold.cursor.style.opacity = 0; hold.engine.set(dClosed(true), 'peek'); const p = hold.engine.rim(-1, .3); hold.engine.ripple(p); }],
     [700, () => {}],
-    [900, () => { const s = .55; hold.engine.lean(Math.tanh(220 / 320), .1, 'cursor'); hold.engine.glow(hold.engine.rim(1, .15), s); }],
-    [700, () => { hold.engine.lean(Math.tanh(380 / 320), .15, 'cursor'); hold.engine.glow(hold.engine.rim(1, .2), .85); }],
-    [800, () => { hold.engine.settle(); hold.engine.glow(hold.engine.rim(1, .2), 0); }],
-    [600, () => { hold.engine.lean(-Math.tanh(260 / 320), .1, 'cursor'); hold.engine.glow(hold.engine.rim(-1, .15), .6); }],
-    [800, () => { hold.engine.settle(); hold.engine.glow(hold.engine.rim(-1, .15), 0); }],
+    [900, () => { const s = .55; hold.engine.lean(Math.tanh(220 / 320), .1, 'cursor'); hold.engine.glow(hold.engine.rim(1, .04), s); }],
+    [700, () => { hold.engine.lean(Math.tanh(380 / 320), .15, 'cursor'); hold.engine.glow(hold.engine.rim(1, .04), .85); }],
+    [800, () => { hold.engine.settle(); hold.engine.glow(hold.engine.rim(1, .04), 0); }],
+    [600, () => { hold.engine.lean(-Math.tanh(260 / 320), .1, 'cursor'); hold.engine.glow(hold.engine.rim(-1, .04), .6); }],
+    [800, () => { hold.engine.settle(); hold.engine.glow(hold.engine.rim(-1, .04), 0); }],
     [600, () => { hold.engine.set(dClosed(false), 'peek'); hold.cursor.style.opacity = 1; moveCursor(hold.cursor, centre(hold.scene) + 130, 90, 0); }],
     [900, () => { moveCursor(hold.cursor, 16, 92, 900); }],
   ], 400);
@@ -871,12 +929,12 @@ make test</pre>
   let effect = 0;
   out.cursor.style.opacity = 0;
   if (!reduced) loop([
-    [700, () => { tag.textContent = effects[effect]; out.engine.lean(.5, .1, 'cursor'); out.engine.glow(out.engine.rim(1, .2), .45); }],
-    [500, () => { out.engine.lean(.9, .15, 'cursor'); out.engine.glow(out.engine.rim(1, .2), 1); }],
+    [700, () => { tag.textContent = effects[effect]; out.engine.lean(.5, .1, 'cursor'); out.engine.glow(out.engine.rim(1, .04), .45); }],
+    [500, () => { out.engine.lean(.9, .15, 'cursor'); out.engine.glow(out.engine.rim(1, .04), 1); }],
     [120, () => {
-      const p = out.engine.rim(1, .2);
+      const p = out.engine.rim(1, .04);
       out.engine.glow(p, 0); out.engine.settle();
-      if (effect === 0) out.engine.ripple(p); else if (effect === 1) out.engine.ring(p); else out.engine.glass(p, { x: .98, y: .2 });
+      if (effect === 0) out.engine.ripple(p); else if (effect === 1) out.engine.ring(p); else out.engine.glass(p, { x: 1, y: .04 });
       out.engine.set(dClosed(false), 'peek');
       const sx = centre(out.scene) + (p.x - out.engine.size.wl - 92.5 + 4) * z;
       out.cursor.style.opacity = 1; moveCursor(out.cursor, sx, p.y * z, 0); moveCursor(out.cursor, sx + 70, 60, 700);
@@ -889,13 +947,13 @@ make test</pre>
   force.engine.set(dClosed(true));
   if (!reduced) loop([
     [600, () => { slider.style.setProperty('--k', .85); }],
-    [500, () => { force.engine.lean(.45, .1, 'cursor'); force.engine.glow(force.engine.rim(1, .2), .3); }],
-    [500, () => { force.engine.lean(.75, .15, 'cursor'); force.engine.glow(force.engine.rim(1, .2), .6); }],
-    [500, () => { force.engine.lean(.95, .2, 'cursor'); force.engine.glow(force.engine.rim(1, .2), 1); }],
-    [120, () => { force.engine.ripple(force.engine.rim(1, .2)); force.engine.glow(force.engine.rim(1, .2), 0); force.engine.settle(); }],
+    [500, () => { force.engine.lean(.45, .1, 'cursor'); force.engine.glow(force.engine.rim(1, .04), .3); }],
+    [500, () => { force.engine.lean(.75, .15, 'cursor'); force.engine.glow(force.engine.rim(1, .04), .6); }],
+    [500, () => { force.engine.lean(.95, .2, 'cursor'); force.engine.glow(force.engine.rim(1, .04), 1); }],
+    [120, () => { force.engine.ripple(force.engine.rim(1, .04)); force.engine.glow(force.engine.rim(1, .04), 0); force.engine.settle(); }],
     [1200, () => { slider.style.setProperty('--k', .2); }],
-    [500, () => { force.engine.lean(.45, .1, 'cursor'); force.engine.glow(force.engine.rim(1, .2), 1); }],
-    [120, () => { force.engine.ripple(force.engine.rim(1, .2)); force.engine.glow(force.engine.rim(1, .2), 0); force.engine.settle(); }],
+    [500, () => { force.engine.lean(.45, .1, 'cursor'); force.engine.glow(force.engine.rim(1, .04), 1); }],
+    [120, () => { force.engine.ripple(force.engine.rim(1, .04)); force.engine.glow(force.engine.rim(1, .04), 0); force.engine.settle(); }],
     [1200, () => {}],
   ], 800);
 
@@ -904,11 +962,36 @@ make test</pre>
   pad.engine.set(dClosed(true));
   if (!reduced) loop([
     [600, () => { finger.classList.add('down'); }],
-    [400, () => { pad.engine.lean(-.6, .2, 'cursor'); pad.engine.glow(pad.engine.rim(-1, .3), .5); }],
-    [1600, () => { pad.engine.lean(-.75, .25, 'cursor'); pad.engine.glow(pad.engine.rim(-1, .3), .6); }],
-    [600, () => { finger.classList.remove('down'); pad.engine.settle(); pad.engine.glow(pad.engine.rim(-1, .3), 0); }],
+    [400, () => { pad.engine.lean(-.6, .2, 'cursor'); pad.engine.glow(pad.engine.rim(-1, .05), .5); }],
+    [1600, () => { pad.engine.lean(-.75, .25, 'cursor'); pad.engine.glow(pad.engine.rim(-1, .05), .6); }],
+    [600, () => { finger.classList.remove('down'); pad.engine.settle(); pad.engine.glow(pad.engine.rim(-1, .05), 0); }],
     [1400, () => {}],
   ], 800);
+
+  window.sylt = { stop: () => timers.forEach(clearTimeout), island: hero, wings: wings.engine, lock: lockDemo.engine, hold: hold.engine, out: out.engine, force: force.engine, pad: pad.engine, views: { closed: heroClosed, volume, brightness, music, lock, time, greeting, note, expanded, mediaCard, eventRow, weatherSection, herdr, clipboard, shelf, rune, bluetooth, agents, calendar, headphones, weather, track } };
+
+  // The Layout pane: a tile crosses to the other wing, then one is hidden; the island re-flows each time.
+  const arrange = demo('dArrange'), tile = { wxR: arrange.scene.querySelector('.tile.wx:not(.gone)'), wxL: arrange.scene.querySelector('.tile.wx.gone'), hp: arrange.scene.querySelector('.tile.hp') };
+  const arranged = (l, r) => ({ mode: 'closed', l, r });
+  arrange.engine.set(arranged(calendar, headphones + weather));
+  if (!reduced) loop([
+    [1400, () => { tile.wxR.classList.add('press'); }],
+    [350, () => { tile.wxR.classList.add('gone'); tile.wxL.classList.remove('gone'); arrange.engine.set(arranged(calendar + weather, headphones), 'value'); }],
+    [2000, () => { tile.hp.classList.add('press'); }],
+    [350, () => { tile.hp.classList.add('gone'); arrange.engine.set(arranged(calendar + weather, ''), 'value'); }],
+    [2400, () => { [tile.wxR, tile.hp].forEach(t => t.classList.remove('press', 'gone')); tile.wxL.classList.add('gone'); arrange.engine.set(arranged(calendar, headphones + weather), 'value'); }],
+  ], 1000);
+
+  // The gap between two items: the slider widens it, the switch puts a hairline in it.
+  const gapDemo = demo('dGap'), handle = gapDemo.scene.querySelector('.handle'), spaced = (s, line) => ({ mode: 'closed', l: calendar, r: `<span class="cw">${headphones}<i class="gp${line ? ' ln' : ''}" style="--s:${s}px"></i>${weather}</span>` });
+  const setGap = (s, line) => { handle.querySelector('b').textContent = line ? `${s} pt, line` : `${s} pt`; handle.querySelector('.sl').style.setProperty('--k', (s - 2) / 30); handle.querySelector('.box').classList.toggle('on', line); gapDemo.engine.set(spaced(s, line), 'value'); };
+  setGap(8, false);
+  if (!reduced) loop([
+    [1400, () => setGap(16, false)],
+    [900, () => setGap(24, false)],
+    [1400, () => setGap(24, true)],
+    [2400, () => setGap(8, false)],
+  ], 1200);
 
   // ---- Theme: follows the system, with a manual toggle remembered per browser.
   const root = document.documentElement, themeButton = document.getElementById('theme');

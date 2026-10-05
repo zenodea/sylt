@@ -39,4 +39,18 @@ final class WingLayoutTests: XCTestCase {
         let wings = layout.resolve(plugins: [plugins[0]])
         XCTAssertFalse(wings.left.contains(.plugin("weather")))
     }
+
+    func testGapsRoundTripAndWidenTheWing() throws {
+        var layout = WingLayout()
+        layout.setGap(WingGap(spacing: 16, separator: true), between: .calendar, and: .plugin("agents"))
+        let decoded = try JSONDecoder().decode(WingLayout.self, from: JSONEncoder().encode(layout))
+        XCTAssertEqual(decoded, layout)
+        XCTAssertEqual(decoded.resolve(plugins: plugins).gap(between: .calendar, and: .plugin("agents")).width, 17)
+
+        var island = IslandLayout()
+        island.showsCalendar = true
+        island.pluginWidths = ["agents": 40]
+        island.wings = layout.resolve(plugins: plugins)
+        XCTAssertEqual(island.leftWing, 52 + 17 + 40 + IslandLayout.wingPadding * 2)
+    }
 }

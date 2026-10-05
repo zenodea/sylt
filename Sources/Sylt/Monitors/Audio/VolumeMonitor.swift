@@ -5,8 +5,8 @@ import Combine
 
 @MainActor
 final class VolumeMonitor: ObservableObject {
-    @Published var level: Float = 0   // 0...1
-    @Published var isMuted = false
+    @Published private(set) var level: Float = 0   // 0...1
+    @Published private(set) var isMuted = false
     @Published private(set) var outputName = ""
     let changes = PassthroughSubject<Void, Never>()
     let muteChanges = PassthroughSubject<Bool, Never>()

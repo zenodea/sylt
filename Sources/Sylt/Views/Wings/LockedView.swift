@@ -29,7 +29,7 @@ struct LockedView: View {
                 .frame(width: trailingWing - gap, alignment: .leading)
                 .padding(.leading, gap)
         }
-        .frame(height: layout.notchHeight + 2)
+        .frame(height: layout.notchHeight + IslandLayout.notchOverlap)
     }
 
     private var trailingWing: CGFloat {

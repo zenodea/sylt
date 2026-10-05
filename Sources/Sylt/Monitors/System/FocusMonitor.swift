@@ -4,7 +4,7 @@ import Foundation
 /// The active Focus mode, read from the Do Not Disturb assertion store.
 @MainActor
 final class FocusMonitor: ObservableObject {
-    @Published var mode: String?
+    @Published private(set) var mode: String?
     let changes = PassthroughSubject<String?, Never>()
 
     private let directory = URL(fileURLWithPath: NSHomeDirectory() + "/Library/DoNotDisturb/DB")

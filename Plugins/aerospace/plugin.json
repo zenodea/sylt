@@ -1,0 +1,13 @@
+{
+  "protocol": 1,
+  "id": "aerospace",
+  "name": "AeroSpace",
+  "description": "Workspaces of the AeroSpace window manager, the current one marked. Click one to switch.",
+  "symbol": "square.grid.3x3.fill",
+  "run": "aerospace.py",
+  "side": "left",
+  "settings": [
+    { "key": "announce", "title": "Flash the workspace name when switching", "type": "bool", "default": false },
+    { "key": "showEmpty", "title": "Show empty workspaces too", "type": "bool", "default": false }
+  ]
+}

@@ -27,7 +27,7 @@ final class BluetoothMonitor: NSObject, ObservableObject {
     /// A connected device dropping to 20 and then 10 percent.
     let lowBattery = PassthroughSubject<Device, Never>()
     /// Connected devices with a known charge, audio devices first.
-    @Published var connected: [Device] = []
+    @Published private(set) var connected: [Device] = []
 
     var headphones: Device? { connected.first { $0.isAudio && $0.battery != nil } }
 

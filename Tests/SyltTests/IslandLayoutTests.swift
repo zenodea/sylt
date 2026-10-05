@@ -13,7 +13,7 @@ final class IslandLayoutTests: XCTestCase {
         let layout = layout
         XCTAssertEqual(layout.leftWing, 0)
         XCTAssertEqual(layout.rightWing, 0)
-        XCTAssertEqual(layout.closedWidth, 180)
+        XCTAssertEqual(layout.closedWidth, 180 + IslandLayout.sideOverlap * 2)
         XCTAssertEqual(layout.frame(for: .closed, hovering: false).centerOffset, 0)
     }
 
@@ -23,7 +23,7 @@ final class IslandLayoutTests: XCTestCase {
         XCTAssertGreaterThan(layout.leftWing, 0)
         XCTAssertEqual(layout.rightWing, 0)
         let frame = layout.frame(for: .closed, hovering: false)
-        XCTAssertEqual(frame.size.width, 180 + layout.leftWing)
+        XCTAssertEqual(frame.size.width, 180 + IslandLayout.sideOverlap * 2 + layout.leftWing)
         XCTAssertEqual(frame.centerOffset, -layout.leftWing / 2, "a left-only island shifts left to keep the notch covered")
     }
 
@@ -50,7 +50,7 @@ final class IslandLayoutTests: XCTestCase {
         let layout = layout
         let closed = layout.frame(for: .closed, hovering: true).size
         XCTAssertEqual(closed.width, layout.closedWidth + IslandLayout.hoverGrowth.width)
-        XCTAssertEqual(closed.height, 32 + IslandLayout.hoverGrowth.height)
+        XCTAssertEqual(closed.height, 32 + IslandLayout.notchOverlap + IslandLayout.hoverGrowth.height)
         let expanded = layout.frame(for: .expanded, hovering: true).size
         XCTAssertEqual(expanded, layout.frame(for: .expanded, hovering: false).size)
     }

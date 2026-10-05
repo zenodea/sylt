@@ -7,6 +7,8 @@ struct LayoutPane: View {
     @ObservedObject var preferences: Preferences
     @ObservedObject var plugins: PluginRegistry
 
+    @State private var editingGap: String?
+
     private var wingPlugins: [WingPlugin] { plugins.plugins.map(\.wingPlugin) }
     private var resolved: ResolvedWings { preferences.wingLayout.resolve(plugins: wingPlugins) }
 
@@ -62,8 +64,9 @@ struct LayoutPane: View {
             Label(column.title, systemImage: column == .left ? "arrow.up.left" : "arrow.up.right")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
-            VStack(spacing: 4) {
-                ForEach(items, id: \.id) { item in
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 { gapHandle(between: items[index - 1], and: item) }
                     tile(item, in: column)
                         .draggable(item.id)
                         .dropDestination(for: String.self) { ids, _ in
@@ -84,6 +87,52 @@ struct LayoutPane: View {
                 ids.first.flatMap(WingItem.init(id:)).map { move($0, to: column) } ?? false
             }
         }
+    }
+
+    /// The space between two tiles: click it to set how far apart the two sit on the
+    /// island, and whether a line divides them.
+    private func gapHandle(between first: WingItem, and second: WingItem) -> some View {
+        let key = WingLayout.gapKey(first, second)
+        let gap = preferences.wingLayout.gap(between: first, and: second)
+        let editing = editingGap == key
+        return VStack(spacing: 4) {
+            Button {
+                withAnimation(.snappy) { editingGap = editing ? nil : key }
+            } label: {
+                HStack(spacing: 6) {
+                    Rectangle().fill(.quaternary).frame(height: 1)
+                    Text(gap.separator ? "\(Int(gap.spacing)) pt, line" : "\(Int(gap.spacing)) pt")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(editing ? Color.accentColor : .secondary)
+                    Rectangle().fill(.quaternary).frame(height: 1)
+                }
+                .frame(height: 12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if editing {
+                HStack(spacing: 10) {
+                    Slider(value: Binding(
+                        get: { gap.spacing },
+                        set: { setGap(WingGap(spacing: $0, separator: gap.separator), between: first, and: second) }
+                    ), in: 2...32, step: 2)
+                    Toggle("Line", isOn: Binding(
+                        get: { gap.separator },
+                        set: { setGap(WingGap(spacing: gap.spacing, separator: $0), between: first, and: second) }
+                    ))
+                    .toggleStyle(.checkbox)
+                    .font(.caption)
+                }
+                .padding(.horizontal, 6)
+                .padding(.bottom, 4)
+            }
+        }
+    }
+
+    private func setGap(_ gap: WingGap, between first: WingItem, and second: WingItem) {
+        var layout = preferences.wingLayout
+        layout.setGap(gap, between: first, and: second)
+        preferences.wingLayout = layout
     }
 
     private func tile(_ item: WingItem, in column: WingColumn) -> some View {
@@ -168,14 +217,14 @@ private struct IslandPreview: View {
 
     private var island: some View {
         HStack(spacing: 0) {
-            HStack(spacing: 12) { ForEach(wings.left, id: \.id) { sample($0) } }
+            row(wings.left)
                 .padding(.leading, wings.left.isEmpty ? 0 : 14)
                 .padding(.trailing, wings.left.isEmpty ? 0 : 8)
             UnevenRoundedRectangle(bottomLeadingRadius: 8, bottomTrailingRadius: 8, style: .continuous)
                 .strokeBorder(.white.opacity(0.14), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
                 .frame(width: Self.notchWidth, height: Self.height - 8)
                 .frame(height: Self.height, alignment: .top)
-            HStack(spacing: 12) { ForEach(wings.right, id: \.id) { sample($0) } }
+            row(wings.right)
                 .padding(.leading, wings.right.isEmpty ? 0 : 8)
                 .padding(.trailing, wings.right.isEmpty ? 0 : 14)
         }
@@ -185,6 +234,15 @@ private struct IslandPreview: View {
         .fixedSize()
         .background(GeometryReader { proxy in Color.clear.preference(key: IslandWidthKey.self, value: proxy.size.width) })
         .animation(.snappy, value: wings)
+    }
+
+    private func row(_ items: [WingItem]) -> some View {
+        HStack(spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                if index > 0 { WingGapView(gap: wings.gap(between: items[index - 1], and: item)) }
+                sample(item)
+            }
+        }
     }
 
     @ViewBuilder

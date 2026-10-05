@@ -4,8 +4,8 @@ import QuartzCore
 
 @MainActor
 final class NowPlayingMonitor: ObservableObject {
-    @Published var track: NowPlayingTrack?
-    @Published var isPlaying = false
+    @Published private(set) var track: NowPlayingTrack?
+    @Published private(set) var isPlaying = false
     @Published private(set) var position = PlaybackPosition.idle
     let trackChanges = PassthroughSubject<Void, Never>()
     let playbackResumed = PassthroughSubject<Void, Never>()

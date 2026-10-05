@@ -33,16 +33,37 @@ struct IslandLayout: Equatable {
     static let notchGap: CGFloat = 4
     static let wingEdge: CGFloat = 8
     static let hoverGrowth = CGSize(width: 14, height: 6)
+    /// The hardware notch runs a little deeper and wider than the area macOS reports; the
+    /// island always covers it with room to spare, so its rounded corners begin on screen.
+    static let notchOverlap: CGFloat = 4
+    static let sideOverlap: CGFloat = 6
 
     var artworkSize: CGFloat { notchHeight - 12 }
     var isFullscreen = false
 
     /// Each closed wing fits its own content; an empty wing is zero.
-    var leftWing: CGFloat { Self.wing(wings.left.flatMap(widths)) }
-    var rightWing: CGFloat { Self.wing(wings.right.flatMap(widths)) }
+    var leftWing: CGFloat { wing(wings.left) }
+    var rightWing: CGFloat { wing(wings.right) }
+
+    /// The items with something to show right now, in order.
+    func visibleItems(_ items: [WingItem]) -> [WingItem] {
+        items.filter { widths(of: $0).contains { $0 > 0 } }
+    }
+
+    /// Content plus the gap chosen between each pair of visible neighbours.
+    private func wing(_ items: [WingItem]) -> CGFloat {
+        let visible = visibleItems(items)
+        guard !visible.isEmpty else { return 0 }
+        var total: CGFloat = 0
+        for (index, item) in visible.enumerated() {
+            total += Self.contentWidth(widths(of: item))
+            if index > 0 { total += wings.gap(between: visible[index - 1], and: item).width }
+        }
+        return total + Self.wingPadding * 2
+    }
 
     /// The widths an item takes right now, zero when it has nothing to show.
-    private func widths(of item: WingItem) -> [CGFloat] {
+    func widths(of item: WingItem) -> [CGFloat] {
         switch item {
         case .calendar: [showsCalendar ? 52 : 0]
         case .privacy: [CGFloat(privacyDots) * 10]
@@ -53,12 +74,7 @@ struct IslandLayout: Equatable {
         }
     }
 
-    var closedWidth: CGFloat { notchWidth + leftWing + rightWing }
-
-    private static func wing(_ items: [CGFloat]) -> CGFloat {
-        let content = contentWidth(items)
-        return content == 0 ? 0 : content + wingPadding * 2
-    }
+    var closedWidth: CGFloat { notchWidth + Self.sideOverlap * 2 + leftWing + rightWing }
 
     /// Heights of the expanded sections that currently have something to show.
     var expandedSections: [CGFloat] {
@@ -106,7 +122,7 @@ struct IslandLayout: Equatable {
     private func restingFrame(for mode: IslandMode) -> IslandFrame {
         switch mode {
         case .closed:
-            IslandFrame(size: CGSize(width: closedWidth, height: notchHeight), centerOffset: (rightWing - leftWing) / 2)
+            IslandFrame(size: CGSize(width: closedWidth, height: notchHeight + Self.notchOverlap), centerOffset: (rightWing - leftWing) / 2)
         case .locked:
             compact(leading: LockedView.leadingWing, trailing: LockedView.timeWing)
         case .hud(let kind):
@@ -114,7 +130,7 @@ struct IslandLayout: Equatable {
             case .compact:
                 compact(leading: wingWidths(for: mode).leading, trailing: wingWidths(for: mode).trailing)
             case .twoRow:
-                IslandFrame(size: CGSize(width: closedWidth, height: notchHeight + Self.hudRowHeight + 6), centerOffset: (rightWing - leftWing) / 2)
+                IslandFrame(size: CGSize(width: closedWidth, height: notchHeight + Self.notchOverlap + Self.hudRowHeight + 6), centerOffset: (rightWing - leftWing) / 2)
             case .card:
                 centred(CGSize(width: notchWidth + Self.cardWings, height: Self.hudHeight))
             }
@@ -137,7 +153,7 @@ struct IslandLayout: Equatable {
 
     private func compact(leading: CGFloat, trailing: CGFloat) -> IslandFrame {
         IslandFrame(
-            size: CGSize(width: notchWidth + leading + trailing, height: notchHeight + 2),
+            size: CGSize(width: notchWidth + Self.sideOverlap * 2 + leading + trailing, height: notchHeight + Self.notchOverlap),
             centerOffset: (trailing - leading) / 2
         )
     }

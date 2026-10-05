@@ -62,20 +62,59 @@ struct WingPlugin: Equatable {
     let side: WingSide
 }
 
+/// The space between two neighbouring items, and whether a thin line sits in it.
+struct WingGap: Codable, Equatable {
+    static let defaultSpacing: Double = 8
+    static let separatorWidth: CGFloat = 1
+
+    var spacing: Double = defaultSpacing
+    var separator = false
+
+    /// The room the gap takes in the wing.
+    var width: CGFloat { CGFloat(spacing) + (separator ? Self.separatorWidth : 0) }
+}
+
 /// What the closed wings show, in order, after the user's choices are applied.
 struct ResolvedWings: Equatable {
     var left: [WingItem] = [.calendar]
     var right: [WingItem] = [.privacy, .focus, .headphones, .music]
+    var gaps: [String: WingGap] = [:]
+
+    func gap(between first: WingItem, and second: WingItem) -> WingGap {
+        gaps[WingLayout.gapKey(first, second)] ?? WingGap()
+    }
 }
 
-/// The user's wing layout: which items sit left, right or nowhere, in what order.
-/// Anything not mentioned keeps its natural place, so new plugins need no migration.
+/// The user's wing layout: which items sit left, right or nowhere, in what order,
+/// and how much room sits between neighbours. Anything not mentioned keeps its
+/// natural place, so new plugins need no migration.
 struct WingLayout: Codable, Equatable {
     var left: [String] = []
     var right: [String] = []
     var hidden: [String] = []
+    var gaps: [String: WingGap] = [:]
 
-    var isCustomised: Bool { !left.isEmpty || !right.isEmpty || !hidden.isEmpty }
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        left = try container.decodeIfPresent([String].self, forKey: .left) ?? []
+        right = try container.decodeIfPresent([String].self, forKey: .right) ?? []
+        hidden = try container.decodeIfPresent([String].self, forKey: .hidden) ?? []
+        gaps = try container.decodeIfPresent([String: WingGap].self, forKey: .gaps) ?? [:]
+    }
+
+    var isCustomised: Bool { !left.isEmpty || !right.isEmpty || !hidden.isEmpty || !gaps.isEmpty }
+
+    static func gapKey(_ first: WingItem, _ second: WingItem) -> String { "\(first.id)>\(second.id)" }
+
+    func gap(between first: WingItem, and second: WingItem) -> WingGap {
+        gaps[Self.gapKey(first, second)] ?? WingGap()
+    }
+
+    mutating func setGap(_ gap: WingGap, between first: WingItem, and second: WingItem) {
+        gaps[Self.gapKey(first, second)] = gap == WingGap() ? nil : gap
+    }
 
     func resolve(plugins: [WingPlugin]) -> ResolvedWings {
         let natural = Self.natural(plugins: plugins)
@@ -87,7 +126,7 @@ struct WingLayout: Codable, Equatable {
                 return item
             } + rest.filter { !mentioned.contains($0.id) }
         }
-        return ResolvedWings(left: items(left, then: natural.left), right: items(right, then: natural.right))
+        return ResolvedWings(left: items(left, then: natural.left), right: items(right, then: natural.right), gaps: gaps)
     }
 
     /// Every item the layout can place, in natural order, for the designer.

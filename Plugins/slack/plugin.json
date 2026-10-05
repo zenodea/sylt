@@ -1,0 +1,13 @@
+{
+  "protocol": 1,
+  "id": "slack",
+  "name": "Slack",
+  "description": "Unread mentions from Slack's badge, with a flash when new ones arrive. Needs no token.",
+  "symbol": "number",
+  "run": "slack.py",
+  "side": "right",
+  "settings": [
+    { "key": "announce", "title": "Flash when new mentions arrive", "type": "bool", "default": true },
+    { "key": "showDot", "title": "Show a dot for unread channels", "type": "bool", "default": true }
+  ]
+}

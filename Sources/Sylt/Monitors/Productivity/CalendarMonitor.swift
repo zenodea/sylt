@@ -13,9 +13,9 @@ final class CalendarMonitor: ObservableObject {
         let joinURL: URL?
     }
 
-    @Published var next: Event?
+    @Published private(set) var next: Event?
     /// The next event starts within half an hour, so it earns a spot in the wing.
-    @Published var imminent = false
+    @Published private(set) var imminent = false
     @Published private(set) var authorized = false
     let reminders = PassthroughSubject<Event, Never>()
 

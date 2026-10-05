@@ -12,7 +12,7 @@ struct IslandView: View {
         let size = frame.size
         let canvas = state.canvasSize
         let shape = IslandShape(frame: frame, notchHeight: state.notchHeight)
-        let notch = IslandFrame(size: CGSize(width: state.notchWidth, height: state.notchHeight), centerOffset: 0)
+        let notch = IslandFrame(size: CGSize(width: state.notchWidth, height: state.notchHeight + IslandLayout.notchOverlap), centerOffset: 0)
 
         ZStack(alignment: .top) {
             IslandShape(frame: notch, notchHeight: state.notchHeight)
@@ -51,6 +51,7 @@ struct IslandView: View {
                     .frame(width: canvas.width, height: canvas.height)
             }
             .frame(width: canvas.width, height: canvas.height, alignment: .top)
+            .animation(IslandAnimation.value, value: state.layout)
             .contentShape(shape)
             .modifier(CursorPull(cursor: state.cursor, enabled: state.isHovering && state.mode != .expanded))
             .scaleEffect(y: isPressed ? 0.95 : 1, anchor: .top)

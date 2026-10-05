@@ -28,6 +28,8 @@ final class NotchPanel: NSPanel {
     private static let ejectDistance: CGFloat = 4
     /// How far below the top of the screen the held pointer is kept.
     private static let topMargin: CGFloat = 10
+    /// How far beyond the island's sides a free pointer is still kept off the top edge.
+    private static let menuBarGuardMargin: CGFloat = 60
     private static let recaptureDelay: CFTimeInterval = 0.15
     /// The pull decays as time passes between movements, so only a fast,
     /// deliberate shove reaches the release distance. A single quick flick
@@ -109,7 +111,17 @@ final class NotchPanel: NSPanel {
         let location = NSEvent.mouseLocation
         state.cursorMoved(to: CGPoint(x: location.x - frame.minX, y: frame.maxY - location.y))
         ignoresMouseEvents = state.lock.isLocked || !state.isHovering
+        keepMenuBarAway(at: location)
         if state.absorbsCursor, CACurrentMediaTime() - releasedAt > Self.recaptureDelay { capture() }
+    }
+
+    /// Touching the top of the screen brings the menu bar out over the island. Anywhere
+    /// across the island's span, the pointer is nudged back down before that can happen.
+    private func keepMenuBarAway(at location: CGPoint) {
+        guard location.y >= frame.maxY - 1 else { return }
+        let island = state.hitFrame.insetBy(dx: -Self.menuBarGuardMargin, dy: 0)
+        guard (frame.minX + island.minX ... frame.minX + island.maxX).contains(location.x) else { return }
+        CursorControl.warp(to: cgPoint(CGPoint(x: location.x, y: frame.maxY - 2)))
     }
 
     /// Hide the pointer where it is. It is not moved while held: a warp shows up

@@ -12,7 +12,7 @@ final class PrivacyMonitor: ObservableObject {
         var any: Bool { microphone || camera }
     }
 
-    @Published var use = Use()
+    @Published private(set) var use = Use()
     let changes = PassthroughSubject<Use, Never>()
 
     private var timer: Timer?
