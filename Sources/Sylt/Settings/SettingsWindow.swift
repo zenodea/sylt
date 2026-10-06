@@ -14,6 +14,7 @@ final class SettingsWindow {
         )
         window.title = "Sylt"
         window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
         window.toolbarStyle = .unified
         window.isReleasedWhenClosed = false
         window.contentViewController = NSHostingController(

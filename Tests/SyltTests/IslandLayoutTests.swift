@@ -78,7 +78,8 @@ final class IslandLayoutTests: XCTestCase {
         var layout = layout
         XCTAssertEqual(layout.expandedHeight, IslandLayout.expandedBaseHeight + IslandLayout.emptyExpandedHeight)
         layout.showsMediaCard = true
-        layout.pluginSections = [34]
+        layout.pluginSectionHeights = ["a": 34]
+        layout.expandedPages = ExpandedLayout().resolve(available: layout.availableSections)
         XCTAssertEqual(
             layout.expandedHeight,
             IslandLayout.expandedBaseHeight + IslandLayout.mediaCardHeight + 34 + IslandLayout.sectionGap

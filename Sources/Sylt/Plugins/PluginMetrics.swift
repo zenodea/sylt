@@ -30,7 +30,7 @@ extension PluginSection {
     static let maxRows = 4
 
     var height: CGFloat {
-        var height: CGFloat = title == nil ? 0 : Self.headerHeight
+        var height: CGFloat = Self.headerHeight
         height += (rows ?? []).prefix(Self.maxRows).reduce(0) { $0 + $1.height }
         if !(files ?? []).isEmpty { height += Self.filesHeight }
         if !(buttons ?? []).isEmpty { height += Self.buttonsHeight }

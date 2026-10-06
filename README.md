@@ -8,8 +8,8 @@ Website: https://zenodea.github.io/sylt/
 
 **Closed** the island hugs the notch and shows only live state in two wings:
 
-- Left: running agents (working first, idle faded), a countdown to the next meeting, a running timer, AeroSpace workspaces with the current one bright.
-- Right: mic and camera dots, the active Focus, headphone charge, the weather, Slack's unread count, album art with live audio bars.
+- Left: running agents (working first, idle faded), a countdown to the next meeting, a running timer, AeroSpace workspaces with the current one bright, open reminders.
+- Right: mic and camera dots, the active Focus, headphone charge, the weather, Slack's unread count, the time, album art with live audio bars.
 
 Each wing is sized to its own content. An empty side adds nothing.
 
@@ -31,7 +31,7 @@ Each wing is sized to its own content. An empty side adds nothing.
 | Unlock | A padlock that springs open with a greeting when you unlock. |
 | Plugins | Whatever a plugin asks for: a timer ending, a download landing, an agent finishing. |
 
-**Expanded** (click or swipe down) stacks what's relevant:
+**Expanded** (click or swipe down) shows what's relevant, two sections to a page. Swipe sideways to turn the page; the Layout pane in Settings decides which sections share a page.
 
 - Media card with artwork, transport, a seek bar, the source app and an output volume slider with the device name.
 - Next event with a Join button for Zoom, Meet, Teams and Webex links.
@@ -75,12 +75,12 @@ Each is asked for the first time its plugin needs it, and each plugin can be swi
 
 - The island is a transparent panel over the notch, drawn with SwiftUI. It is moved into its own WindowServer space pinned at the lock-screen level through the private SkyLight framework, which is what keeps it above full-screen apps and the login window.
 - The panel only takes the mouse while the cursor is over the island, so the rest of the strip stays click-through.
-- Built-in sources are Swift `Monitor`s with a `HUDKind` for their overlay. Everything else is a plugin: a program in any language that prints JSON, rendered by the island with the same badges, overlays and sections. Eight ship in the app: weather, downloads, timer, clipboard, file shelf, agents, AeroSpace workspaces and Slack.
+- Built-in sources are Swift `Monitor`s with a `HUDKind` for their overlay. Everything else is a plugin: a program in any language that prints JSON, rendered by the island with the same badges, overlays and sections. Eleven ship in the app: weather, downloads, timer, clipboard, file shelf, agents, AeroSpace workspaces, Slack, a clock, todos from Reminders and a Ghostty quick terminal.
 - MediaRemote withholds metadata from third-party apps on recent macOS, so now-playing data comes from a small adapter hosted in Apple's own `perl`, with AppleScript for Spotify and Music and a session-store lookup for Firefox.
 
 ## Writing a plugin
 
-A plugin is a folder with a `plugin.json` and a program. Drop it in `~/Library/Application Support/Sylt/Plugins` and it starts; Settings has a button for the folder. The eight shipped plugins in `Plugins/` are the reference.
+A plugin is a folder with a `plugin.json` and a program. Drop it in `~/Library/Application Support/Sylt/Plugins` and it starts; Settings has a button for the folder. The eleven shipped plugins in `Plugins/` are the reference.
 
 ```json
 {

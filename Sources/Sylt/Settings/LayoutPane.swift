@@ -1,13 +1,17 @@
 import SwiftUI
 
-/// Decide what each closed wing shows. The island is drawn at the top with every item
-/// in place; the list under each wing is that wing's content, in order. A tile's buttons
-/// move it to the other wing or hide it, and dragging a tile onto another sets the order.
+/// Decide what the island shows: the closed wings and the pages of the expanded view.
+/// Tiles are dragged straight between lists; the others slide apart to make room.
 struct LayoutPane: View {
     @ObservedObject var preferences: Preferences
     @ObservedObject var plugins: PluginRegistry
-
+    @StateObject private var wingBoard = DragBoard()
+    @StateObject private var pageBoard = DragBoard()
     @State private var editingGap: String?
+
+    private static let wingSpace = "wings"
+    private static let pageSpace = "pages"
+    private static let tileHeight: CGFloat = 32
 
     private var wingPlugins: [WingPlugin] { plugins.plugins.map(\.wingPlugin) }
     private var resolved: ResolvedWings { preferences.wingLayout.resolve(plugins: wingPlugins) }
@@ -18,75 +22,108 @@ struct LayoutPane: View {
         return (natural.left + natural.right).filter { !shown.contains($0) }
     }
 
+    private var allSections: [ExpandedSection] {
+        [.media, .event] + plugins.plugins.map { ExpandedSection.plugin($0.id) }
+    }
+
+    private var resolvedPages: [[ExpandedSection]] { preferences.expandedLayout.resolve(available: allSections) }
+
     var body: some View {
-        Section {
-            VStack(spacing: 14) {
-                IslandPreview(wings: resolved, describe: describe)
-                HStack(alignment: .top, spacing: 14) {
-                    wing(.left, items: resolved.left)
-                    wing(.right, items: resolved.right)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                SettingsCard(title: "Preview") {
+                    IslandPreview(wings: resolved, describe: describe)
                 }
-            }
-            .padding(.vertical, 4)
-        } header: {
-            Text("Preview")
-        }
-        Section {
-            if hidden.isEmpty {
-                Text("Nothing hidden")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(hidden, id: \.id) { item in
-                    HStack(spacing: 8) {
-                        glyph(item)
-                        Text(describe(item).title)
+                SettingsCard(title: "Wings") {
+                    wingsBoard
+                }
+                SettingsCard(title: "Expanded view") {
+                    pagesBoard
+                }
+                if preferences.wingLayout.isCustomised || preferences.expandedLayout.isCustomised {
+                    HStack {
                         Spacer()
-                        Button { move(item, to: .left) } label: { Label("Show on the left", systemImage: "arrow.left.to.line") }
-                        Button { move(item, to: .right) } label: { Label("Show on the right", systemImage: "arrow.right.to.line") }
+                        Button("Reset to defaults") {
+                            preferences.wingLayout = WingLayout()
+                            preferences.expandedLayout = ExpandedLayout()
+                        }
                     }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
                 }
             }
-            if preferences.wingLayout.isCustomised {
-                HStack {
-                    Spacer()
-                    Button("Reset to defaults") { withAnimation(.snappy) { preferences.wingLayout = WingLayout() } }
-                }
-            }
-        } header: {
-            Text("Hidden")
+            .padding(20)
         }
     }
 
-    private func wing(_ column: WingColumn, items: [WingItem]) -> some View {
+    // MARK: Wings
+
+    private var wingsBoard: some View {
+        let columns: [(WingColumn, [WingItem])] = [(.left, resolved.left), (.right, resolved.right), (.hidden, hidden)]
+        wingBoard.columns = Dictionary(uniqueKeysWithValues: columns.map { ($0.0.rawValue, $0.1.map(\.id)) })
+        return HStack(alignment: .top, spacing: 14) {
+            ForEach(columns, id: \.0) { column, items in
+                wingColumn(column, items: items)
+            }
+        }
+        .coordinateSpace(name: Self.wingSpace)
+        .onPreferenceChange(BoardFramesKey.self) { wingBoard.report($0) }
+        .overlay(alignment: .topLeading) {
+            if let id = wingBoard.dragging, let item = WingItem(id: id) {
+                let frame = wingBoard.frame(of: id)
+                tile(item, in: nil)
+                    .frame(width: frame.width)
+                    .scaleEffect(1.03)
+                    .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+                    .offset(x: frame.minX + wingBoard.translation.width, y: frame.minY + wingBoard.translation.height)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    private func wingColumn(_ column: WingColumn, items: [WingItem]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label(column.title, systemImage: column == .left ? "arrow.up.left" : "arrow.up.right")
+            Label(column.title, systemImage: column == .left ? "arrow.up.left" : column == .right ? "arrow.up.right" : "eye.slash")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
             VStack(spacing: 0) {
+                let gap = wingBoard.gap(in: column.rawValue)
                 ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    if index > 0 { gapHandle(between: items[index - 1], and: item) }
+                    if index > 0, column != .hidden { gapHandle(between: items[index - 1], and: item) }
+                    slot(open: gap == index)
                     tile(item, in: column)
-                        .draggable(item.id)
-                        .dropDestination(for: String.self) { ids, _ in
-                            ids.first.flatMap(WingItem.init(id:)).map { move($0, to: column, before: item) } ?? false
-                        }
+                        .boardFrame("tile:\(item.id)", space: Self.wingSpace)
+                        .opacity(wingBoard.dragging == item.id ? 0 : 1)
+                        .frame(height: wingBoard.dragging == item.id ? 0 : nil)
+                        .clipped()
+                        .gesture(wingDrag(item))
                 }
-                if items.isEmpty {
-                    Text("Empty wing")
+                slot(open: gap == items.count)
+                if items.isEmpty, gap == nil {
+                    Text(column == .hidden ? "Nothing hidden" : "Empty wing")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity, minHeight: 40)
                 }
             }
+            .animation(.snappy(duration: 0.25), value: wingBoard.drop)
             .padding(6)
             .frame(maxWidth: .infinity, alignment: .top)
             .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .dropDestination(for: String.self) { ids, _ in
-                ids.first.flatMap(WingItem.init(id:)).map { move($0, to: column) } ?? false
-            }
+            .boardFrame("column:\(column.rawValue)", space: Self.wingSpace)
         }
+    }
+
+    private func wingDrag(_ item: WingItem) -> some Gesture {
+        DragGesture(minimumDistance: 3, coordinateSpace: .named(Self.wingSpace))
+            .onChanged { value in wingBoard.update(item.id, location: value.location, translation: value.translation) }
+            .onEnded { _ in
+                guard let result = wingBoard.end(), let column = WingColumn(rawValue: result.column) else { return }
+                move(item, to: column, before: result.before.flatMap(WingItem.init(id:)))
+            }
+    }
+
+    /// The room that opens where a dragged tile would land.
+    private func slot(open: Bool) -> some View {
+        Color.clear.frame(height: open ? Self.tileHeight + 4 : 0)
     }
 
     /// The space between two tiles: click it to set how far apart the two sit on the
@@ -97,7 +134,7 @@ struct LayoutPane: View {
         let editing = editingGap == key
         return VStack(spacing: 4) {
             Button {
-                withAnimation(.snappy) { editingGap = editing ? nil : key }
+                withAnimation(.easeOut(duration: 0.18)) { editingGap = editing ? nil : key }
             } label: {
                 HStack(spacing: 6) {
                     Rectangle().fill(.quaternary).frame(height: 1)
@@ -135,25 +172,31 @@ struct LayoutPane: View {
         preferences.wingLayout = layout
     }
 
-    private func tile(_ item: WingItem, in column: WingColumn) -> some View {
+    /// A tile; `column` nil is the floating copy that follows the pointer.
+    private func tile(_ item: WingItem, in column: WingColumn?) -> some View {
         HStack(spacing: 8) {
             glyph(item)
             Text(describe(item).title)
                 .font(.callout)
                 .lineLimit(1)
             Spacer(minLength: 4)
-            Button {
-                move(item, to: column == .left ? .right : .left)
-            } label: {
-                Label(column == .left ? "Move to the right wing" : "Move to the left wing", systemImage: column == .left ? "arrow.right" : "arrow.left")
+            if let column, column != .hidden {
+                Button {
+                    move(item, to: column == .left ? .right : .left)
+                } label: {
+                    Label(column == .left ? "Move to the right wing" : "Move to the left wing", systemImage: column == .left ? "arrow.right" : "arrow.left")
+                }
+                Button { move(item, to: .hidden) } label: { Label("Hide", systemImage: "eye.slash") }
+            } else if column == .hidden {
+                Button { move(item, to: .left) } label: { Label("Show on the left", systemImage: "arrow.left.to.line") }
+                Button { move(item, to: .right) } label: { Label("Show on the right", systemImage: "arrow.right.to.line") }
             }
-            Button { move(item, to: .hidden) } label: { Label("Hide", systemImage: "eye.slash") }
         }
         .labelStyle(.iconOnly)
         .buttonStyle(.borderless)
         .foregroundStyle(.secondary)
         .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .frame(height: Self.tileHeight)
         .background(.background, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(.quaternary, lineWidth: 1))
         .contentShape(Rectangle())
@@ -168,12 +211,12 @@ struct LayoutPane: View {
             .background(description.isExternal ? Color.purple : .accentColor, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 
-    @discardableResult
-    private func move(_ item: WingItem, to column: WingColumn, before target: WingItem? = nil) -> Bool {
+    private func move(_ item: WingItem, to column: WingColumn, before target: WingItem? = nil) {
         var layout = preferences.wingLayout
         layout.move(item, to: column, before: target, plugins: wingPlugins)
-        withAnimation(.snappy) { preferences.wingLayout = layout }
-        return true
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { preferences.wingLayout = layout }
     }
 
     /// Title and symbol for a tile and for the preview; plugins come from their manifests.
@@ -183,10 +226,141 @@ struct LayoutPane: View {
         }
         return (plugin.manifest.name, plugin.manifest.symbol ?? item.symbol, !plugin.isBundled)
     }
+
+    // MARK: Pages
+
+    private var pagesBoard: some View {
+        let pages = resolvedPages
+        var columns = Dictionary(uniqueKeysWithValues: pages.enumerated().map { ("page:\($0.offset)", $0.element.map(\.id)) })
+        columns["page:new"] = []
+        pageBoard.columns = columns
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: 12) {
+                ForEach(Array(pages.enumerated()), id: \.offset) { index, sections in
+                    pageColumn("page:\(index)", title: "Page \(index + 1)", sections: sections)
+                }
+                pageColumn("page:new", title: "New page", sections: [])
+            }
+            .padding(.vertical, 4)
+        }
+        .coordinateSpace(name: Self.pageSpace)
+        .onPreferenceChange(BoardFramesKey.self) { pageBoard.report($0) }
+        .overlay(alignment: .topLeading) {
+            if let id = pageBoard.dragging, let section = ExpandedSection(id: id) {
+                let frame = pageBoard.frame(of: id)
+                sectionTile(section)
+                    .frame(width: frame.width)
+                    .scaleEffect(1.03)
+                    .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+                    .offset(x: frame.minX + pageBoard.translation.width, y: frame.minY + pageBoard.translation.height)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    private func pageColumn(_ key: String, title: String, sections: [ExpandedSection]) -> some View {
+        let isNew = key == "page:new"
+        let index = Int(key.dropFirst(5)) ?? -1
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(isNew ? .tertiary : .secondary)
+                Spacer()
+                if !isNew {
+                    // The whole page moves earlier or later.
+                    Button { movePage(index, by: -1) } label: { Image(systemName: "chevron.left") }
+                        .disabled(index == 0)
+                    Button { movePage(index, by: 1) } label: { Image(systemName: "chevron.right") }
+                        .disabled(index >= resolvedPages.count - 1)
+                }
+            }
+            .buttonStyle(.borderless)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            VStack(spacing: 0) {
+                let gap = pageBoard.gap(in: key)
+                ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                    slot(open: gap == index)
+                    sectionTile(section)
+                        .boardFrame("tile:\(section.id)", space: Self.pageSpace)
+                        .opacity(pageBoard.dragging == section.id ? 0 : 1)
+                        .frame(height: pageBoard.dragging == section.id ? 0 : nil)
+                        .clipped()
+                        .gesture(pageDrag(section))
+                }
+                slot(open: gap == sections.count)
+                if sections.isEmpty, gap == nil {
+                    Text(isNew ? "Drop here" : "Empty page")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                }
+            }
+            .animation(.snappy(duration: 0.25), value: pageBoard.drop)
+            .padding(6)
+            .frame(width: 200, alignment: .top)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(.quaternary.opacity(isNew ? 0 : 0.35))
+            )
+            .overlay {
+                if isNew {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(.quaternary, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                }
+            }
+            .boardFrame("column:\(key)", space: Self.pageSpace)
+        }
+    }
+
+    private func pageDrag(_ section: ExpandedSection) -> some Gesture {
+        DragGesture(minimumDistance: 3, coordinateSpace: .named(Self.pageSpace))
+            .onChanged { value in pageBoard.update(section.id, location: value.location, translation: value.translation) }
+            .onEnded { _ in
+                guard let result = pageBoard.end() else { return }
+                let index = result.column == "page:new" ? resolvedPages.count : Int(result.column.dropFirst(5)) ?? resolvedPages.count
+                var layout = preferences.expandedLayout
+                layout.move(section, toPage: index, before: result.before.flatMap(ExpandedSection.init(id:)), all: allSections)
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { preferences.expandedLayout = layout }
+            }
+    }
+
+    private func movePage(_ index: Int, by delta: Int) {
+        var layout = preferences.expandedLayout
+        layout.movePage(index, by: delta, all: allSections)
+        withAnimation(.snappy(duration: 0.25)) { preferences.expandedLayout = layout }
+    }
+
+    private func sectionTile(_ section: ExpandedSection) -> some View {
+        let description = describeSection(section)
+        return HStack(spacing: 8) {
+            Image(systemName: description.symbol)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(description.isExternal ? Color.purple : .accentColor, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            Text(description.title).font(.callout).lineLimit(1)
+            Spacer(minLength: 4)
+            Image(systemName: "line.3.horizontal").font(.caption).foregroundStyle(.quaternary)
+        }
+        .padding(.horizontal, 8)
+        .frame(height: Self.tileHeight)
+        .background(.background, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(.quaternary, lineWidth: 1))
+        .contentShape(Rectangle())
+    }
+
+    private func describeSection(_ section: ExpandedSection) -> (title: String, symbol: String, isExternal: Bool) {
+        guard case .plugin(let id) = section, let plugin = plugins.plugins.first(where: { $0.id == id }) else {
+            return (section.title, section.symbol, false)
+        }
+        return (plugin.manifest.name, plugin.manifest.symbol ?? section.symbol, !plugin.isBundled)
+    }
 }
 
-/// The closed island with every placed item drawn as it looks when live, scaled down to
-/// fit when the wings grow long. The notch is outlined so the two wings read as two.
 private struct IslandPreview: View {
     let wings: ResolvedWings
     let describe: (WingItem) -> (title: String, symbol: String, isExternal: Bool)

@@ -37,18 +37,6 @@ struct SettingsView: View {
             }
         }
 
-        var subtitle: String {
-            switch self {
-            case .general: "Startup, system overlays and unlock"
-            case .builtIn: "What the island watches on its own"
-            case .plugins: "Programs that put things in the island"
-            case .layout: "What each wing shows, in what order"
-            case .huds: "Which overlays appear, and for how long"
-            case .effects: "How the island treats the pointer"
-            case .about: "Version and project"
-            }
-        }
-
         var tint: Color {
             switch self {
             case .general: .gray
@@ -78,23 +66,40 @@ struct SettingsView: View {
             .navigationSplitViewColumnWidth(min: 190, ideal: 190, max: 190)
             .toolbar(removing: .sidebarToggle)
         } detail: {
-            Form {
-                switch pane {
-                case .general: general
-                case .builtIn: builtInPane
-                case .plugins: pluginsPane
-                case .layout: LayoutPane(preferences: preferences, plugins: plugins)
-                case .huds: huds
-                case .effects: effects
-                case .about: about
-                }
+            VStack(alignment: .leading, spacing: 0) {
+                Text(pane.title)
+                    .font(.system(size: 22, weight: .bold))
+                    .padding(.horizontal, 24)
+                    .padding(.top, 26)
+                    .padding(.bottom, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                paneContent
             }
-            .formStyle(.grouped)
-            .safeAreaPadding(.top, 4)
             .navigationTitle(pane.title)
-            .navigationSubtitle(pane.subtitle)
         }
         .frame(minWidth: 760, idealWidth: 760, minHeight: 520, idealHeight: 540)
+    }
+
+    @ViewBuilder
+    private var paneContent: some View {
+            Group {
+                if pane == .layout {
+                    // Not a Form: its rows reload on every height change, which flashes the tiles.
+                    LayoutPane(preferences: preferences, plugins: plugins)
+                } else {
+                    Form {
+                        switch pane {
+                        case .general: general
+                        case .builtIn: builtInPane
+                        case .plugins: pluginsPane
+                        case .huds: huds
+                        case .effects: effects
+                        default: about
+                        }
+                    }
+                    .formStyle(.grouped)
+                }
+            }
     }
 
     @ViewBuilder
@@ -236,7 +241,7 @@ struct SettingsView: View {
                 .toggleStyle(.switch)
             }
         } header: {
-            Text("Show an overlay for")
+            Text("Overlays")
         }
         Section("Timing") {
             LabeledContent("Overlay duration") {
@@ -262,11 +267,6 @@ struct SettingsView: View {
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                 Text("Version \(Bundle.main.shortVersion)")
                     .foregroundStyle(.secondary)
-                Text("A dynamic island for the notch: media, levels, agents and alerts, drawn where your eyes already are.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 320)
                 Button("Quit Sylt") { NSApp.terminate(nil) }
                     .padding(.top, 6)
             }
@@ -309,14 +309,41 @@ private struct ExternalPluginRow: View {
             }
             .toggleStyle(.switch)
             if registry.isEnabled(plugin) {
-                DisclosureGroup("Options", isExpanded: $expanded) {
-                    Toggle("Show overlays", isOn: Binding(get: { registry.store.showsHUDs(plugin.manifest) }, set: { registry.setShowsHUDs($0, plugin) }))
-                    ForEach(plugin.manifest.settings ?? []) { setting in
-                        PluginSettingField(setting: setting, plugin: plugin, store: registry.store)
+                Button {
+                    withAnimation(.easeOut(duration: 0.18)) { expanded.toggle() }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.bold))
+                            .rotationEffect(.degrees(expanded ? 90 : 0))
+                        Text("Options")
                     }
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
                 }
-                .font(.callout)
+                .buttonStyle(.plain)
                 .padding(.leading, 40)
+                if expanded {
+                    VStack(spacing: 0) {
+                        OptionRow(title: "Show overlays") {
+                            Toggle("", isOn: Binding(get: { registry.store.showsHUDs(plugin.manifest) }, set: { registry.setShowsHUDs($0, plugin) }))
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                                .controlSize(.small)
+                        }
+                        ForEach(plugin.manifest.settings ?? []) { setting in
+                            Divider().padding(.leading, 12)
+                            OptionRow(title: setting.title) {
+                                PluginSettingField(setting: setting, plugin: plugin, store: registry.store)
+                            }
+                        }
+                    }
+                    .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(.quaternary, lineWidth: 1))
+                    .padding(.leading, 40)
+                    .padding(.top, 2)
+                    .transition(.opacity)
+                }
             }
         }
         .padding(.vertical, 2)
@@ -339,15 +366,34 @@ private struct PluginSettingField: View {
     var body: some View {
         switch setting.type {
         case .bool:
-            Toggle(setting.title, isOn: Binding(get: { value.boolValue ?? false }, set: { set(.bool($0)) }))
+            Toggle("", isOn: Binding(get: { value.boolValue ?? false }, set: { set(.bool($0)) }))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
         case .text:
-            TextField(setting.title, text: Binding(get: { value.stringValue ?? "" }, set: { set(.string($0)) }))
+            TextField("", text: Binding(get: { value.stringValue ?? "" }, set: { set(.string($0)) }), prompt: Text(setting.default?.stringValue ?? ""))
+                .textFieldStyle(.roundedBorder)
+                .controlSize(.small)
+                .frame(width: 180)
         case .number:
-            TextField(setting.title, value: Binding(get: { value.doubleValue ?? 0 }, set: { set(.number($0)) }), format: .number)
+            HStack(spacing: 6) {
+                TextField("", value: Binding(get: { value.doubleValue ?? 0 }, set: { set(.number($0)) }), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .controlSize(.small)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 56)
+                Stepper("", value: Binding(get: { value.doubleValue ?? 0 }, set: { set(.number($0)) }), step: 1)
+                    .labelsHidden()
+                    .controlSize(.small)
+            }
         case .choice:
-            Picker(setting.title, selection: Binding(get: { value.stringValue ?? setting.options?.first ?? "" }, set: { set(.string($0)) })) {
+            Picker("", selection: Binding(get: { value.stringValue ?? setting.options?.first ?? "" }, set: { set(.string($0)) })) {
                 ForEach(setting.options ?? [], id: \.self) { Text($0) }
             }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .controlSize(.small)
+            .frame(width: 160)
         }
     }
 }
@@ -368,5 +414,39 @@ struct SettingsIcon: View {
                 in: RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
             )
             .overlay(RoundedRectangle(cornerRadius: size * 0.26, style: .continuous).strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+    }
+}
+
+/// One line inside a plugin's options box: the title on the left, its control on the right.
+private struct OptionRow<Control: View>: View {
+    let title: String
+    @ViewBuilder let control: Control
+
+    var body: some View {
+        HStack {
+            Text(title).font(.callout)
+            Spacer()
+            control
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+    }
+}
+
+/// A grouped-form look for content that lives outside a Form.
+struct SettingsCard<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.headline)
+                .padding(.leading, 2)
+            content
+                .padding(12)
+                .background(Color(nsColor: .controlBackgroundColor).opacity(0.6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1))
+        }
     }
 }

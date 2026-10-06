@@ -24,6 +24,10 @@ final class IslandState: ObservableObject {
     static let pullSoftness: CGFloat = 320
     @Published private(set) var isHovering = false
     @Published private(set) var layout = IslandLayout()
+    /// Which way the last page turn went, for the slide.
+    private(set) var pageDirection = 1
+    /// Where scrolling lists are on the canvas, so a scroll over one stays the list's.
+    var listFrames: [CGRect] = []
 
     let preferences: Preferences
     let battery = BatteryMonitor()
@@ -143,13 +147,35 @@ final class IslandState: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.refreshPluginLayout() }
             .store(in: &cancellables)
+        preferences.$expandedLayout
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.refreshExpandedPages() }
+            .store(in: &cancellables)
     }
 
     private func refreshPluginLayout() {
         let running = plugins.plugins.filter(\.isRunning)
         layout.pluginWidths = Dictionary(uniqueKeysWithValues: running.map { ($0.id, PluginItem.width(of: $0.wingItems, spacing: $0.wingSpacing)) })
         layout.wings = preferences.wingLayout.resolve(plugins: plugins.plugins.map(\.wingPlugin))
-        layout.pluginSections = running.compactMap { $0.section?.height }
+        layout.pluginSectionHeights = Dictionary(uniqueKeysWithValues: running.compactMap { plugin in plugin.section.map { (plugin.id, $0.height) } })
+        refreshExpandedPages()
+    }
+
+    /// Pages follow the sections available now and the user's grouping.
+    private func refreshExpandedPages() {
+        layout.expandedPages = preferences.expandedLayout.resolve(available: layout.availableSections)
+        layout.expandedPage = min(layout.expandedPage, max(0, layout.expandedPages.count - 1))
+    }
+
+    /// Turn the expanded view's page; `delta` is +1 for the next page, -1 for the previous.
+    func turnPage(_ delta: Int) {
+        let count = layout.expandedPages.count
+        guard count > 1 else { return }
+        let next = (layout.expandedPage + delta + count) % count
+        pageDirection = delta
+        withAnimation(IslandAnimation.expand) { layout.expandedPage = next }
+        Haptics.press()
     }
 
     func hoverChanged(_ inside: Bool) {
@@ -327,6 +353,10 @@ final class IslandState: ObservableObject {
         case .up where mode == .expanded:
             transition(to: .closed)
             Haptics.collapse()
+        case .left where mode == .expanded && layout.expandedPages.count > 1:
+            turnPage(1)
+        case .right where mode == .expanded && layout.expandedPages.count > 1:
+            turnPage(-1)
         case .left where nowPlaying.track != nil:
             nowPlaying.next()
             flash(toward: CGVector(dx: -1, dy: 0))
@@ -351,6 +381,7 @@ final class IslandState: ObservableObject {
                 layout.showsArtwork = track != nil
                 layout.showsAudioBars = track != nil
                 layout.showsMediaCard = track != nil
+                refreshExpandedPages()
             }
             .store(in: &cancellables)
 
@@ -359,6 +390,7 @@ final class IslandState: ObservableObject {
             .sink { [weak self] next, imminent in
                 self?.layout.showsNextEvent = next != nil
                 self?.layout.showsCalendar = imminent
+                self?.refreshExpandedPages()
             }
             .store(in: &cancellables)
 

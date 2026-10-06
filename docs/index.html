@@ -7,7 +7,9 @@
 <meta name="description" content="A dynamic island for the MacBook notch: media, agents, meetings, timers, levels and alerts, with a plugin system.">
 <link rel="icon" type="image/png" href="assets/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=block">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=block" rel="stylesheet">
 <style>
   :root {
     --bg: #0b0d12; --bg-2: #11141b; --panel: #161a23; --line: rgba(255,255,255,.08);
@@ -30,7 +32,7 @@
   body {
     margin: 0; background: var(--bg); color: var(--fg);
     font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; line-height: 1.5;
   }
   a { color: inherit; }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
@@ -77,23 +79,23 @@
 
   /* island: black, square against the screen edge, bottom corners rounding as it grows */
   .notch { position: absolute; top: 0; left: calc(50% - 92.5px); width: 185px; height: 32px; background: #000; border-radius: 0 0 10px 10px; }
-  .pos { position: absolute; top: 0; left: calc(50% - 92.5px); transform-origin: 50% 0; }
+  .pos { position: absolute; top: 0; left: calc(50% - 92.5px); transform-origin: 50% 0; will-change: transform; }
   .notchline { position: absolute; top: -1px; left: calc(50% - 92.5px); width: 185px; height: 33px; border: 1px dashed var(--notchline, rgba(255,255,255,.14)); border-top: none; border-radius: 0 0 10px 10px; pointer-events: none; z-index: 2; }
   :root[data-theme="light"] .notchline { --notchline: rgba(255,255,255,.22); }
-  .pos .liquid { position: absolute; left: -12px; top: 0; pointer-events: none; }
-  .isl { position: relative; display: flex; flex-wrap: wrap; align-items: flex-start; height: 32px; background: #000; color: #fff; overflow: hidden; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,.4); transform-origin: 0 0;
-    font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, Inter, sans-serif; font-size: 13px; font-weight: 500; line-height: 1.2; white-space: nowrap; -webkit-font-smoothing: antialiased; }
+  .pos .liquid { position: absolute; top: 0; pointer-events: none; }
+  .isl { position: absolute; top: 0; left: 0; width: 0; height: 32px; color: #fff; transform-origin: 0 0; will-change: transform;
+    font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, Inter, sans-serif; font-size: 13px; font-weight: 500; line-height: 1.2; white-space: nowrap; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  .isl .bg { position: absolute; top: 0; left: 0; width: 185px; height: 32px; background: #000; overflow: hidden; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,.4); will-change: left, width, height; }
   .isl.probe { position: absolute; left: -9999px; top: -9999px; visibility: hidden; width: auto; }
-  .isl .w { height: 32px; display: flex; align-items: center; flex: none; overflow: hidden; transition: height .25s; }
+  .isl .w { position: absolute; top: 0; height: 32px; display: flex; align-items: center; overflow: hidden; transition: height .25s; }
   .isl.hud .w { height: 34px; }
-  .isl .w.l { justify-content: flex-end; } .isl .w.r { justify-content: flex-start; }
-  .isl .gap { width: 185px; height: 32px; flex: none; }
+  .isl .w.l { right: 0; justify-content: flex-end; clip-path: inset(0 4px 0 0); } .isl .w.r { left: 185px; justify-content: flex-start; clip-path: inset(0 0 0 4px); }
   .isl .c { display: flex; align-items: center; gap: 8px; padding: 0 6px; height: 100%; flex: none; will-change: opacity, filter, transform; }
   .isl .c:empty { padding: 0; }
   .isl .w.l .c.h { padding: 0 4px 0 8px; } .isl .w.r .c.h { padding: 0 8px 0 4px; }
-  .isl .row { width: 100%; height: 18px; margin-bottom: 4px; padding: 0 12px; font-size: 11px; font-weight: 500; line-height: 18px; color: rgba(255,255,255,.85); overflow: hidden; }
+  .isl .row { position: absolute; left: 0; right: 0; top: 32px; height: 18px; padding: 0 12px; font-size: 11px; font-weight: 500; line-height: 18px; color: rgba(255,255,255,.85); overflow: hidden; clip-path: inset(4px 0 0 0); }
   .isl .row .c { display: block; padding: 0; }
-  .isl .card { position: absolute; left: 0; top: 0; }
+  .isl .card { position: absolute; inset: 0; clip-path: inset(36px 0 0 0); }
   .isl .fx { position: absolute; inset: 0; pointer-events: none; -webkit-mask-image: linear-gradient(transparent, #000 12px); mask-image: linear-gradient(transparent, #000 12px); }
   .isl .fx svg { position: absolute; left: 0; top: 0; overflow: visible; }
   .isl .fx .rim { fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; filter: blur(1.5px); opacity: 0; transition: opacity .22s; }
@@ -105,7 +107,7 @@
   .isl .t { font-size: 11px; font-weight: 600; }
   .isl .w85 { color: rgba(255,255,255,.85); } .isl .dim { color: rgba(255,255,255,.6); }
   .isl .num { font-variant-numeric: tabular-nums; }
-  .isl .orange { color: #ff9f0a; } .isl .red { color: #ff453a; } .isl .green { color: #30d158; } .isl .blue { color: #0a84ff; } .isl .indigo { color: #5e5ce6; }
+  .isl .cyan { color: #64d2ff; } .isl .orange { color: #ff9f0a; } .isl .red { color: #ff453a; } .isl .green { color: #30d158; } .isl .blue { color: #0a84ff; } .isl .indigo { color: #5e5ce6; }
   .isl svg.ic { width: 1em; height: 1em; fill: currentColor; flex: none; }
   .isl .g { display: inline-grid; place-items: center; width: 16px; height: 16px; flex: none; }
   .isl .g.hg { width: 18px; }
@@ -161,7 +163,7 @@
   .isl .rune i { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(10,132,255,.6); animation: bring .9s ease-out forwards; }
   .isl .rune i + i { animation-delay: .25s; }
   @keyframes draw { to { stroke-dashoffset: 0; } }
-  @keyframes bring { from { transform: scale(.6); opacity: .8; } to { transform: scale(1.8); opacity: 0; } }
+  @keyframes bring { from { transform: scale(.5); opacity: .8; } to { transform: scale(1); opacity: 0; } }
   .isl .wifi .a { opacity: .35; animation: lit .25s ease-out forwards; }
   .isl .wifi .a:nth-child(2) { animation-delay: .18s; } .isl .wifi .a:nth-child(3) { animation-delay: .36s; }
   @keyframes lit { to { opacity: 1; } }
@@ -172,22 +174,28 @@
   .isl .batt { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .isl .batt svg { width: 16px; height: 12px; }
   .isl .lock { position: relative; width: 11px; height: 8px; border-radius: 2.5px; background: rgba(255,255,255,.85); margin: 7px 1px 0; flex: none; transition: background .3s; }
-  .isl .lock::before { content: ""; position: absolute; left: 2px; top: -5px; width: 7px; height: 6.5px; border: 2px solid rgba(255,255,255,.85); border-bottom: none; border-radius: 3.5px 3.5px 0 0; transform-origin: 0 100%; transition: transform .55s cubic-bezier(.3,1.7,.4,1), border-color .3s; }
+  /* the shackle: a 7x6.5 arch with a 2px stroke, drawn behind the body, so it is 9x7.5 outside and its legs sink into the body as in the app */
+  .isl .lock::before { content: ""; position: absolute; z-index: -1; box-sizing: border-box; left: 1px; top: -6px; width: 9px; height: 7.5px; border: 2px solid rgba(255,255,255,.85); border-bottom: none; border-radius: 4.5px 4.5px 0 0; transform-origin: 1px calc(100% - 1px); transition: transform .55s cubic-bezier(.3,1.7,.4,1), border-color .3s; }
   .isl .lock.open { background: #30d158; } .isl .lock.open::before { border-color: #30d158; transform: translateY(-2.5px) rotate(-28deg); }
   .isl .time { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.85); font-variant-numeric: tabular-nums; }
   .isl .greet { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.85); }
   .isl .evt { display: inline-flex; gap: 6px; align-items: center; }
 
   /* notification card */
-  .isl .note { position: absolute; left: 16px; right: 16px; top: 34px; height: 34px; display: flex; align-items: center; gap: 10px; }
+  .isl .note { position: absolute; left: 16px; right: 16px; top: 36px; height: 34px; display: flex; align-items: center; gap: 10px; }
   .isl .note .app { width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(#5af07a, #1fc846); display: grid; place-items: center; flex: none; }
   .isl .note .app svg { width: 18px; height: 18px; fill: #fff; }
   .isl .note b { display: block; font-weight: 500; font-size: 13px; } .isl .note small { display: block; font-size: 11px; color: rgba(255,255,255,.6); }
 
   /* expanded panel */
-  .isl .exp { position: absolute; left: 0; top: 0; padding: 24px 14px 12px; display: flex; flex-direction: column; gap: 10px; font-size: 12px; font-weight: 500; }
-  .isl .exp > * { animation: stg .45s cubic-bezier(.2,.9,.3,1) both; animation-delay: calc(.12s + var(--i, 0) * .06s); }
-  @keyframes stg { from { opacity: 0; transform: translateY(-6px); } }
+  /* expanded panel: one page of sections under the notch, the page dots along the bottom */
+  .isl .exp { position: absolute; left: 0; top: 0; font-size: 12px; font-weight: 500; }
+  .isl .pg { position: absolute; left: 14px; right: 14px; top: 36px; display: flex; flex-direction: column; gap: 10px; will-change: transform, opacity; }
+  .isl .pg > * { animation: stg .45s cubic-bezier(.2,.9,.3,1) both; animation-delay: calc(.12s + var(--i, 0) * .06s); }
+  .isl .pgs { position: absolute; left: 0; right: 0; bottom: 12px; height: 14px; display: flex; justify-content: center; align-items: center; gap: 5px; }
+  .isl .pgs i { width: 5px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.3); transition: width .3s cubic-bezier(.2,.9,.3,1), background .3s; }
+  .isl .pgs i.on { width: 12px; background: rgba(255,255,255,.9); }
+  @keyframes stg { from { opacity: 0; transform: translateY(-3px); } }
   .isl .mc { position: relative; height: 138px; padding: 10px; border-radius: 14px; display: flex; flex-direction: column; gap: 8px; background: linear-gradient(135deg, rgba(167,139,250,.22), rgba(167,139,250,.08)), rgba(255,255,255,.04); }
   .isl .mc::before { content: ""; position: absolute; inset: 0; border-radius: 14px; padding: 1px; background: linear-gradient(90deg, #f472b6, #c084fc, #818cf8, #22d3ee); opacity: .75; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude; pointer-events: none; }
   .isl .mc .top { display: flex; gap: 12px; }
@@ -248,9 +256,14 @@
   .layer .mini { height: 240px; border-radius: 18px; border: 1px solid var(--line); }
   .layer .mini .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; font-size: 13px; color: var(--cap); background: linear-gradient(transparent, var(--wall-base) 55%); z-index: 2; }
   .layer.flip .mini { order: 2; }
+  #expanded .mini { height: 300px; --z: .85; }
   @media (max-width: 760px) { .layer { grid-template-columns: 1fr; } .layer.flip .mini { order: 0; } }
   @media (max-width: 520px) { .layer .mini { --z: .8; } }
-  .blocks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .blocks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .group { margin: 0 0 44px; } .group:last-of-type { margin-bottom: 0; }
+  .group h3 { font-size: 20px; letter-spacing: -.02em; margin: 0 0 4px; }
+  .group .glead { color: var(--muted); margin: 0 0 14px; font-size: 15px; max-width: 640px; }
+  .perms { margin: 0; padding-left: 18px; color: var(--muted); font-size: 15px; } .perms li { margin: 4px 0; }
   .block { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: inherit; font-size: 13px; font-weight: 600; text-align: left; cursor: pointer; transition: background .15s, border-color .15s, transform .15s; }
   .block .ico { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: var(--chip); }
   .block .ico svg { width: 15px; height: 15px; fill: currentColor; }
@@ -290,11 +303,13 @@
   .demo .pad { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); width: 64px; height: 38px; border-radius: 8px; border: 1px solid rgba(var(--ink), .22); background: rgba(var(--ink), .06); }
   .demo .finger { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: rgba(var(--ink), .8); opacity: 0; transform: scale(.6); transition: opacity .25s, transform .25s; }
   .demo .finger.down { opacity: 1; transform: scale(1); }
-  #customise .steps { grid-template-columns: repeat(3, 1fr); }
-  @media (max-width: 860px) { #customise .steps { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 560px) { #customise .steps { grid-template-columns: 1fr; } }
+  .steps.three { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 860px) { .steps.three { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .steps.three { grid-template-columns: 1fr; } }
+  h3.sub { font-size: 20px; letter-spacing: -.02em; margin: 36px 0 14px; } .steps + h3.sub { margin-top: 44px; }
   .demo .pane { position: absolute; left: 16px; right: 16px; top: 34px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-family: Inter, system-ui, sans-serif; }
   .demo .pane.one { display: block; width: 170px; left: 50%; transform: translateX(-50%); }
+  #dPages { height: 164px; --z: .5; } .demo .pane.pages { top: 78px; }
   .demo .pane h6 { margin: 0 0 4px; font-size: 9px; font-weight: 600; color: var(--cap); }
   .demo .tile { height: 19px; margin-bottom: 4px; padding: 0 5px 0 4px; display: flex; align-items: center; gap: 5px; border-radius: 5px; border: 1px solid rgba(var(--ink), .14); background: rgba(var(--ink), .07); font-size: 9px; font-weight: 500; color: var(--cap); overflow: hidden; transition: opacity .3s, transform .3s, height .3s, margin .3s, border-color .2s, background .2s; }
   .demo .tile i.ic { width: 11px; height: 11px; border-radius: 3px; background: #0a84ff; flex: none; }
@@ -316,6 +331,8 @@
   .isl .gp { width: calc(var(--s) + var(--l, 0px)); height: 14px; display: grid; place-items: center; flex: none; transition: width .3s cubic-bezier(.2,.9,.3,1); }
   .isl .gp::after { content: ""; width: 1px; height: 12px; border-radius: .5px; background: rgba(255,255,255,.28); opacity: 0; transition: opacity .25s; }
   .isl .gp.ln { --l: 1px; } .isl .gp.ln::after { opacity: 1; }
+  /* Firefox: content only fades, and sits in its own layer from the first paint so the text is never re-rasterised mid-swap. */
+  @supports (-moz-appearance: none) { .isl .c { will-change: opacity; } }
   footer { padding: 36px 0 56px; color: var(--dim); font-size: 13px; text-align: center; border-top: 1px solid var(--line); }
   @media (max-width: 640px) { .hero { padding-top: 88px; } nav .links a { display: none; } }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
@@ -350,6 +367,14 @@
   <symbol id="i-star" viewBox="0 0 16 16"><path d="M8 0l1 5.4L13.7 2 10.6 6.6 16 8l-5.4 1.4L13.7 14 9 10.6 8 16l-1-5.4L2.3 14l3.1-4.6L0 8l5.4-1.4L2.3 2 7 5.4z"/></symbol>
   <symbol id="i-mic" viewBox="0 0 16 16"><rect x="5.5" y="1" width="5" height="8.5" rx="2.5"/><path d="M3.5 7.5a4.5 4.5 0 0 0 9 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 12v3M5.5 15h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
   <symbol id="i-lock" viewBox="0 0 16 16"><path d="M4.5 6.5V5a3.5 3.5 0 0 1 7 0v1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="2.5" y="6.5" width="11" height="8.5" rx="2.2"/></symbol>
+  <symbol id="i-slack" viewBox="0 0 16 16"><rect width="16" height="16" rx="3.6" fill="#4a154b"/><rect x="5.6" y="2.6" width="2" height="4.6" rx="1" fill="#36c5f0"/><rect x="3" y="5.6" width="2" height="2" rx="1" fill="#36c5f0"/><rect x="8.8" y="5.6" width="4.6" height="2" rx="1" fill="#2eb67d"/><rect x="8.4" y="3" width="2" height="2" rx="1" fill="#2eb67d"/><rect x="8.4" y="8.8" width="2" height="4.6" rx="1" fill="#ecb22e"/><rect x="11" y="8.4" width="2" height="2" rx="1" fill="#ecb22e"/><rect x="2.6" y="8.4" width="4.6" height="2" rx="1" fill="#e01e5a"/><rect x="5.6" y="11" width="2" height="2" rx="1" fill="#e01e5a"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2"/><path d="M8 3.8v4.4l2.9 1.8" fill="none" stroke="#000" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 3.6l1.2 1.2 2.1-2.3M1.5 8.1l1.2 1.2 2.1-2.3M1.5 12.6l1.2 1.2 2.1-2.3"/></g><rect x="7" y="2.9" width="8" height="1.7" rx=".85"/><rect x="7" y="7.4" width="8" height="1.7" rx=".85"/><rect x="7" y="11.9" width="8" height="1.7" rx=".85"/></symbol>
+  <symbol id="i-circle" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-termo" viewBox="0 0 16 16"><rect x="1" y="2.5" width="14" height="11" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 6l2.4 2L4 10M8 10.5h3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 16 16"><path d="M8.6 1c.4 2.6 3.9 3.9 3.9 8a4.5 4.5 0 0 1-9 0c0-1.9 1-3.2 1.9-4.2.1 1.2.6 2 1.4 2.3C6.5 4.6 7.2 2.4 8.6 1z"/></symbol>
+  <symbol id="i-snow" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 1.5v13M2.4 4.8l11.2 6.4M2.4 11.2l11.2-6.4M8 1.5L6.3 3.2M8 1.5l1.7 1.7M8 14.5l-1.7-1.7M8 14.5l1.7-1.7M2.4 4.8l2.3-.4M2.4 4.8l.4 2.3M13.6 11.2l-2.3.4M13.6 11.2l-.4-2.3M2.4 11.2l.4-2.3M2.4 11.2l2.3.4M13.6 4.8l-.4 2.3M13.6 4.8l-2.3-.4"/></g></symbol>
+  <symbol id="i-puzzle2" viewBox="0 0 16 16"><rect x="1" y="2" width="6" height="12" rx="1.5"/><rect x="9" y="2" width="6" height="12" rx="1.5" opacity=".45"/></symbol>
   <symbol id="i-grid" viewBox="0 0 16 16"><path d="M1 1h4v4H1zM6 1h4v4H6zM11 1h4v4h-4zM1 6h4v4H1zM6 6h4v4H6zM11 6h4v4h-4zM1 11h4v4H1zM6 11h4v4H6zM11 11h4v4h-4z"/></symbol>
   <symbol id="i-bt" viewBox="0 0 16 16"><path d="M4 4.5L12 11.5 8 15V1l4 3.5L4 11.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
@@ -357,10 +382,13 @@
   <div class="bar">
     <a class="brand" href="#"><img src="assets/icon.png" alt="" width="26" height="26" style="border-radius:7px"> Sylt</a>
     <div class="links">
+      <a href="#wings">Wings</a>
       <a href="#builtin">Built in</a>
+      <a href="#expanded">Expanded</a>
       <a href="#plugins">Plugins</a>
       <a href="#how">How it works</a>
       <a href="#customise">Customise</a>
+      <a href="#create">Create one</a>
       <a href="#install">Install</a>
       <a href="https://github.com/zenodea/sylt">GitHub</a>
       <button id="theme" aria-label="Toggle light and dark" title="Light / dark">
@@ -384,39 +412,68 @@
   </div>
 </header>
 
+<section id="wings">
+  <div class="wrap">
+    <h2>Two wings</h2>
+    <p class="lead">Closed, the island hugs the notch and shows only live state, one wing on each side. Each wing is sized to its own content, and an empty side adds nothing. Select a state to see it.</p>
+    <div class="layer"><div class="mini scene" id="wg"><div class="cap" id="wgCap"></div></div><div class="blocks" id="wgBlocks"></div></div>
+  </div>
+</section>
+
 <section id="builtin">
   <div class="wrap">
     <h2>Built in</h2>
-    <p class="lead">Twelve sources are part of the app because they use system APIs. Select one to see it on the island.</p>
-    <div class="layer">
-      <div class="mini scene" id="baseScene"><div class="cap" id="baseCap"></div></div>
-      <div class="blocks" id="baseBlocks"></div>
+    <p class="lead">What comes from the system is part of the app. Each change shows as a short overlay out of the notch, and some things stay in a wing while they are true. A one-sided overlay never touches the other wing. Every kind can be switched off in Settings, and a slider sets how long they stay. Select one to see it on the island.</p>
+    <div class="group">
+      <h3>Sound and light</h3>
+      <p class="glead">Volume, brightness and mute use the right wing only, and a track change keeps both wings and adds a title row.</p>
+      <div class="layer"><div class="mini scene" id="g1"><div class="cap" id="g1Cap"></div></div><div class="blocks" id="g1Blocks"></div></div>
     </div>
+    <div class="group">
+      <h3>Power and connections</h3>
+      <p class="glead">Battery levels and the charger, Bluetooth devices with their charge, the network link, and the Mac running hot.</p>
+      <div class="layer flip"><div class="mini scene" id="g2"><div class="cap" id="g2Cap"></div></div><div class="blocks" id="g2Blocks"></div></div>
+    </div>
+    <div class="group">
+      <h3>Calendar and focus</h3>
+      <p class="glead">The next meeting, a Focus mode, the microphone and camera, and the keyboard.</p>
+      <div class="layer"><div class="mini scene" id="g3"><div class="cap" id="g3Cap"></div></div><div class="blocks" id="g3Blocks"></div></div>
+    </div>
+    <div class="group">
+      <h3>Lock screen and notifications</h3>
+      <p class="glead">The island stays on the lock screen, springs open on unlock, and can mirror Notification Center banners.</p>
+      <div class="layer flip"><div class="mini scene" id="g4"><div class="cap" id="g4Cap"></div></div><div class="blocks" id="g4Blocks"></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="expanded">
+  <div class="wrap">
+    <h2>Expanded</h2>
+    <p class="lead">Click or swipe down and the island opens on what is relevant, two sections to a page. Swipe sideways to turn the page; the Layout pane decides which sections share one.</p>
+    <div class="layer"><div class="mini scene" id="ex"><div class="cap" id="exCap"></div></div><div class="blocks" id="exBlocks"></div></div>
   </div>
 </section>
 
 <section id="plugins">
   <div class="wrap">
     <h2>Plugins</h2>
-    <p class="lead">Everything else is a program that prints JSON, in any language. Seven are included.</p>
-    <div class="layer flip">
-      <div class="mini scene" id="extScene"><div class="cap" id="extCap"></div></div>
-      <div class="text">
-        <div class="blocks" id="extBlocks"></div>
-        <p class="lead">Settings declared in the manifest appear as a form in the app. Clicks, buttons, file drops and clipboard changes are delivered as events. Each plugin can be switched off, and its overlays can be switched off separately. Plugins run with your user permissions.</p>
-      </div>
+    <p class="lead">Everything else is a program that prints JSON, in any language, drawn with the same badges, overlays and sections: a timer ending, a download landing, an agent finishing. Eleven are included. Each can be switched off, and its overlays separately.</p>
+    <div class="group">
+      <h3>Work</h3>
+      <p class="glead">Coding agents, window-manager workspaces, a terminal and Slack.</p>
+      <div class="layer flip"><div class="mini scene" id="p1"><div class="cap" id="p1Cap"></div></div><div class="blocks" id="p1Blocks"></div></div>
     </div>
-    <h3 style="font-size:20px;letter-spacing:-.02em;margin:34px 0 8px">Create one</h3>
-    <p class="lead">Put this folder in the plugins folder (Settings, Plugins, Open plugins folder). It starts immediately.</p>
-<pre><span class="c"># plugin.json</span>
-{ "protocol": 1, "id": "coffee", "name": "Coffee", "symbol": "cup.and.saucer.fill", "run": "coffee.sh" }
-
-<span class="c"># coffee.sh</span>
-read start
-echo '{"wing": {"side": "right", "items": [{"symbol": "cup.and.saucer.fill", "text": "2"}]}}'
-echo '{"hud": {"symbol": "cup.and.saucer.fill", "tint": "orange", "text": "Coffee logged"}}'
-echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup"}]}}'</pre>
-    <p class="lead" style="margin-top:18px">The full protocol is in the <a href="https://github.com/zenodea/sylt#writing-a-plugin">README</a>.</p>
+    <div class="group">
+      <h3>Day to day</h3>
+      <p class="glead">Reminders, the time, a countdown and the weather.</p>
+      <div class="layer"><div class="mini scene" id="p2"><div class="cap" id="p2Cap"></div></div><div class="blocks" id="p2Blocks"></div></div>
+    </div>
+    <div class="group">
+      <h3>Files</h3>
+      <p class="glead">Downloads as they land, a shelf for files you drop on the island, and what you copied.</p>
+      <div class="layer flip"><div class="mini scene" id="p3"><div class="cap" id="p3Cap"></div></div><div class="blocks" id="p3Blocks"></div></div>
+    </div>
   </div>
 </section>
 
@@ -441,13 +498,15 @@ echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup
         <b>On the lock screen</b><p>The island stays visible while the Mac is locked, showing a padlock and the time. On unlock the padlock opens and a greeting replaces the time.</p>
       </div>
     </div>
+    <p class="lead" style="margin:28px 0 0">Built-in sources are Swift monitors with a kind of overlay each; everything else is a plugin. Now-playing data is the odd one out: MediaRemote withholds metadata from third-party apps on recent macOS, so it comes from a small adapter hosted in Apple's own <code class="inline">perl</code>, with AppleScript for Spotify and Music and a session-store lookup for Firefox.</p>
   </div>
 </section>
 
 <section id="customise">
   <div class="wrap">
     <h2>Make it yours</h2>
-    <p class="lead">Settings has an Effects pane for the pointer and a Layout pane for the wings. All of it is a choice.</p>
+    <p class="lead" style="margin-bottom:0">Settings has an Effects pane for the pointer and a Layout pane for the wings and the expanded view. All of it is a choice.</p>
+    <h3 class="sub">The pointer</h3>
     <div class="steps">
       <div class="step">
         <div class="demo scene" id="dHold"><div class="cursor"></div></div>
@@ -455,7 +514,7 @@ echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup
       </div>
       <div class="step">
         <div class="demo scene" id="dOut"><div class="cursor"></div><div class="tag"></div></div>
-        <b>Lets it out your way</b><p>A firm push frees the pointer through the rim on that side. Choose what marks the spot: a ripple around the rim, a ring of light, a reflection across dark glass, or nothing.</p>
+        <b>Lets it out your way</b><p>A firm push frees the pointer through the rim on that side, and it keeps moving in the same motion. Choose what marks the spot: a ripple around the rim, with its strength on a slider, a ring of light, a reflection across dark glass, or nothing. A haptic tap on release is a switch.</p>
       </div>
       <div class="step">
         <div class="demo scene" id="dForce"><div class="slider" style="--k:.85"><i></i><b></b></div></div>
@@ -463,8 +522,11 @@ echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup
       </div>
       <div class="step">
         <div class="demo scene" id="dPad"><div class="pad"><i class="finger"></i></div></div>
-        <b>Knows when you let go</b><p>On the trackpad the island keeps its lean while a finger is down and settles when it lifts. The menu bar stays put the whole time the pointer is held.</p>
+        <b>Knows when you let go</b><p>On the trackpad the island keeps its lean while a finger is down and settles when it lifts. The pointer is kept off the top edge of the screen while held, so the menu bar stays put.</p>
       </div>
+    </div>
+    <h3 class="sub">The layout</h3>
+    <div class="steps three">
       <div class="step">
         <div class="demo scene" id="dArrange"><div class="pane">
           <div><h6>Left wing</h6><div class="tile"><i class="ic"></i>Next event<span class="sp"><svg viewBox="0 0 10 10"><path d="M2 5h6M5.5 2.5 8 5 5.5 7.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div><div class="tile wx gone"><i class="ic ext"></i>Weather<span class="sp"><svg viewBox="0 0 10 10"><path d="M2 5h6M5.5 2.5 8 5 5.5 7.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div></div>
@@ -480,7 +542,35 @@ echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup
         </div></div>
         <b>Space them out</b><p>Between any two items a thin handle opens a slider for the gap, 2 to 32 points, and a switch for a hairline in it. The island shows the result as you drag.</p>
       </div>
+      <div class="step">
+        <div class="demo scene" id="dPages"><div class="pane pages">
+          <div><h6>Page 1</h6><div class="tile"><i class="ic"></i>Next event</div><div class="tile wx"><i class="ic ext"></i>Weather</div><div class="tile tm gone"><i class="ic ext"></i>Timer</div></div>
+          <div><h6>Page 2</h6><div class="tile tm"><i class="ic ext"></i>Timer</div><div class="tile wx gone"><i class="ic ext"></i>Weather</div><div class="tile"><i class="ic ext"></i>Clipboard</div></div>
+        </div></div>
+        <b>Put sections on pages</b><p>The expanded view holds two sections to a page. The Layout pane lists the pages; drag a section to another page or to a new one, and arrows move a whole page earlier or later. The island opens on the result.</p>
+      </div>
     </div>
+  </div>
+</section>
+
+<section id="create">
+  <div class="wrap">
+    <h2>Create one</h2>
+    <p class="lead">A plugin is a folder with a manifest and a program. Put it in the plugins folder (Settings, Plugins, Open plugins folder) and it starts. The eleven shipped plugins are the reference.</p>
+<pre><span class="c"># plugin.json</span>
+{ "protocol": 1, "id": "coffee", "name": "Coffee", "symbol": "cup.and.saucer.fill", "run": "coffee.sh",
+  "settings": [{ "key": "goal", "title": "Daily goal", "type": "number", "default": 3 }] }
+
+<span class="c"># coffee.sh: one JSON object per line, each replacing one thing</span>
+read start                               <span class="c"># {"event":"start","settings":{...},"dataDir":"..."}</span>
+echo '{"wing": {"side": "right", "items": [{"symbol": "cup.and.saucer.fill", "text": "2"}]}}'
+echo '{"hud": {"symbol": "cup.and.saucer.fill", "tint": "orange", "text": "Coffee logged"}}'
+echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup"}]}}'
+while read event; do                     <span class="c"># {"event":"click","row":"log"}</span>
+  case "$event" in *'"click"'*) echo '{"wing": {"side": "right", "items": [{"symbol": "cup.and.saucer.fill", "text": "3"}]}}';; esac
+done</pre>
+    <p class="lead" style="margin-top:18px">A plugin prints <code class="inline">wing</code> for its badge, <code class="inline">hud</code> for an overlay, <code class="inline">section</code> for its expanded section, <code class="inline">sound</code>, <code class="inline">activate</code> to bring an app forward and <code class="inline">open</code> for a file or URL. The app writes <code class="inline">start</code>, <code class="inline">settings</code>, <code class="inline">click</code>, <code class="inline">button</code>, <code class="inline">action</code>, <code class="inline">drop</code>, <code class="inline">clipboard</code>, <code class="inline">remove</code> and <code class="inline">stop</code> to its stdin.</p>
+    <p class="lead">The manifest can set an <code class="inline">interval</code> to run once per interval instead of staying running, <code class="inline">accepts</code> for file drops or clipboard changes, a default <code class="inline">side</code>, and settings of type bool, text, number or choice, which Settings turns into a form. Plugins run as you, with your permissions; scripts without an executable bit run through the interpreter their extension implies. The full protocol is in the <a href="https://github.com/zenodea/sylt#writing-a-plugin">README</a>.</p>
   </div>
 </section>
 
@@ -495,7 +585,13 @@ make open
 
 <span class="c"># run the tests</span>
 make test</pre>
-    <p class="lead" style="margin-top:18px">Right-click the island for Settings, including <code class="inline">Open at login</code>. Each plugin asks for its permission the first time it needs one, and each can be switched off.</p>
+    <p class="lead" style="margin-top:18px">Right-click the island for Settings, including <code class="inline">Open at login</code>. Each permission is asked for the first time its plugin needs it, and each plugin can be switched off:</p>
+    <ul class="perms">
+      <li>Accessibility: to take over the volume and brightness keys, mirror notifications, and raise an agent's terminal window.</li>
+      <li>Calendar: for the next event.</li>
+      <li>Bluetooth: for device connections and battery.</li>
+      <li>Automation (Spotify, Music): for artwork and transport.</li>
+    </ul>
   </div>
 </section>
 
@@ -507,6 +603,7 @@ make test</pre>
 (() => {
   const NOTCH = 185, NH = 32;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const gecko = CSS.supports('-moz-appearance', 'none');
 
   // ---- SwiftUI springs, sampled into keyframes. response is the period, dampingFraction the damping ratio.
   const SPRINGS = { peek: [.28, .7], expand: [.48, .72], collapse: [.36, .95], hud: [.4, .68], cursor: [.22, .78], press: [.2, .6], value: [.3, .85], unlock: [.45, .5], rebound: [.38, .55], follow: [.2, .8], flip: [.7, .75], pop: [.3, .5], unpop: [.4, .6] };
@@ -519,14 +616,17 @@ make test</pre>
     return curves[name] = { s, T };
   }
   // Runs one spring on an element: `frame(k)` gives the style at progress k, which overshoots past 1.
+  // The start state is written before the animation exists and the end state only once it has
+  // finished, so a first frame that lands late never shows the end state early.
   function tween(el, key, name, frame, delay = 0) {
     const anims = el._anims || (el._anims = {});
     if (anims[key]) anims[key].cancel();
+    if (reduced) return Object.assign(el.style, frame(1));
     const { s, T } = curve(name);
-    const frames = s.map((k, i) => Object.assign({ offset: i / (s.length - 1) }, frame(k)));
-    Object.assign(el.style, frame(1));
-    if (reduced) return;
-    anims[key] = el.animate(frames, { duration: T * 1000, delay, easing: 'linear', fill: 'none' });
+    Object.assign(el.style, frame(0));
+    const anim = el.animate(s.map((k, i) => Object.assign({ offset: i / (s.length - 1) }, frame(k))), { duration: T * 1000, delay, easing: 'linear', fill: 'forwards' });
+    anim.onfinish = () => { Object.assign(el.style, frame(1)); anim.cancel(); };
+    anims[key] = anim;
   }
   const px = v => v + 'px';
   const num = v => parseFloat(v) || 0;
@@ -535,9 +635,9 @@ make test</pre>
   // ---- The island. Two wings around the notch, each sized to its own content, plus a row below or a card over everything.
   function island(scene) {
     const stage = document.createElement('div'); stage.className = 'stage';
-    stage.innerHTML = '<div class="notch"></div><div class="pos"><svg class="liquid"><path fill="#000"/></svg><div class="isl"><div class="w l"><span class="c"></span></div><div class="gap"></div><div class="w r"><span class="c"></span></div><div class="row"><span class="c"></span></div><div class="card"><span class="c"></span></div><div class="fx"><svg><defs><mask><circle fill="url(#g-glow)"/></mask><mask><circle fill="url(#g-glow)"/></mask></defs><path class="rim"/><path class="thread"/></svg><i class="ringfx"></i><i class="sheen"></i></div></div></div><div class="isl probe"><div class="w"><span class="c"></span></div></div><div class="notchline"></div>';
+    stage.innerHTML = '<div class="notch"></div><div class="pos"><svg class="liquid"><path fill="#000"/></svg><div class="isl"><div class="bg"><div class="row"><span class="c"></span></div><div class="card"><span class="c"></span></div><div class="fx"><svg><defs><mask><circle fill="url(#g-glow)"/></mask><mask><circle fill="url(#g-glow)"/></mask></defs><path class="rim"/><path class="thread"/></svg><i class="ringfx"></i><i class="sheen"></i></div></div><div class="w l"><span class="c"></span></div><div class="w r"><span class="c"></span></div></div></div><div class="isl probe"><div class="w"><span class="c"></span></div></div><div class="notchline"></div>';
     scene.appendChild(stage);
-    const pos = stage.querySelector('.pos'), isl = stage.querySelector('.isl'), fx = isl.querySelector('.fx'), liquid = stage.querySelector('.liquid');
+    const pos = stage.querySelector('.pos'), isl = stage.querySelector('.isl'), bg = isl.querySelector('.bg'), fx = isl.querySelector('.fx'), liquid = stage.querySelector('.liquid');
     const wing = { l: isl.querySelector('.w.l'), r: isl.querySelector('.w.r') };
     const region = { l: wing.l.firstChild, r: wing.r.firstChild, row: isl.querySelector('.row .c'), card: isl.querySelector('.card .c') };
     const probe = stage.querySelector('.probe .c');
@@ -561,11 +661,17 @@ make test</pre>
     const strip = s => s.replace(/\s(class|style)="[^"]*"/g, '');
     const scratch = document.createElement('template');
     const norm = html => { scratch.innerHTML = html; return scratch.innerHTML; };
+    const settle = node => { node.getAnimations().forEach(a => a.cancel()); node.style.opacity = node.style.filter = node.style.transform = ''; };
+    // Firefox rasterises filtered or scaled text afresh the first time it draws it, so there content only fades.
+    const gone = px => gecko ? { opacity: 0 } : { opacity: 0, filter: `blur(${px}px)`, transform: 'scale(.9)' };
+    const here = gecko ? { opacity: 1 } : { opacity: 1, filter: 'blur(0)', transform: 'none' };
+    // Every swap cancels what the region was doing and carries on from how it looks now; a
+    // swap that has been superseded does nothing when its fade-out ends.
     function swap(node, html, cls) {
       html = norm(html);
-      if (node._leaving) { node._pending = [html, cls]; return; }
-      if (node.innerHTML === html) { node.getAnimations().forEach(a => a.cancel()); return; }
-      if (node.innerHTML && html && strip(node.innerHTML) === strip(html)) {
+      const token = node._token = (node._token || 0) + 1;
+      if (node.innerHTML === html) { settle(node); return; }
+      if (node.innerHTML && html && !node.getAnimations().length && strip(node.innerHTML) === strip(html)) {
         const tpl = document.createElement('template'); tpl.innerHTML = html;
         const a = node.querySelectorAll('*'), b = tpl.content.querySelectorAll('*');
         a.forEach((el, i) => {
@@ -575,22 +681,26 @@ make test</pre>
           }
           if (el.style.cssText !== b[i].style.cssText) el.style.cssText = b[i].style.cssText;
         });
-        node._pending = null;
         return;
       }
       const enter = () => {
-        node._leaving = false;
-        if (node._pending) { [html, cls] = node._pending; node._pending = null; }
-        node.getAnimations().forEach(a => a.cancel());
-        if (node.innerHTML === html) return;
+        if (node._token !== token) return;
+        settle(node);
         node.innerHTML = html;
         if (cls !== undefined) node.classList.toggle('h', cls);
-        if (html && !reduced) node.animate([{ opacity: 0, filter: 'blur(6px)', transform: 'scale(.9)' }, { opacity: 1, filter: 'blur(0)', transform: 'none' }], { duration: 280, easing: 'ease-out' });
+        if (html && !reduced) {
+          Object.assign(node.style, gone(6));
+          const anim = node.animate([gone(6), here], { duration: 280, easing: 'ease-out', fill: 'forwards' });
+          anim.onfinish = () => settle(node);
+        }
         node.querySelectorAll('.bars').forEach(startBars);
       };
       if (!node.innerHTML || reduced) return enter();
-      node._leaving = true;
-      node.animate([{ opacity: 1, filter: 'blur(0)', transform: 'none' }, { opacity: 0, filter: 'blur(4px)', transform: 'scale(.9)' }], { duration: 110, easing: 'ease-in', fill: 'forwards' }).onfinish = enter;
+      const now = getComputedStyle(node), opacity = parseFloat(now.opacity);
+      node.getAnimations().forEach(a => a.cancel());
+      const was = gecko ? { opacity: now.opacity } : { opacity: now.opacity, filter: now.filter, transform: now.transform };
+      Object.assign(node.style, was);
+      node.animate([{ ...was, opacity }, gone(4)], { duration: 110 * opacity, easing: 'ease-in', fill: 'forwards' }).onfinish = enter;
     }
     function flip(art) {
       const a = curve('flip'), b = curve('pop'), c = curve('unpop');
@@ -603,8 +713,29 @@ make test</pre>
       if (!reduced) art.animate(frames, { duration: T * 1000, easing: 'linear' });
     }
 
+    // A page turn: the old page slides out and fades, the new one slides in from the other edge, and the
+    // dots move. The content is replaced in one go once the slide has ended.
+    function turn(node, html, dir) {
+      html = norm(html);
+      const token = node._token = (node._token || 0) + 1;
+      const exp = node.firstElementChild, old = exp && exp.querySelector('.pg'), tpl = document.createElement('template');
+      tpl.innerHTML = html;
+      const next = tpl.content.querySelector('.pg');
+      if (!old || !next || reduced) return swap(node, html);
+      settle(node);
+      exp.querySelectorAll('.pgs i').forEach((dot, i) => dot.classList.toggle('on', tpl.content.querySelectorAll('.pgs i')[i].classList.contains('on')));
+      exp.appendChild(next);
+      const timing = { duration: 380, easing: 'cubic-bezier(.2,.9,.3,1)', fill: 'forwards' };
+      old.animate([{ transform: 'none', opacity: 1 }, { transform: `translateX(${-dir * 440}px)`, opacity: 0 }], timing);
+      next.animate([{ transform: `translateX(${dir * 440}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], timing).onfinish = () => { if (node._token === token) node.innerHTML = html; };
+    }
+
+    let last = null;
     function set(v, spring) {
+      const prev = last;
+      last = v;
       const hud = v.mode === 'hud' || v.mode === 'locked', card = v.mode === 'card' || v.mode === 'expanded';
+      const turning = card && prev && prev.mode === 'expanded' && v.mode === 'expanded' && v.page !== prev.page;
       let wl, wr, h;
       if (card) { wl = wr = (v.w - NOTCH) / 2; h = v.h; }
       else {
@@ -616,28 +747,37 @@ make test</pre>
       swap(region.l, card ? '' : v.l || '', !!v.hudL);
       swap(region.r, card ? '' : v.r || '', !!v.hudR);
       swap(region.row, card ? '' : v.row || '');
-      swap(region.card, card ? v.card : '');
+      if (turning) turn(region.card, v.card, Math.sign(v.page - prev.page)); else swap(region.card, card ? v.card : '');
       if (card) region.card.parentElement.style.width = px(v.w);
       isl.classList.toggle('hud', hud);
-      const from = { wl: num(getComputedStyle(wing.l).width), wr: num(getComputedStyle(wing.r).width), h: num(getComputedStyle(isl).height), w: num(getComputedStyle(isl).width) };
+      const from = { wl: num(getComputedStyle(wing.l).width), wr: num(getComputedStyle(wing.r).width), h: num(getComputedStyle(bg).height), w: num(getComputedStyle(bg).width) };
       const w = wl + NOTCH + wr;
       Object.assign(size, { wl, wr, h });
       mode = v.mode;
-      tween(wing.l, 'w', name, k => ({ width: px(from.wl + (wl - from.wl) * k) }));
+      const at = k => from.wl + (wl - from.wl) * k;
+      tween(wing.l, 'w', name, k => ({ width: px(at(k)) }));
       tween(wing.r, 'w', name, k => ({ width: px(from.wr + (wr - from.wr) * k) }));
-      tween(pos, 't', name, k => ({ transform: `translateX(${-(from.wl + (wl - from.wl) * k)}px)` }));
-      tween(isl, 'h', name, k => { const hh = from.h + (h - from.h) * k, r = radius(hh), g = Math.max(0, hh - NH); return { width: px(from.w + (w - from.w) * k), height: px(hh), borderRadius: `0 0 ${r}px ${r}px`, boxShadow: `0 ${2 + g * .03}px ${10 + g * .12}px rgba(0,0,0,.4)` }; });
+      tween(bg, 'box', name, k => { const hh = from.h + (h - from.h) * k, r = radius(hh), g = Math.max(0, hh - NH); return { left: px(-at(k)), width: px(from.w + (w - from.w) * k), height: px(hh), borderRadius: `0 0 ${r}px ${r}px`, boxShadow: `0 ${2 + g * .03}px ${10 + g * .12}px rgba(0,0,0,.4)` }; });
+      // The cut-out follows the box as it slides, so the light effects never reach the notch mid-transition.
+      tween(fx, 'cut', name, k => ({ clipPath: cut(at(k), 0) }));
+      liquid.style.left = px(-wl - 12);
+      liquid.style.clipPath = cut(wl, 12);
       frameId++;
     }
 
     const width = () => size.wl + NOTCH + size.wr;
+    // The notch and a 4px margin around it, cut out of a box whose left edge sits `wl` left of the notch.
+    const cut = (wl, offset) => { const a = wl - 4 + offset, b = wl + NOTCH + 4 + offset; return `polygon(0 0, ${a}px 0, ${a}px 36px, ${b}px 36px, ${b}px 0, 100% 0, 100% 100%, 0 100%)`; };
+    fx.style.clipPath = cut(0, 0);
     // The lean: the pull scales the island from its top, and the far edge stretches toward the push.
     function applyLean(name) {
       const w = width(), f = { x: lean.x, y: lean.y, p: lean.press };
       return (tx, ty, tp) => tween(isl, 'lean', name, k => {
         const x = f.x + (tx - f.x) * k, y = f.y + (ty - f.y) * k, p = f.p + (tp - f.p) * k;
-        const sx = 1 + Math.abs(x) * .6 * .015, sy = 1 + y * .6 * .06, ex = 1 + Math.abs(x) * .04, ey = 1 + Math.max(0, y) * .08, ax = x > 0 ? 0 : w;
-        return { transform: `translate(${w / 2}px,0) scale(${sx},${sy}) translate(${-w / 2}px,0) translate(${ax}px,0) scale(${ex},${ey}) translate(${-ax}px,0) scale(1,${1 - p * .05})` };
+        // Scaled about the notch, so the wings move away from it and never over it.
+        const sx = 1 + Math.abs(x) * .6 * .015, sy = 1 + y * .6 * .06, ex = 1 + Math.abs(x) * .04, ey = 1 + Math.max(0, y) * .08, nx = NOTCH / 2, ax = x > 0 ? 0 : NOTCH;
+        // The press squashes about the line 4px under the notch, so an open card's top edge stays put.
+        return { transform: `translate(${nx}px,0) scale(${sx},${sy}) translate(${-nx}px,0) translate(${ax}px,0) scale(${ex},${ey}) translate(${-ax}px,0) translate(0,${NH + 4}px) scale(1,${1 - p * .05}) translate(0,${-NH - 4}px)` };
       });
     }
     function setLean(x, y, name) { applyLean(name)(x, y, lean.press); Object.assign(lean, { x, y }); }
@@ -717,7 +857,24 @@ make test</pre>
       liquid._run = run;
       requestAnimationFrame(step);
     }
-    return { set, lean: setLean, settle: () => setLean(0, 0, 'rebound'), press, rim, glow, ring, glass, ripple, width, size, stage, get mode() { return mode; } };
+    // What differs between the DOM and a fresh render of the last state, once everything has settled.
+    function check() {
+      if (!last) return [];
+      const card = last.mode === 'card' || last.mode === 'expanded';
+      const expect = { l: card ? '' : last.l || '', r: card ? '' : last.r || '', row: card ? '' : last.row || '', card: card ? last.card : '' };
+      const problems = [];
+      for (const k in region) {
+        const node = region[k];
+        if (node.innerHTML.replace(/\sstyle="[^"]*"/g, '') !== norm(expect[k]).replace(/\sstyle="[^"]*"/g, '')) problems.push(k + ' content');
+        if (node.style.opacity || node.style.filter || node.style.transform) problems.push(k + ' inline state');
+        if (node.getAnimations().length) problems.push(k + ' still animating');
+      }
+      const actual = [wing.l, wing.r].map(w => num(getComputedStyle(w).width)).concat(num(getComputedStyle(bg).height), num(getComputedStyle(bg).width));
+      const wanted = [size.wl, size.wr, size.h, width()];
+      if (actual.some((a, i) => Math.abs(a - wanted[i]) > .5)) problems.push('size ' + actual.map(Math.round) + ' wanted ' + wanted.map(Math.round));
+      return problems;
+    }
+    return { set, check, lean: setLean, settle: () => setLean(0, 0, 'rebound'), press, rim, glow, ring, glass, ripple, width, size, stage, get mode() { return mode; } };
   }
 
   // ---- Audio bars move on a sum of sines, like the app's.
@@ -762,30 +919,66 @@ make test</pre>
   const mediaCard = `<div class="mc" style="--i:0"><div class="top"><span class="cover"><span class="src"><i>${ic('i-note')}</i></span></span><div class="meta"><div><div class="ti">Sundown</div><div class="ar">Tidal Lines</div></div><div class="prog"><span>1:22</span><span class="bar"><i style="--v:.38"></i></span><span>3:34</span></div><div class="ctl"><span>${ic('i-back')}</span><span class="big">${ic('i-pause')}</span><span>${ic('i-fwd')}</span></div></div></div><div class="out">${ic('i-spk')}<span class="sl"></span><span class="dev">AirPods Pro</span></div></div>`;
   const eventRow = `<div class="ev" style="--i:1"><span class="tm"><b>14:30</b><small>15:00</small></span><span>Design review</span><span class="join">${ic('i-video')}Join</span></div>`;
   const weatherSection = i => `<div class="sec" style="--i:${i}"><div class="rows"><div class="rw lg">${ic('i-cloudsun')}<span class="ttl">12°&nbsp; Clear<div class="dtl">H 18° · L 11° · wind 9 km/h</div></span></div></div></div>`;
-  const expanded = (sections, heights) => ({ mode: 'expanded', w: 440, h: 46 + heights.reduce((a, b) => a + b, 0) + (heights.length - 1) * 10, card: `<div class="exp" style="width:440px">${sections}</div>` });
+  // The open island, as the app sizes it: 60 base, the sections and their gaps, 14 for the page dots. The
+  // height is shared by every page, so a page turn never resizes; `h` is the tallest page when it is not this one.
+  const expanded = (sections, heights, page = 0, h) => {
+    h = h || 60 + heights.reduce((a, b) => a + b, 0) + (heights.length - 1) * 10 + 14;
+    const dots = [0, 1, 2].map(i => i === page ? '<i class="on"></i>' : '<i></i>').join('');
+    return { mode: 'expanded', w: 440, h, page, card: `<div class="exp" style="width:440px;height:${h}px"><div class="pg">${sections}</div><div class="pgs">${dots}</div></div>` };
+  };
   const herdr = `<div class="sec" style="--i:2"><div class="hd">🐑 Herdr<span class="sp"><span class="tl"><i class="dot gn"></i>1</span><span class="tl"><i class="dot bl"></i>1</span><span class="tl"><i class="dot o"></i>1</span></span></div><div class="rows"><div class="rw hi">${agentIcon('claude', 'working')}<span class="ttl">Refactor the parser</span><span class="wd"><i></i><i></i><i></i></span></div><div class="rw">${agentIcon('claude', 'done')}<span class="ttl">Write the release notes</span><span class="tr">4m</span><span class="st d"></span></div><div class="rw">${agentIcon('pi', 'waiting')}<span class="ttl">π · bundle</span><span class="tr">15m</span><span class="st a"></span></div></div></div>`;
   const clipboard = `<div class="sec" style="--i:0"><div class="hd">${ic('i-clip')}Clipboard</div><div class="rows"><div class="rw">${ic('i-docs')}<span class="ttl">git rebase -i HEAD~3</span></div><div class="rw">${ic('i-docs')}<span class="ttl">https://example.com/notes</span></div><div class="rw">${ic('i-docs')}<span class="ttl">Meeting moved to 15:00</span></div></div></div>`;
   const shelf = `<div class="sec" style="--i:0"><div class="hd">${ic('i-tray')}Shelf<span class="sp">Clear</span></div><div class="files"><span class="file"><i></i>brief.pdf</span><span class="file"><i class="img"></i>logo.png</span><span class="file"><i></i>notes.md</span></div></div>`;
   const workspaces = `<span class="ws"><b>0</b><span>1</span><span>2</span></span>`;
   const aerospace = `<div class="sec" style="--i:0"><div class="rows"><div class="rw hi" style="height:29px"><span class="ttl">Workspace 0<div class="dtl">Firefox, Sylt</div></span><span class="tr">current</span></div><div class="rw" style="height:29px"><span class="ttl">Workspace 1<div class="dtl">Ghostty</div></span></div></div></div>`;
+  const slackWing = `<span class="pi">${ic('i-slack')}3</span>`;
+  const slackRow = `<div class="sec" style="--i:0"><div class="rows"><div class="rw" style="height:29px">${ic('i-slack')}<span class="ttl">Open Slack<div class="dtl">3 unread mentions</div></span></div></div></div>`;
+  const slackHUD = { mode: 'hud', l: agents, r: `<span class="g" style="font-size:14px">${ic('i-slack')}</span>${label('3 unread')}`, hudR: true };
+  const clockWing = `<span class="pi">14:59</span>`;
+  const clockRow = `<div class="sec" style="--i:0"><div class="rows"><div class="rw" style="height:29px">${ic('i-cal')}<span class="ttl">Thursday, 8 October<div class="dtl">Week 41</div></span></div></div></div>`;
+  const todosWing = `<span class="pi">${ic('i-list')}3</span>`;
+  const focusWing = `<span class="g indigo">${ic('i-moon')}</span>`;
+  const dots = `<span class="dots"><i class="dot o"></i><i class="dot gn"></i></span>`;
+  const todosSection = `<div class="sec" style="--i:0"><div class="rows"><div class="rw">${ic('i-circle')}<span class="ttl">Buy milk</span></div><div class="rw" style="height:29px">${ic('i-circle')}<span class="ttl">Call the bank<div class="dtl">Today 17:00</div></span></div></div><div class="btns"><span class="pill">Open Reminders</span></div></div>`;
+  const ghosttySection = `<div class="sec" style="--i:0"><div class="rows"><div class="rw" style="height:29px">${ic('i-termo')}<span class="ttl">Quick terminal<div class="dtl">Through your keybind</div></span><span class="pill">New window</span></div></div></div>`;
   const timerSection = `<div class="sec" style="--i:0"><div class="rows"><div class="rw">${ic('i-timer')}<span class="ttl">24:59</span><span class="pill">Cancel</span></div></div></div>`;
 
   const heroClosed = (b, playing = true) => ({ mode: 'closed', l: `${calendar}${agents}`, r: `${weather}${music(b, playing)}` });
 
   // ---- Runs a list of [hold ms, fn] forever.
-  const timers = new Set();
+  // Every loop advances from one frame ticker, one step per tick at most, so a page that was
+  // hidden does not replay a backlog when it comes back; it just picks up its current step.
+  const loops = new Set();
   function loop(steps, start = 0) {
-    let i = 0;
-    const run = () => { const [hold, fn] = steps[i]; fn(); i = (i + 1) % steps.length; timers.add(setTimeout(run, hold)); };
-    timers.add(setTimeout(run, start));
+    loops.add({ steps, i: 0, due: performance.now() + start });
   }
+  let ticker = 0;
+  function tick() {
+    const now = performance.now();
+    for (const l of loops) {
+      if (now < l.due) continue;
+      const [hold, fn] = l.steps[l.i];
+      fn();
+      l.i = (l.i + 1) % l.steps.length;
+      l.due = now + hold;
+    }
+    ticker = requestAnimationFrame(tick);
+  }
+  ticker = requestAnimationFrame(tick);
+  document.addEventListener('visibilitychange', () => {
+    cancelAnimationFrame(ticker);
+    if (document.hidden) return;
+    const now = performance.now();
+    loops.forEach(l => { l.due = Math.max(l.due, now + 400); });
+    ticker = requestAnimationFrame(tick);
+  });
 
   // ---- Hero: a day on the island.
   const hero = island(document.getElementById('heroScene'));
   const caption = document.getElementById('caption');
   const say = text => caption.textContent = text;
   hero.set(heroClosed(false));
-  if (!reduced) loop([
+  const heroSteps = [
     [1400, () => { say('Volume'); hero.set({ mode: 'hud', l: `${calendar}${agents}`, r: volume(.65), hudR: true }); }],
     [1200, () => { say('Closed'); hero.set(heroClosed(false)); }],
     [2200, () => { say('Track change'); hero.set({ mode: 'hud', l: `${calendar}${agents}`, r: `${weather}${music(true)}`, row: track }); }],
@@ -799,67 +992,107 @@ make test</pre>
     [1400, () => { say('Closed'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}` }); }],
     [500, () => { say('Pointer over'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}`, hover: true }, 'peek'); }],
     [160, () => { hero.press(true); }],
-    [3600, () => { say('Expanded'); hero.press(false); hero.set(expanded(mediaCard + eventRow + weatherSection(2), [138, 34, 32])); }],
+    [3600, () => { say('Expanded'); hero.press(false); hero.set(expanded(mediaCard + eventRow, [138, 34])); }],
     [2400, () => { say('Closed'); hero.set(heroClosed(false)); }],
-  ], 2400);
+  ];
+  if (!reduced) loop(heroSteps, 2400);
 
-  // ---- A showcase: an island plus clickable blocks. It cycles on its own; a click takes over for a while.
-  function showcase(sceneId, capId, blocksId, items, delay) {
-    const engine = island(document.getElementById(sceneId)), capEl = document.getElementById(capId), blocksEl = document.getElementById(blocksId);
-    let index = 0, alt = false, pausedUntil = 0;
+  // ---- A showcase: an island plus clickable blocks. The selection only moves when a block is clicked;
+  // clicking the selected block again shows its other state.
+  const showcases = {};
+  function showcase(id, items) {
+    const engine = island(document.getElementById(id)), capEl = document.getElementById(id + 'Cap'), blocksEl = document.getElementById(id + 'Blocks');
+    let index = 0, alt = false, shown = 0;
     const blocks = items.map((item, i) => {
       const b = document.createElement('button');
       b.className = 'block'; b.innerHTML = `<span class="ico">${ic(item.icon)}</span>${item.name}`;
-      b.onclick = () => { alt = index === i && item.alt ? !alt : false; show(i); pausedUntil = Date.now() + 12000; };
+      b.onclick = () => select(i, index === i && item.alt ? !alt : false);
       b.onmousedown = e => e.preventDefault();
       blocksEl.appendChild(b);
       return b;
     });
-    function show(i) {
-      index = i;
-      const item = items[i], v = alt && item.alt ? item.alt : item;
+    function select(i, other) {
+      index = i; alt = other;
+      const item = items[i], v = alt && item.alt ? item.alt : item, token = ++shown;
       blocks.forEach((b, j) => b.setAttribute('aria-selected', j === i));
-      engine.set(v.view);
+      engine.set(v.intro || v.view);
+      if (v.intro && !reduced) setTimeout(() => { if (shown === token) engine.set(v.view); }, 2000);
       capEl.textContent = v.caption;
     }
-    show(0);
-    if (reduced) return;
-    setInterval(() => { if (Date.now() >= pausedUntil) { alt = false; show((index + 1) % items.length); } }, delay);
+    select(0, false);
+    showcases[id] = { engine, items, select };
   }
 
   const baseL = `${calendar}${agents}`, baseR = `${headphones}${music(false)}`;
   const hudBoth = (l, r) => ({ mode: 'hud', l, r, hudL: true, hudR: true });
-  showcase('baseScene', 'baseCap', 'baseBlocks', [
+  const show = showcase;
+  show('wg', [
+    { icon: 'i-term', name: 'Agents and a meeting', view: { mode: 'closed', l: baseL, r: `${headphones}${weather}${music(false)}` }, caption: 'Left: 13 minutes to the next meeting, then the agents, the working one bright and the idle ones faded. Right: headphone charge, the weather and the cover with live audio bars.' },
+    { icon: 'i-timer', name: 'Timer and reminders', view: { mode: 'closed', l: `${timerWing}${todosWing}`, r: `${weather}${music(false, false)}` }, caption: 'A running timer and the open reminders on the left. Paused music keeps its cover and the bars go flat.' },
+    { icon: 'i-grid', name: 'Workspaces and Focus', view: { mode: 'closed', l: `${workspaces}${agents}`, r: `${focusWing}${weather}` }, caption: 'AeroSpace workspaces on the left, the current one bright. A Focus mode shows as a moon on the right while it is on.' },
+    { icon: 'i-mic', name: 'On a call', view: { mode: 'closed', l: calendar, r: `${dots}${headphones}${clockWing}` }, caption: 'An orange dot while the microphone is in use and a green one for the camera, then headphone charge and the clock plugin\'s time.' },
+    { icon: 'i-slack', name: 'Slack and the time', view: { mode: 'closed', l: agents, r: `${slackWing}${clockWing}${music(true)}` }, caption: 'Slack\'s unread count and the time share the right wing with the cover. Each wing is only as wide as what is in it.' },
+    { icon: 'i-circle', name: 'An empty side', view: { mode: 'closed', l: '', r: weather }, caption: 'Nothing on the left, so there is no left wing: the island is the notch and the weather.' },
+  ]);
+  show('g1', [
     { icon: 'i-spk', name: 'Volume', view: { mode: 'hud', l: baseL, r: volume(.65), hudR: true }, caption: 'Volume: the right wing shows the level; the left wing is unchanged.' },
-    { icon: 'i-sun', name: 'Brightness', view: { mode: 'hud', l: baseL, r: brightness(.45), hudR: true }, caption: 'Brightness uses the same layout as volume.' },
+    { icon: 'i-sun', name: 'Brightness', view: { mode: 'hud', l: baseL, r: brightness(.45), hudR: true }, caption: 'Brightness, for changes made through the keys or the island, never for auto-brightness.' },
     { icon: 'i-spk', name: 'Mute', view: { mode: 'hud', l: baseL, r: volume(.65, true), hudR: true }, caption: 'Mute: a slash is drawn over the speaker and the bar empties. Select again to unmute.',
       alt: { view: { mode: 'hud', l: baseL, r: volume(.65), hudR: true }, caption: 'Unmute: the slash wipes away and the bar fills back to the level.' } },
-    { icon: 'i-note', name: 'Now Playing', view: { mode: 'hud', l: baseL, r: `${headphones}${music(true)}`, row: track }, caption: 'Track change: the cover flips and the title appears below the notch. Both wings stay as they are.' },
-    { icon: 'i-batt', name: 'Battery', view: hudBoth(battery, label('Low battery', 'red')), caption: 'Battery alerts at set levels and when the charger is connected or removed.' },
-    { icon: 'i-bt', name: 'Bluetooth', view: hudBoth(rune, bluetooth), caption: 'Bluetooth: the rune draws itself in, then the device name and a gauge filling to its charge.' },
-    { icon: 'i-wifi', name: 'Network', view: hudBoth(wifi, label('Wi-Fi')), caption: 'Network: the Wi-Fi arcs light up one by one. Ethernet and offline look the same way.' },
-    { icon: 'i-cal', name: 'Calendar', view: hudBoth(glyph('i-cal', 'orange'), `<span class="evt">${label('Design review')}${label('in 4m', 'orange num')}</span>`), caption: 'Calendar: the next event, five minutes before it starts. The expanded view has a Join button for calls.' },
-    { icon: 'i-kbd', name: 'Keyboard', view: { mode: 'hud', l: baseL, r: `<span class="g">${ic('i-caps')}</span>${label('Caps Lock on')}`, hudR: true }, caption: 'Keyboard: Caps Lock and input source changes, on the right only.' },
-    { icon: 'i-mic', name: 'Mic & camera', view: hudBoth('<span class="dots"><i class="dot o"></i><i class="dot gn"></i></span>', label('Mic and camera on')), caption: 'Mic and camera: an orange dot while the microphone is in use, green for the camera.' },
+    { icon: 'i-note', name: 'Track change', view: { mode: 'hud', l: baseL, r: `${headphones}${music(true)}`, row: track }, caption: 'Track change: the cover flips and the title appears below the notch. Both wings stay as they are.' },
+  ]);
+  show('g2', [
+    { icon: 'i-batt', name: 'Battery', view: hudBoth(battery, label('Low battery', 'red')), caption: 'Battery: a message at 80, 60, 40, 20, 15, 10, 5 and 0 percent, and when the charger comes or goes.' },
+    { icon: 'i-bt', name: 'Bluetooth', view: hudBoth(rune, bluetooth), caption: 'Bluetooth: the rune draws itself in, then the device name and a gauge filling to its charge. Low-battery warnings at 20 and 10 percent.' },
+    { icon: 'i-wifi', name: 'Network', view: hudBoth(wifi, label('Wi-Fi')), caption: 'Network: the Wi-Fi arcs light up one by one, a cable clicks in, a slashed Wi-Fi when you go offline.' },
+    { icon: 'i-flame', name: 'Thermals', view: hudBoth(glyph('i-flame', 'orange'), label('Hot · performance reduced')), caption: 'Thermals: when the Mac gets hot enough to throttle. Select again for the cool-down.',
+      alt: { view: hudBoth(glyph('i-snow', 'cyan'), label('Cooled down')), caption: 'Cooled down again.' } },
+  ]);
+  show('g3', [
+    { icon: 'i-cal', name: 'Calendar', view: hudBoth(glyph('i-cal', 'orange'), `<span class="evt">${label('Design review')}${label('in 4m', 'orange num')}</span>`), caption: 'Calendar: the next event five minutes before it starts and again at the start. A countdown sits in the wing until then.' },
     { icon: 'i-moon', name: 'Focus', view: hudBoth(glyph('i-moon', 'indigo'), label('Work')), caption: 'Focus: the mode name when it changes, then a moon in the wing while it is on.' },
-    { icon: 'i-lock', name: 'Lock screen', view: { mode: 'locked', l: lock(false), r: time, hudL: true, hudR: true }, caption: 'Lock screen: a padlock and the time. Select again to see the unlock.',
+    { icon: 'i-mic', name: 'Mic & camera', view: hudBoth(dots, label('Mic and camera on')), caption: 'Mic and camera: an orange dot while the microphone is in use, green for the camera.' },
+    { icon: 'i-kbd', name: 'Keyboard', view: { mode: 'hud', l: baseL, r: `<span class="g">${ic('i-caps')}</span>${label('Caps Lock on')}`, hudR: true }, caption: 'Keyboard: Caps Lock on or off and layout changes, on the right only.' },
+  ]);
+  show('g4', [
+    { icon: 'i-lock', name: 'Lock screen', view: { mode: 'locked', l: lock(false), r: time, hudL: true, hudR: true }, caption: 'Lock screen: a padlock and the time, visible over the login window. Select again to see the unlock.',
       alt: { view: { mode: 'locked', l: lock(true), r: greeting, hudL: true, hudR: true }, caption: 'Unlock: the padlock springs open and a greeting replaces the time.' } },
-  ], 2800);
+    { icon: 'i-msg', name: 'Notifications', view: { mode: 'card', w: 381, h: 76, card: note }, caption: 'Notifications: Notification Center banners mirrored as a card. Experimental.' },
+  ]);
 
-  showcase('extScene', 'extCap', 'extBlocks', [
-    { icon: 'i-cloudsun', name: 'Weather', view: { mode: 'closed', l: agents, r: `${weather}${music(false)}` }, caption: 'Weather: temperature in the wing; conditions and the day\'s range when expanded. Data from Open-Meteo. Select again to expand.',
-      alt: { view: expanded(weatherSection(0), [32]), caption: 'Expanded: the weather row with the day\'s range.' } },
+  show('ex', [
+    { icon: 'i-note', name: 'Media card', view: expanded(mediaCard, [138]), caption: 'The media card: artwork with the source app, title, a seek bar, transport, and an output slider with the device name.' },
+    { icon: 'i-video', name: 'Next event', view: expanded(mediaCard + eventRow, [138, 34]), caption: 'The next event under it, with a Join button for Zoom, Meet, Teams and Webex links.' },
+    { icon: 'i-puzzle2', name: 'Second page', view: expanded(weatherSection(0) + clipboard.replace('--i:0', '--i:1'), [32, 22 + 72], 1, 256), caption: 'Swipe sideways and the next page holds the plugins\' sections, two to a page: here the weather with the day\'s range and the clipboard history. The tallest page sets the height, so turning never resizes.' },
+    { icon: 'i-term', name: 'Third page', view: expanded(herdr.replace('--i:2', '--i:0') + timerSection.replace('--i:0', '--i:1'), [22 + 72, 30], 2, 256), caption: 'The agents, with the time since each last changed, and the running timer. Which sections share a page is set in the Layout pane.' },
+  ]);
+
+  show('p1', [
+    { icon: 'i-term', name: 'Agents', view: expanded(herdr, [22 + 72], 1), caption: 'Agents: working first, then done, then waiting, with the time since the last change. Selecting one raises its terminal. Select again for a finished agent.',
+      alt: { view: { mode: 'hud', l: `<span class="g" style="font-size:14px">${ic('i-term')}</span>${label('Refactor the pars…')}<span class="pop green" style="display:inline-grid">${ic('i-check')}</span>`, r: `${weather}`, hudL: true }, caption: 'An agent finishing: its title and a tick on the left; the right wing stays as it is.' } },
+    { icon: 'i-grid', name: 'AeroSpace', view: { mode: 'closed', l: `${workspaces}${agents}`, r: weather }, caption: 'AeroSpace workspaces, the current one bright. Click a row to switch. Select again to expand.',
+      alt: { view: expanded(aerospace, [64], 1), caption: 'Expanded: each workspace with its apps; the current row is highlighted.' } },
+    { icon: 'i-termo', name: 'Ghostty', view: expanded(ghosttySection, [32], 1), caption: 'A quick terminal from the island: Ghostty\'s quick terminal through your keybind, or a new window. Select again for the wing badge.',
+      alt: { view: { mode: 'closed', l: agents, r: `<span class="pi">${ic('i-termo')}</span>${weather}` }, caption: 'With the badge option on, a terminal button sits in the wing.' } },
+    { icon: 'i-slack', name: 'Slack', intro: slackHUD, view: { mode: 'closed', l: agents, r: `${slackWing}${weather}${music(false)}` }, caption: 'Slack\'s badge in the wing: mentions and direct messages as a count, unread channels as a dot. A flash when new ones arrive. No token needed. Select again to expand.',
+      alt: { view: expanded(slackRow, [32], 1), caption: 'Expanded: one row to open Slack, with the unread count.' } },
+  ]);
+  show('p2', [
+    { icon: 'i-list', name: 'Todos', view: { mode: 'closed', l: `${todosWing}${agents}`, r: weather }, caption: 'Open reminders from the Reminders app. Click one to tick it off. Select again to expand.',
+      alt: { view: expanded(todosSection, [24 + 32 + 30], 1), caption: 'Expanded: the open reminders, with a button to open the app.' } },
+    { icon: 'i-clock', name: 'Clock', view: { mode: 'closed', l: agents, r: `${clockWing}${weather}${music(false)}` }, caption: 'The time, in whichever wing you put it. Seconds and 24-hour are options. Select again to expand.',
+      alt: { view: expanded(clockRow, [32], 1), caption: 'Expanded: the date and the week number.' } },
     { icon: 'i-timer', name: 'Timer', view: { mode: 'closed', l: `${timerWing}${agents}`, r: weather }, caption: 'Timer: a ring draining with the time left, in the left wing. Select again for the end.',
       alt: { view: { mode: 'hud', l: glyph('i-timer', 'orange'), r: label('25 min timer done'), hudL: true, hudR: true }, caption: 'When it ends: an overlay with a chime, and the ring leaves the wing.' } },
+    { icon: 'i-cloudsun', name: 'Weather', view: { mode: 'closed', l: agents, r: `${weather}${music(false)}` }, caption: 'Weather: temperature in the wing; conditions and the day\'s range when expanded. Data from Open-Meteo. Select again to expand.',
+      alt: { view: expanded(weatherSection(0), [32], 1), caption: 'Expanded: the weather row with the day\'s range.' } },
+  ]);
+  show('p3', [
     { icon: 'i-down', name: 'Downloads', view: { mode: 'hud', l: glyph('i-down', 'blue'), r: label('report-final.pdf'), hudL: true, hudR: true }, caption: 'Downloads: an overlay when a browser download starts. Select again for the finish.',
       alt: { view: { mode: 'hud', l: glyph('i-check', 'green'), r: label('report-final.pdf'), hudL: true, hudR: true }, caption: 'Finished: the same overlay with a green tick.' } },
-    { icon: 'i-clip', name: 'Clipboard', view: expanded(clipboard, [22 + 72]), caption: 'Clipboard: recent text copies in the expanded view; selecting one copies it again. Password managers are excluded.' },
-    { icon: 'i-tray', name: 'File shelf', view: expanded(shelf, [22 + 56]), caption: 'File shelf: drop files onto the island; drag them out when needed.' },
-    { icon: 'i-grid', name: 'AeroSpace', view: { mode: 'closed', l: `${workspaces}${agents}`, r: weather }, caption: 'AeroSpace workspaces, the current one bright. Click a row to switch. Select again to expand.',
-      alt: { view: expanded(aerospace, [64]), caption: 'Expanded: each workspace with its apps; the current row is highlighted.' } },
-    { icon: 'i-term', name: 'Agents', view: expanded(herdr, [22 + 72]), caption: 'Agents: working first, then done, then waiting, with the time since the last change. Selecting one raises its terminal. Select again for a finished agent.',
-      alt: { view: { mode: 'hud', l: `<span class="g" style="font-size:14px">${ic('i-term')}</span>${label('Refactor the pars…')}<span class="pop green" style="display:inline-grid">${ic('i-check')}</span>`, r: `${weather}`, hudL: true }, caption: 'An agent finishing: its title and a tick on the left; the right wing stays as it is.' } },
-  ], 3000);
+    { icon: 'i-tray', name: 'File shelf', view: expanded(shelf, [22 + 56], 1), caption: 'File shelf: drop files onto the island to keep them handy; drag them out when needed.' },
+    { icon: 'i-clip', name: 'Clipboard', view: expanded(clipboard, [22 + 72], 1), caption: 'Clipboard: recent text copies in the expanded view; selecting one copies it again. Password managers are excluded.' },
+  ]);
 
   // ---- The small demos.
   const demo = id => { const scene = document.getElementById(id); const engine = island(scene); return { scene, engine, cursor: scene.querySelector('.cursor') }; };
@@ -968,7 +1201,22 @@ make test</pre>
     [1400, () => {}],
   ], 800);
 
-  window.sylt = { stop: () => timers.forEach(clearTimeout), island: hero, wings: wings.engine, lock: lockDemo.engine, hold: hold.engine, out: out.engine, force: force.engine, pad: pad.engine, views: { closed: heroClosed, volume, brightness, music, lock, time, greeting, note, expanded, mediaCard, eventRow, weatherSection, herdr, clipboard, shelf, rune, bluetooth, agents, calendar, headphones, weather, track } };
+  const warm = document.createElement('div');
+  warm.className = 'isl';
+  warm.style.cssText = 'position:fixed;left:0;top:0;opacity:.01;pointer-events:none;width:auto';
+  warm.innerHTML = `<div class="w"><span class="c">${[calendar, agents, music(false), music(true), headphones, weather, timerWing, workspaces, slackWing, clockWing, todosWing, focusWing, dots, volume(.65), volume(.65, true), brightness(.45), rune, bluetooth, wifi, battery, glyph('i-cal'), label('x'), lock(false), lock(true), time, greeting].join('')}</span></div><div class="card" style="width:440px"><span class="c">${note}<div class="exp">${mediaCard}${eventRow}${weatherSection(0)}${herdr}${clipboard}${shelf}${timerSection}${aerospace}${slackRow}${clockRow}${todosSection}${ghosttySection}</div></span></div>`;
+  document.body.appendChild(warm);
+  warm.offsetWidth;
+  setTimeout(() => warm.remove(), 400);
+
+  // Runs the hero's steps n times over, `ms` apart, so swaps land on wings still in motion.
+  function cycle(n, ms) {
+    let k = 0;
+    const total = n * heroSteps.length;
+    const step = () => { heroSteps[k % heroSteps.length][1](); if (++k < total) setTimeout(step, ms); };
+    step();
+  }
+  window.sylt = { stop: () => loops.clear(), cycle, heroSteps, showcases, island: hero, wings: wings.engine, lock: lockDemo.engine, hold: hold.engine, out: out.engine, force: force.engine, pad: pad.engine, views: { closed: heroClosed, volume, brightness, music, lock, time, greeting, note, expanded, mediaCard, eventRow, weatherSection, herdr, clipboard, shelf, rune, bluetooth, agents, calendar, headphones, weather, track } };
 
   // The Layout pane: a tile crosses to the other wing, then one is hidden; the island re-flows each time.
   const arrange = demo('dArrange'), tile = { wxR: arrange.scene.querySelector('.tile.wx:not(.gone)'), wxL: arrange.scene.querySelector('.tile.wx.gone'), hp: arrange.scene.querySelector('.tile.hp') };
@@ -992,6 +1240,17 @@ make test</pre>
     [1400, () => setGap(24, true)],
     [2400, () => setGap(8, false)],
   ], 1200);
+
+  // The pages board: a section is dragged to the other page and the open island shows the new page.
+  const pages = demo('dPages'), pageTile = { wx1: pages.scene.querySelector('.tile.wx:not(.gone)'), wx2: pages.scene.querySelector('.tile.wx.gone'), tm1: pages.scene.querySelector('.tile.tm.gone'), tm2: pages.scene.querySelector('.tile.tm:not(.gone)') };
+  const page = second => expanded(eventRow.replace('--i:1', '--i:0') + (second ? timerSection : weatherSection(0)).replace('--i:0', '--i:1'), [34, second ? 30 : 32]);
+  pages.engine.set(page(false));
+  if (!reduced) loop([
+    [1600, () => { pageTile.tm2.classList.add('press'); }],
+    [350, () => { pageTile.tm2.classList.add('gone'); pageTile.tm1.classList.remove('gone'); pageTile.wx1.classList.add('gone'); pageTile.wx2.classList.remove('gone'); pages.engine.set(page(true), 'value'); }],
+    [2600, () => { pageTile.tm2.classList.remove('press', 'gone'); pageTile.tm1.classList.add('gone'); pageTile.wx1.classList.remove('gone'); pageTile.wx2.classList.add('gone'); pages.engine.set(page(false), 'value'); }],
+    [2000, () => {}],
+  ], 1400);
 
   // ---- Theme: follows the system, with a manual toggle remembered per browser.
   const root = document.documentElement, themeButton = document.getElementById('theme');

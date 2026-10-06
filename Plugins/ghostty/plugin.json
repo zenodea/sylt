@@ -1,0 +1,13 @@
+{
+  "protocol": 1,
+  "id": "ghostty",
+  "name": "Ghostty",
+  "description": "A quick terminal from the island: Ghostty's quick terminal if you have a keybind for it, else a new window.",
+  "symbol": "terminal",
+  "run": "ghostty.py",
+  "side": "right",
+  "enabledByDefault": false,
+  "settings": [
+    { "key": "badge", "title": "Show a terminal button in the wing", "type": "bool", "default": false }
+  ]
+}

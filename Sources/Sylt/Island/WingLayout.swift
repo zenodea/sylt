@@ -62,7 +62,8 @@ struct WingPlugin: Equatable {
     let side: WingSide
 }
 
-/// The space between two neighbouring items, and whether a thin line sits in it.
+/// The space after an item, before whatever shows next to it, and whether a thin line
+/// sits in it. It belongs to the item, so it holds when a neighbour is idle or moved.
 struct WingGap: Codable, Equatable {
     static let defaultSpacing: Double = 8
     static let separatorWidth: CGFloat = 1
@@ -83,6 +84,11 @@ struct ResolvedWings: Equatable {
     func gap(between first: WingItem, and second: WingItem) -> WingGap {
         gaps[WingLayout.gapKey(first, second)] ?? WingGap()
     }
+
+    /// The gap after an item, whatever follows it.
+    func gap(after item: WingItem) -> WingGap {
+        gaps[item.id] ?? WingGap()
+    }
 }
 
 /// The user's wing layout: which items sit left, right or nowhere, in what order,
@@ -101,12 +107,15 @@ struct WingLayout: Codable, Equatable {
         left = try container.decodeIfPresent([String].self, forKey: .left) ?? []
         right = try container.decodeIfPresent([String].self, forKey: .right) ?? []
         hidden = try container.decodeIfPresent([String].self, forKey: .hidden) ?? []
-        gaps = try container.decodeIfPresent([String: WingGap].self, forKey: .gaps) ?? [:]
+        // Gaps used to be keyed by the pair of neighbours; now by the item before the gap.
+        let stored = try container.decodeIfPresent([String: WingGap].self, forKey: .gaps) ?? [:]
+        gaps = Dictionary(stored.map { (String($0.key.split(separator: ">").first ?? ""), $0.value) }) { first, _ in first }
     }
 
     var isCustomised: Bool { !left.isEmpty || !right.isEmpty || !hidden.isEmpty || !gaps.isEmpty }
 
-    static func gapKey(_ first: WingItem, _ second: WingItem) -> String { "\(first.id)>\(second.id)" }
+    /// A gap is keyed by the item in front of it; the item behind doesn't matter.
+    static func gapKey(_ first: WingItem, _ second: WingItem) -> String { first.id }
 
     func gap(between first: WingItem, and second: WingItem) -> WingGap {
         gaps[Self.gapKey(first, second)] ?? WingGap()

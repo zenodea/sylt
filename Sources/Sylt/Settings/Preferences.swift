@@ -17,6 +17,7 @@ final class Preferences: ObservableObject {
     @Published var showsRimGlow: Bool
     @Published var hapticsOnRelease: Bool
     @Published var wingLayout: WingLayout
+    @Published var expandedLayout: ExpandedLayout
 
     private let defaults: UserDefaults
     private var cancellables = Set<AnyCancellable>()
@@ -36,6 +37,7 @@ final class Preferences: ObservableObject {
         static let haptics = "hapticsOnRelease"
         static let knownPlugins = "knownPlugins"
         static let wingLayout = "wingLayout"
+        static let expandedLayout = "expandedLayout"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -68,6 +70,7 @@ final class Preferences: ObservableObject {
         showsRimGlow = defaults.object(forKey: Key.rimGlow) as? Bool ?? true
         hapticsOnRelease = defaults.object(forKey: Key.haptics) as? Bool ?? true
         wingLayout = defaults.data(forKey: Key.wingLayout).flatMap { try? JSONDecoder().decode(WingLayout.self, from: $0) } ?? WingLayout()
+        expandedLayout = defaults.data(forKey: Key.expandedLayout).flatMap { try? JSONDecoder().decode(ExpandedLayout.self, from: $0) } ?? ExpandedLayout()
 
         $enabledPlugins
             .dropFirst()
@@ -120,6 +123,10 @@ final class Preferences: ObservableObject {
         $wingLayout
             .dropFirst()
             .sink { defaults.set(try? JSONEncoder().encode($0), forKey: Key.wingLayout) }
+            .store(in: &cancellables)
+        $expandedLayout
+            .dropFirst()
+            .sink { defaults.set(try? JSONEncoder().encode($0), forKey: Key.expandedLayout) }
             .store(in: &cancellables)
     }
 

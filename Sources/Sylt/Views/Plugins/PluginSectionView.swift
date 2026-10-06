@@ -1,28 +1,26 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// A plugin's expanded section: an optional header with actions, rows, a strip of files, and buttons.
+/// A plugin's expanded section: a header naming the plugin, with its actions, then rows, a strip of files, and buttons.
 struct PluginSectionView: View {
     @ObservedObject var plugin: ExternalPlugin
 
     var body: some View {
         if let section = plugin.section {
             VStack(alignment: .leading, spacing: 4) {
-                if let title = section.title {
-                    HStack(spacing: 6) {
-                        if let symbol = section.symbol { Image(systemName: symbol) }
-                        Text(title)
-                        Spacer()
-                        if let items = section.items { PluginBadge(items: items) }
-                        ForEach(section.actions ?? []) { action in
-                            Button(action.title) { plugin.send(PluginEvent(event: "action", id: action.id)); Haptics.press() }
-                                .buttonStyle(.plain)
-                        }
+                HStack(spacing: 6) {
+                    Image(systemName: section.symbol ?? plugin.manifest.symbol ?? "puzzlepiece.extension.fill")
+                    Text(section.title ?? plugin.manifest.name)
+                    Spacer()
+                    if let items = section.items { PluginBadge(items: items) }
+                    ForEach(section.actions ?? []) { action in
+                        Button(action.title) { plugin.send(PluginEvent(event: "action", id: action.id)); Haptics.press() }
+                            .buttonStyle(.plain)
                     }
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.5))
-                    .frame(height: PluginSection.headerHeight - 4)
                 }
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.5))
+                .frame(height: PluginSection.headerHeight - 4)
                 if let rows = section.rows, !rows.isEmpty {
                     // More rows than fit scroll inside the space the first few take.
                     ScrollView(showsIndicators: false) {
@@ -34,16 +32,16 @@ struct PluginSectionView: View {
                             }
                         }
                     }
-                    .frame(height: rows.prefix(PluginSection.maxRows).reduce(0) { $0 + $1.height } - 3)
+                    .frame(minHeight: rows.prefix(PluginSection.maxRows).reduce(0) { $0 + $1.height } - 3, maxHeight: .infinity)
+                    .background(GeometryReader { proxy in
+                        Color.clear.preference(key: ListFramesKey.self, value: [proxy.frame(in: .named("canvas"))])
+                    })
                 }
                 if let paths = section.files, !paths.isEmpty {
                     fileStrip(paths)
                 }
                 if let buttons = section.buttons, !buttons.isEmpty {
                     HStack(spacing: 8) {
-                        if section.title == nil, let symbol = section.symbol {
-                            Image(systemName: symbol).foregroundStyle(.white.opacity(0.6)).padding(.trailing, 2)
-                        }
                         ForEach(buttons) { button in
                             Button(button.title) { plugin.send(PluginEvent(event: "button", id: button.id)); Haptics.expand() }
                                 .buttonStyle(Pill(tint: .white.opacity(0.1)))
@@ -52,6 +50,7 @@ struct PluginSectionView: View {
                     .frame(height: PluginSection.buttonsHeight - 4)
                 }
             }
+            .frame(maxHeight: section.rows?.isEmpty == false ? .infinity : nil, alignment: .top)
             .animation(IslandAnimation.value, value: section)
         }
     }
@@ -128,4 +127,10 @@ private struct PluginRowView: View {
         }
         .buttonStyle(.plain)
     }
+}
+
+/// Frames of scrolling lists in canvas coordinates.
+struct ListFramesKey: PreferenceKey {
+    static let defaultValue: [CGRect] = []
+    static func reduce(value: inout [CGRect], nextValue: () -> [CGRect]) { value += nextValue() }
 }

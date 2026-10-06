@@ -15,15 +15,19 @@ struct IslandLayout: Equatable {
     /// Which items each closed wing shows, in order, and how wide each plugin's badge is.
     var wings = ResolvedWings()
     var pluginWidths: [String: CGFloat] = [:]
-    var pluginSections: [CGFloat] = []
+    var pluginSectionHeights: [String: CGFloat] = [:]
+    /// The expanded view's pages, each a few sections, and which one is open.
+    var expandedPages: [[ExpandedSection]] = []
+    var expandedPage = 0
 
     static let expandedWidth: CGFloat = 440
-    static let expandedBaseHeight: CGFloat = 46
+    static let expandedBaseHeight: CGFloat = 60
     static let emptyExpandedHeight: CGFloat = 36
     static let mediaCardHeight: CGFloat = 138
     static let hudHeight: CGFloat = 76
     static let eventRowHeight: CGFloat = 34
     static let sectionGap: CGFloat = 10
+    static let pageDotsHeight: CGFloat = 14
     /// The notification card's extra width.
     static let cardWings: CGFloat = 196
     static let hudRowHeight: CGFloat = 18
@@ -76,19 +80,44 @@ struct IslandLayout: Equatable {
 
     var closedWidth: CGFloat { notchWidth + Self.sideOverlap * 2 + leftWing + rightWing }
 
-    /// Heights of the expanded sections that currently have something to show.
-    var expandedSections: [CGFloat] {
-        var sections: [CGFloat] = []
-        if showsMediaCard { sections.append(Self.mediaCardHeight) }
-        if showsNextEvent { sections.append(Self.eventRowHeight) }
-        sections += pluginSections.filter { $0 > 0 }
+    /// Every section with something to show right now, in natural order.
+    var availableSections: [ExpandedSection] {
+        var sections: [ExpandedSection] = []
+        if showsMediaCard { sections.append(.media) }
+        if showsNextEvent { sections.append(.event) }
+        sections += pluginSectionHeights.filter { $0.value > 0 }.keys.sorted().map(ExpandedSection.plugin)
         return sections
     }
 
+    /// The sections on the open page.
+    var currentPageSections: [ExpandedSection] {
+        guard !expandedPages.isEmpty else { return [] }
+        return expandedPages[min(max(expandedPage, 0), expandedPages.count - 1)]
+    }
+
+    /// Heights of the open page's sections.
+    var expandedSections: [CGFloat] {
+        currentPageSections.map(height(of:))
+    }
+
+    func height(of section: ExpandedSection) -> CGFloat {
+        switch section {
+        case .media: Self.mediaCardHeight
+        case .event: Self.eventRowHeight
+        case .plugin(let id): pluginSectionHeights[id] ?? 0
+        }
+    }
+
+    /// The same on every page: the tallest page sets it, so turning pages never resizes.
     var expandedHeight: CGFloat {
-        let sections = expandedSections
-        guard !sections.isEmpty else { return Self.expandedBaseHeight + Self.emptyExpandedHeight }
-        return Self.expandedBaseHeight + sections.reduce(0, +) + CGFloat(sections.count - 1) * Self.sectionGap
+        let tallest = expandedPages.map { page in page.map(height(of:)) }.map(Self.stackHeight).max()
+        guard let tallest else { return Self.expandedBaseHeight + Self.emptyExpandedHeight }
+        let dots: CGFloat = expandedPages.count > 1 ? Self.pageDotsHeight : 0
+        return Self.expandedBaseHeight + tallest + dots
+    }
+
+    private static func stackHeight(_ sections: [CGFloat]) -> CGFloat {
+        sections.reduce(0, +) + CGFloat(max(0, sections.count - 1)) * sectionGap
     }
 
     var canvasSize: CGSize {

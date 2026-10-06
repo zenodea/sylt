@@ -72,6 +72,8 @@ struct IslandView: View {
             }
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .top)
+        .coordinateSpace(name: "canvas")
+        .onPreferenceChange(ListFramesKey.self) { frames in state.listFrames = state.mode == .expanded ? frames : [] }
         .environmentObject(state.battery)
         .environmentObject(state.volume)
         .environmentObject(state.brightness)
@@ -119,7 +121,7 @@ struct IslandView: View {
             } else {
                 WingsView(mode: state.mode, layout: state.layout)
             }
-        case .expanded: ExpandedView(notchHeight: state.notchHeight, layout: state.layout)
+        case .expanded: ExpandedView(notchHeight: state.notchHeight, layout: state.layout, pageDirection: state.pageDirection)
         }
     }
 }

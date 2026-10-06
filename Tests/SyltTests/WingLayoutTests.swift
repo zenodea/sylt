@@ -53,4 +53,18 @@ final class WingLayoutTests: XCTestCase {
         island.wings = layout.resolve(plugins: plugins)
         XCTAssertEqual(island.leftWing, 52 + 17 + 40 + IslandLayout.wingPadding * 2)
     }
+
+    func testGapBelongsToTheItemInFrontOfIt() {
+        var layout = WingLayout()
+        layout.setGap(WingGap(spacing: 10), between: .calendar, and: .plugin("agents"))
+        let wings = layout.resolve(plugins: plugins)
+        XCTAssertEqual(wings.gap(between: .calendar, and: .plugin("timer")).spacing, 10, "the gap after the calendar holds whoever follows")
+        XCTAssertEqual(wings.gap(between: .plugin("agents"), and: .calendar).spacing, 8)
+    }
+
+    func testOldPairKeyedGapsStillLoad() throws {
+        let json = #"{"left":[],"right":[],"hidden":[],"gaps":{"calendar>plugin:agents":{"spacing":12,"separator":true}}}"#
+        let layout = try JSONDecoder().decode(WingLayout.self, from: Data(json.utf8))
+        XCTAssertEqual(layout.gap(between: .calendar, and: .music), WingGap(spacing: 12, separator: true))
+    }
 }

@@ -1,0 +1,14 @@
+{
+  "protocol": 1,
+  "id": "clock",
+  "name": "Clock",
+  "description": "The time, in whichever wing you put it.",
+  "symbol": "clock.fill",
+  "run": "clock.py",
+  "side": "right",
+  "settings": [
+    { "key": "seconds", "title": "Show seconds", "type": "bool", "default": false },
+    { "key": "twentyFour", "title": "24-hour clock", "type": "bool", "default": true },
+    { "key": "date", "title": "Show the date in the expanded view", "type": "bool", "default": true }
+  ]
+}

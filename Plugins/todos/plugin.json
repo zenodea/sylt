@@ -1,0 +1,14 @@
+{
+  "protocol": 1,
+  "id": "todos",
+  "name": "Todos",
+  "description": "Open reminders from the Reminders app. Click one to tick it off.",
+  "symbol": "checklist",
+  "run": "todos.py",
+  "side": "left",
+  "settings": [
+    { "key": "list", "title": "Only this list (blank for all)", "type": "text", "default": "" },
+    { "key": "dueOnly", "title": "Only reminders with a due date", "type": "bool", "default": false },
+    { "key": "limit", "title": "Rows to show", "type": "number", "default": 6 }
+  ]
+}

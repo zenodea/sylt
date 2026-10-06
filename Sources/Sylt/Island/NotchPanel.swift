@@ -10,9 +10,11 @@ final class NotchPanel: NSPanel {
     private var geometry: NotchGeometry
     private var cancellables = Set<AnyCancellable>()
     private var mouseMonitors: [Any] = []
+    private let host: IslandHostingView
     /// While captured, the pointer is parked at the island's centre and mouse
     /// movement pulls the island instead; a shove this far pops the pointer out.
     private var captured = false
+    private var lastMode = IslandMode.closed
     private var pull = CGVector.zero
     /// Where the pointer was when the island took it, in screen coordinates.
     private var entry = CGPoint.zero
@@ -40,6 +42,7 @@ final class NotchPanel: NSPanel {
     init(screen: NSScreen, state: IslandState, openSettings: @escaping () -> Void) {
         self.state = state
         self.geometry = NotchGeometry(screen: screen)
+        host = IslandHostingView(rootView: IslandView(state: state, openSettings: openSettings))
         super.init(
             contentRect: .zero,
             styleMask: [.borderless, .nonactivatingPanel],
@@ -58,7 +61,6 @@ final class NotchPanel: NSPanel {
         isReleasedWhenClosed = false
 
         state.apply(geometry)
-        let host = IslandHostingView(rootView: IslandView(state: state, openSettings: openSettings))
         host.state = state
         contentView = host
         applyFrame()
@@ -80,8 +82,12 @@ final class NotchPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
+    /// Only a real change of screen or notch moves anything; the menu bar sliding in and
+    /// out also fires a screen change and must not.
     func relayout(on screen: NSScreen) {
-        geometry = NotchGeometry(screen: screen)
+        let next = NotchGeometry(screen: screen)
+        guard next != geometry else { return }
+        geometry = next
         state.apply(geometry)
         applyFrame()
     }
@@ -94,11 +100,24 @@ final class NotchPanel: NSPanel {
                 self?.routeMouse(event)
                 return event
             } as Any,
+            // Scrolls reach the recogniser from anywhere over the island, lists included.
+            NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+                guard let self, state.isHovering || captured else { return event }
+                return host.handleScroll(event) ? nil : event
+            } as Any,
         ]
         state.lock.$isLocked
             .combineLatest(state.$mode)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _, _ in self?.routeMouse(nil) }
+            .sink { [weak self] _, mode in
+                guard let self else { return }
+                // A free pointer that opened the island by click or swipe is centred under the notch too.
+                if mode == .expanded, lastMode != .expanded, !captured {
+                    CursorControl.warp(to: screenPoint(of: CGPoint(x: state.canvasSize.width / 2, y: state.notchHeight + 16)))
+                }
+                lastMode = mode
+                routeMouse(nil)
+            }
             .store(in: &cancellables)
     }
 
@@ -111,6 +130,8 @@ final class NotchPanel: NSPanel {
         let location = NSEvent.mouseLocation
         state.cursorMoved(to: CGPoint(x: location.x - frame.minX, y: frame.maxY - location.y))
         ignoresMouseEvents = state.lock.isLocked || !state.isHovering
+        let island = state.hitFrame.insetBy(dx: -Self.menuBarGuardMargin, dy: 0)
+        TopEdgeGuard.shared.guardSpan((frame.minX + island.minX) ... (frame.minX + island.maxX))
         keepMenuBarAway(at: location)
         if state.absorbsCursor, CACurrentMediaTime() - releasedAt > Self.recaptureDelay { capture() }
     }
@@ -211,7 +232,12 @@ final class NotchPanel: NSPanel {
         rest?.invalidate()
         rest = nil
         let ejected = hypot(direction.dx, max(0, direction.dy)) > 0.001
-        CursorControl.warp(to: ejected ? screenPoint(of: state.rimPoint(toward: direction, outside: Self.ejectDistance)) : cgPoint(entry))
+        // Opening the island hands the pointer back centred just under the notch, inside
+        // the open panel, so it never lands outside and closes it again.
+        let home = state.mode == .expanded
+            ? screenPoint(of: CGPoint(x: state.canvasSize.width / 2, y: state.notchHeight + 16))
+            : cgPoint(entry)
+        CursorControl.warp(to: ejected ? screenPoint(of: state.rimPoint(toward: direction, outside: Self.ejectDistance)) : home)
         CursorControl.show()
         releasedAt = CACurrentMediaTime()
         if ejected {
