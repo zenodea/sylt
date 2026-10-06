@@ -5,11 +5,19 @@ import SwiftUI
 struct MuteGlyph: View {
     let muted: Bool
     var level: Double = 1
+    /// Sound is going to a Bluetooth device: the rune stands in for the speaker.
+    var bluetooth = false
     @State private var slash: CGFloat = 0
 
     var body: some View {
-        Image(systemName: "speaker.wave.3.fill", variableValue: muted ? 0 : level)
-            .font(.system(size: 13, weight: .semibold))
+        Group {
+            if bluetooth {
+                RuneMark().opacity(muted ? 0.45 : 1)
+            } else {
+                Image(systemName: "speaker.wave.3.fill", variableValue: muted ? 0 : level)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+        }
             .symbolEffect(.bounce.down, options: .nonRepeating, value: slash)
             .overlay {
                 Slash()

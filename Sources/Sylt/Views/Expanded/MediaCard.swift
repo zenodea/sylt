@@ -87,11 +87,31 @@ struct MediaCard: View {
             LevelSlider(symbol: volume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill", value: volume.isMuted ? 0 : volume.level) {
                 volume.set($0)
             }
-            Text(volume.outputName)
+            Menu {
+                ForEach(volume.outputs) { output in
+                    Button {
+                        volume.selectOutput(output.id)
+                        Haptics.press()
+                    } label: {
+                        Text(output.name)
+                        if output.name == volume.outputName { Image(systemName: "checkmark") }
+                    }
+                }
+            } label: {
+                HStack(spacing: 3) {
+                    Text(volume.outputName)
+                        .lineLimit(1)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 7, weight: .bold))
+                }
                 .font(.system(size: 10, weight: .medium, design: .rounded))
                 .foregroundStyle(.white.opacity(0.5))
-                .lineLimit(1)
-                .frame(maxWidth: 120, alignment: .trailing)
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .frame(maxWidth: 140, alignment: .trailing)
         }
         .padding(.horizontal, 2)
     }

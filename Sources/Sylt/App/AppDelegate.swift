@@ -28,6 +28,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self, let screen = NotchGeometry.preferredScreen() else { return }
             self.panel?.relayout(on: screen)
         }
+        // Launched while the menu bar is away, the notch can't be measured yet: keep asking.
+        if !panel.isMeasured {
+            Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] timer in
+                MainActor.assumeIsolated {
+                    guard let self, let panel = self.panel, let screen = NotchGeometry.preferredScreen() else { return timer.invalidate() }
+                    panel.relayout(on: screen)
+                    if panel.isMeasured { timer.invalidate() }
+                }
+            }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

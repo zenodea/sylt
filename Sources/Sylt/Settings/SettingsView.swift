@@ -70,8 +70,8 @@ struct SettingsView: View {
                 Text(pane.title)
                     .font(.system(size: 22, weight: .bold))
                     .padding(.horizontal, 24)
-                    .padding(.top, 26)
-                    .padding(.bottom, 10)
+                    .padding(.top, 6)
+                    .padding(.bottom, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 paneContent
             }
@@ -139,8 +139,10 @@ struct SettingsView: View {
         }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in mediaKeys.refreshAuthorization() }
         .onAppear { mediaKeys.refreshAuthorization() }
-        Section("Unlock") {
+        Section("Lock screen") {
+            Toggle("Play a sound when the Mac locks", isOn: $preferences.playsLockSound)
             Toggle("Play a sound when the Mac unlocks", isOn: $preferences.playsUnlockSound)
+            Toggle("Keep the wings while locked", isOn: $preferences.lockShowsStatus)
         }
     }
 
@@ -164,6 +166,18 @@ struct SettingsView: View {
         } header: {
             Text("Pointer")
         }
+        Section("Swipes") {
+            Toggle("Lean with swipes", isOn: $preferences.leansWithSwipes)
+            if preferences.leansWithSwipes {
+                Slider(value: $preferences.swipeLeanStrength, in: 0.25...2, step: 0.25) {
+                    Text("How far")
+                } minimumValueLabel: {
+                    Image(systemName: "arrow.left.and.right").imageScale(.small)
+                } maximumValueLabel: {
+                    Image(systemName: "arrow.left.and.right").imageScale(.large)
+                }
+            }
+        }
         if preferences.absorbsPointer {
             Section("Letting go") {
                 Picker("Effect", selection: $preferences.releaseEffect) {
@@ -176,6 +190,13 @@ struct SettingsView: View {
                         Image(systemName: "water.waves").imageScale(.small)
                     } maximumValueLabel: {
                         Image(systemName: "water.waves").imageScale(.large)
+                    }
+                    Slider(value: $preferences.rippleWidth, in: 0.5...3, step: 0.25) {
+                        Text("Ripple width")
+                    } minimumValueLabel: {
+                        Image(systemName: "arrow.left.and.right").imageScale(.small)
+                    } maximumValueLabel: {
+                        Image(systemName: "arrow.left.and.right").imageScale(.large)
                     }
                 }
                 Toggle("Haptic tap", isOn: $preferences.hapticsOnRelease)

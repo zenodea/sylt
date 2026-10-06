@@ -84,6 +84,8 @@ final class NotchPanel: NSPanel {
 
     /// Only a real change of screen or notch moves anything; the menu bar sliding in and
     /// out also fires a screen change and must not.
+    var isMeasured: Bool { geometry.isMeasured }
+
     func relayout(on screen: NSScreen) {
         let next = NotchGeometry(screen: screen)
         guard next != geometry else { return }
@@ -152,19 +154,21 @@ final class NotchPanel: NSPanel {
         pull = .zero
         entry = NSEvent.mouseLocation
         capturedAt = CACurrentMediaTime()
-        CursorControl.hide(on: screen)
-        ignoreNextDelta = true
         // Entering means touching the top of the screen, which is where fullscreen apps
         // reveal the menu bar. The hidden pointer is moved off that edge at once.
         if entry.y > frame.maxY - Self.topMargin {
             entry.y = frame.maxY - Self.topMargin
             CursorControl.warp(to: cgPoint(entry))
         }
+        if state.preferences.releaseEffect == .blackHole {
+            suckIn()
+        } else {
+            CursorControl.hide(on: screen)
+        }
+        ignoreNextDelta = true
         lastDrag = CACurrentMediaTime()
         state.cursorPushed(.zero)
-        if state.preferences.releaseEffect == .ripple {
-            state.cursorAbsorbed(at: CGPoint(x: entry.x - frame.minX, y: frame.maxY - entry.y))
-        }
+        state.cursorHeld(at: CGPoint(x: entry.x - frame.minX, y: frame.maxY - entry.y))
     }
 
     private func dragged(by event: NSEvent) {
@@ -202,6 +206,44 @@ final class NotchPanel: NSPanel {
         pull = .zero
         state.cursorSettled()
         parkPointer()
+    }
+
+    /// Black hole: the visible pointer races to the island's middle in a few quick steps,
+    /// shrinking the gap by half each time, and is only then hidden.
+    private func suckIn() {
+        let target = CGPoint(x: frame.minX + state.canvasSize.width / 2 + state.islandFrame.centerOffset, y: frame.maxY - state.notchHeight / 2 - 2)
+        var position = entry
+        var step = 0
+        Timer.scheduledTimer(withTimeInterval: 1 / 90, repeats: true) { [weak self] timer in
+            MainActor.assumeIsolated {
+                guard let self, self.captured else { return timer.invalidate() }
+                step += 1
+                position = CGPoint(x: position.x + (target.x - position.x) * 0.45, y: position.y + (target.y - position.y) * 0.45)
+                CursorControl.warp(to: self.cgPoint(position))
+                if step >= 7 {
+                    timer.invalidate()
+                    self.entry = position
+                    CursorControl.hide(on: self.screen)
+                }
+            }
+        }
+    }
+
+    /// Black hole: after the throw, the pointer keeps going along the push and slows down,
+    /// so it feels spat out rather than placed.
+    private func fling(toward direction: CGVector) {
+        let length = hypot(direction.dx, max(0, direction.dy))
+        guard length > 0.001 else { return }
+        let unit = CGVector(dx: direction.dx / length, dy: max(0, direction.dy) / length)
+        var speed: CGFloat = 16
+        Timer.scheduledTimer(withTimeInterval: 1 / 90, repeats: true) { timer in
+            MainActor.assumeIsolated {
+                speed *= 0.8
+                guard speed > 1 else { return timer.invalidate() }
+                let location = NSEvent.mouseLocation
+                CursorControl.warp(to: CGPoint(x: location.x + unit.dx * speed, y: NSScreen.screens[0].frame.height - (location.y - unit.dy * speed)))
+            }
+        }
     }
 
     /// The hidden pointer drifts with the mouse while held. Once the mouse rests, it is
@@ -242,6 +284,7 @@ final class NotchPanel: NSPanel {
         releasedAt = CACurrentMediaTime()
         if ejected {
             state.cursorReleased(toward: direction)
+            if state.preferences.releaseEffect == .blackHole { fling(toward: direction) }
             ignoresMouseEvents = true
         } else {
             state.cursorSettled()

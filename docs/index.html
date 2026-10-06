@@ -17,16 +17,22 @@
     --chip: rgba(255,255,255,.08); --panel-hover: #1b2030; --code-bg: #0e1118; --code-fg: #dbeafe;
     --accent: #7dd3fc; --green: #4ade80; --orange: #fb923c; --blue: #60a5fa; --violet: #a78bfa;
     --radius: 18px;
-    --wall: radial-gradient(120% 90% at 30% 10%, #1d2a4a, #0d1120 60%, #090b12); --wall-base: #090b12;
+    --wall-dark: radial-gradient(120% 90% at 30% 10%, #1d2a4a, #0d1120 60%, #090b12);
+    --wall-light: radial-gradient(120% 90% at 30% 10%, #dbe4ff, #c7d2fe 60%, #e2e8f0);
     --ink: 255,255,255; --cap: rgba(243,244,247,.78);
   }
   :root[data-theme="light"] {
     --bg: #f6f7fb; --bg-2: #ffffff; --panel: #ffffff; --line: rgba(15,23,42,.1);
     --fg: #0f172a; --muted: rgba(15,23,42,.66); --dim: rgba(15,23,42,.45);
     --chip: rgba(15,23,42,.06); --panel-hover: #eef1f7; --code-bg: #0f172a; --code-fg: #e2e8f0;
-    --wall: radial-gradient(120% 90% at 30% 10%, #dbe4ff, #c7d2fe 60%, #e2e8f0); --wall-base: #e2e8f0;
     --ink: 15,23,42; --cap: rgba(15,23,42,.72);
   }
+  /* Switching theme crossfades the tokens for a third of a second; the island mocks are not themed and keep their own transitions. */
+  html.theming *:not(.isl, .isl *) { transition: background-color .35s, color .35s, border-color .35s, box-shadow .35s, fill .35s, stroke .35s; }
+  html.theming .demo .tile { transition: opacity .3s, transform .3s, height .3s, margin .3s, border-color .35s, background-color .35s, color .35s; }
+  html.theming .demo .slider i { transition: width .6s cubic-bezier(.3,1,.4,1), background-color .35s; }
+  html.theming .demo .handle .sl i { transition: width .5s cubic-bezier(.3,1,.4,1), background-color .35s; }
+  html.theming .demo .finger { transition: opacity .25s, transform .25s, background-color .35s; }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
@@ -67,14 +73,16 @@
   .btn.primary:hover { opacity: .9; }
   code.inline { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: var(--chip); padding: 2px 7px; border-radius: 6px; }
 
-  /* a piece of screen with the notch at the top */
-  .scene { position: relative; overflow: hidden; background: var(--wall); }
-  .scene .stars { position: absolute; inset: 0; background-image: radial-gradient(1px 1px at 12% 60%, #fff8 50%, transparent 51%), radial-gradient(1px 1px at 70% 30%, #fff6 50%, transparent 51%), radial-gradient(1.5px 1.5px at 88% 72%, #fff5 50%, transparent 51%), radial-gradient(1px 1px at 40% 85%, #fff4 50%, transparent 51%); }
-  :root[data-theme="light"] .scene .stars { display: none; }
+  /* a piece of screen with the notch at the top; it fades out below, as if it carried on past the page */
+  .scene { position: relative; overflow: hidden; background: var(--wall-dark); -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+  /* the light wallpaper sits over the dark one and fades in, since a gradient cannot transition */
+  .scene::before { content: ""; position: absolute; inset: 0; background: var(--wall-light); opacity: 0; transition: opacity .35s; pointer-events: none; }
+  :root[data-theme="light"] .scene::before { opacity: 1; }
+  .scene .stars { position: absolute; inset: 0; transition: opacity .35s; background-image: radial-gradient(1px 1px at 12% 60%, #fff8 50%, transparent 51%), radial-gradient(1px 1px at 70% 30%, #fff6 50%, transparent 51%), radial-gradient(1.5px 1.5px at 88% 72%, #fff5 50%, transparent 51%), radial-gradient(1px 1px at 40% 85%, #fff4 50%, transparent 51%); }
+  :root[data-theme="light"] .scene .stars { opacity: 0; }
   .stage { position: absolute; inset: 0; transform-origin: 50% 0; transform: scale(var(--z, 1)); }
-  .screen { margin: 0 auto; width: min(760px, 100%); aspect-ratio: 760/330; border-radius: 22px 22px 0 0; border: 1px solid var(--line); border-bottom: none; box-shadow: 0 40px 100px rgba(0,0,0,.5); }
-  :root[data-theme="light"] .screen { box-shadow: 0 30px 80px rgba(15,23,42,.18); }
-  .caption { text-align: center; color: var(--muted); font-size: 14px; margin-top: 14px; min-height: 20px; }
+  .screen { margin: 0 auto; width: min(760px, 100%); aspect-ratio: 760/370; border-radius: 22px 22px 0 0; border: 1px solid var(--line); border-bottom: none; }
+  .caption { text-align: center; color: var(--muted); font-size: 14px; margin-top: 4px; min-height: 20px; }
   @media (max-width: 600px) { .screen { --z: .78; } }
 
   /* island: black, square against the screen edge, bottom corners rounding as it grows */
@@ -118,10 +126,8 @@
   .isl .ws { display: inline-flex; gap: 6px; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .isl .ws span { color: rgba(255,255,255,.6); } .isl .ws b { font-weight: 600; }
   .isl .ai { position: relative; width: 14px; height: 14px; flex: none; }
-  .isl .ai .f { position: absolute; inset: 0; border-radius: 3.5px; display: grid; place-items: center; }
-  .isl .ai svg { width: 10px; height: 10px; fill: #fff; }
-  .isl .ai.claude .f { background: #d97757; }
-  .isl .ai.pi .f { background: #26262a; color: #8f8cff; font: 700 10px/1 ui-rounded, system-ui, sans-serif; }
+  .isl .ai .f { position: absolute; inset: 0; display: grid; place-items: center; }
+  .isl .ai svg { width: 14px; height: 14px; }
   .isl .ai.wait .f { filter: saturate(.2); opacity: .45; }
   .isl .ai b { position: absolute; right: -2px; bottom: -2px; width: 6px; height: 6px; border-radius: 50%; background: #000; display: grid; place-items: center; }
   .isl .ai b::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #ff9f0a; }
@@ -181,16 +187,16 @@
   .isl .greet { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.85); }
   .isl .evt { display: inline-flex; gap: 6px; align-items: center; }
 
-  /* notification card */
-  .isl .note { position: absolute; left: 16px; right: 16px; top: 36px; height: 34px; display: flex; align-items: center; gap: 10px; }
-  .isl .note .app { width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(#5af07a, #1fc846); display: grid; place-items: center; flex: none; }
-  .isl .note .app svg { width: 18px; height: 18px; fill: #fff; }
-  .isl .note b { display: block; font-weight: 500; font-size: 13px; } .isl .note small { display: block; font-size: 11px; color: rgba(255,255,255,.6); }
+  /* a notifying app's icon: a tile the size of the album art */
+  .isl .app { width: 20px; height: 20px; border-radius: 5px; background: linear-gradient(#5af07a, #1fc846); display: grid; place-items: center; flex: none; }
+  .isl .app svg { width: 13px; height: 13px; fill: #fff; }
 
   /* expanded panel */
   /* expanded panel: one page of sections under the notch, the page dots along the bottom */
-  .isl .exp { position: absolute; left: 0; top: 0; font-size: 12px; font-weight: 500; }
-  .isl .pg { position: absolute; left: 14px; right: 14px; top: 36px; display: flex; flex-direction: column; gap: 10px; will-change: transform, opacity; }
+  .isl .exp { position: absolute; inset: 0; font-size: 12px; font-weight: 500; }
+  /* the page fills the island between the notch and the dots row; a section with a list grows to take the spare height */
+  .isl .pg { position: absolute; left: 14px; right: 14px; top: 38px; bottom: 26px; display: flex; flex-direction: column; gap: 10px; will-change: transform, opacity; }
+  .isl .pg .sec:has(.rows) { flex: 1 1 auto; }
   .isl .pg > * { animation: stg .45s cubic-bezier(.2,.9,.3,1) both; animation-delay: calc(.12s + var(--i, 0) * .06s); }
   .isl .pgs { position: absolute; left: 0; right: 0; bottom: 12px; height: 14px; display: flex; justify-content: center; align-items: center; gap: 5px; }
   .isl .pgs i { width: 5px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.3); transition: width .3s cubic-bezier(.2,.9,.3,1), background .3s; }
@@ -253,15 +259,15 @@
 
   /* two-layer sections: a piece of screen beside clickable blocks */
   .layer { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; margin: 8px 0 10px; }
-  .layer .mini { height: 240px; border-radius: 18px; border: 1px solid var(--line); }
-  .layer .mini .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; font-size: 13px; color: var(--cap); background: linear-gradient(transparent, var(--wall-base) 55%); z-index: 2; }
+  .layer .mini { height: 240px; border-radius: 18px 18px 0 0; border: 1px solid var(--line); border-bottom: none; }
   .layer.flip .mini { order: 2; }
   #expanded .mini { height: 300px; --z: .85; }
   @media (max-width: 760px) { .layer { grid-template-columns: 1fr; } .layer.flip .mini { order: 0; } }
   @media (max-width: 520px) { .layer .mini { --z: .8; } }
   .blocks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .group { margin: 0 0 44px; } .group:last-of-type { margin-bottom: 0; }
-  .group h3 { font-size: 20px; letter-spacing: -.02em; margin: 0 0 4px; }
+  /* subsections: a smaller heading and a one-line lead inside a section */
+  .group { margin: 0 0 56px; } .group:last-child { margin-bottom: 0; }
+  .group h3 { font-size: 22px; letter-spacing: -.02em; margin: 0 0 6px; }
   .group .glead { color: var(--muted); margin: 0 0 14px; font-size: 15px; max-width: 640px; }
   .perms { margin: 0; padding-left: 18px; color: var(--muted); font-size: 15px; } .perms li { margin: 4px 0; }
   .block { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: inherit; font-size: 13px; font-weight: 600; text-align: left; cursor: pointer; transition: background .15s, border-color .15s, transform .15s; }
@@ -270,8 +276,6 @@
   .block:hover { background: var(--panel-hover); transform: translateY(-1px); }
   .block[aria-selected="true"] { background: var(--fg); color: var(--bg); border-color: transparent; }
   .block[aria-selected="true"] .ico { background: rgba(127,127,127,.2); }
-  .layer .text { display: flex; flex-direction: column; gap: 14px; }
-  .layer .text p.lead { margin: 0; font-size: 15px; }
   @media (max-width: 560px) { .blocks { grid-template-columns: repeat(2, 1fr); } }
 
   /* sections */
@@ -282,11 +286,16 @@
   .step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; overflow: hidden; }
   .step b { display: block; margin-bottom: 6px; }
   .step p { margin: 0; color: var(--muted); font-size: 14px; }
-  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow: auto; font-size: 13.5px; line-height: 1.6; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--code-fg); }
-  pre .c { color: rgba(226,232,240,.5); }
+  /* code: a dark card in both themes with a file tab, tokens in the page's accent hues */
+  .code { margin: 0 0 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--code-bg); overflow: hidden; }
+  .code .tab { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; font: 500 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: rgba(226,232,240,.62); background: rgba(255,255,255,.04); border-bottom: 1px solid rgba(255,255,255,.08); }
+  .code .tab::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); opacity: .85; }
+  pre { margin: 0; padding: 14px 18px 16px; overflow: auto; font-size: 13px; line-height: 1.7; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--code-fg); -webkit-font-smoothing: auto; }
+  pre .c { color: rgba(226,232,240,.42); }
+  pre .k { color: #7dd3fc; } pre .s { color: #c4b5fd; } pre .kw { color: #fb923c; } pre .n { color: #4ade80; }
 
   /* small demos in the step cards: the same island at two thirds size */
-  .step .demo { height: 124px; margin: -20px -20px 16px; border-radius: 18px 18px 0 0; --z: .6; }
+  .step .demo { height: 124px; margin: -20px -20px 16px; border-radius: 18px 18px 0 0; --z: .6; -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), transparent); mask-image: linear-gradient(#000 calc(100% - 22px), transparent); }
   .step .demo .stage { transform-origin: 50% 0; }
   #dLock { --z: .56; } #dWings { --z: .54; }
   .demo .cursor { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px rgba(0,0,0,.55), 0 1px 3px rgba(0,0,0,.4); z-index: 3; pointer-events: none; }
@@ -306,10 +315,10 @@
   .steps.three { grid-template-columns: repeat(3, 1fr); }
   @media (max-width: 860px) { .steps.three { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 560px) { .steps.three { grid-template-columns: 1fr; } }
-  h3.sub { font-size: 20px; letter-spacing: -.02em; margin: 36px 0 14px; } .steps + h3.sub { margin-top: 44px; }
   .demo .pane { position: absolute; left: 16px; right: 16px; top: 34px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-family: Inter, system-ui, sans-serif; }
   .demo .pane.one { display: block; width: 170px; left: 50%; transform: translateX(-50%); }
-  #dPages { height: 164px; --z: .5; } .demo .pane.pages { top: 78px; }
+  #customise .demo { height: 150px; }
+  #dPages { --z: .46; } .demo .pane.pages { top: 68px; }
   .demo .pane h6 { margin: 0 0 4px; font-size: 9px; font-weight: 600; color: var(--cap); }
   .demo .tile { height: 19px; margin-bottom: 4px; padding: 0 5px 0 4px; display: flex; align-items: center; gap: 5px; border-radius: 5px; border: 1px solid rgba(var(--ink), .14); background: rgba(var(--ink), .07); font-size: 9px; font-weight: 500; color: var(--cap); overflow: hidden; transition: opacity .3s, transform .3s, height .3s, margin .3s, border-color .2s, background .2s; }
   .demo .tile i.ic { width: 11px; height: 11px; border-radius: 3px; background: #0a84ff; flex: none; }
@@ -355,7 +364,12 @@
   <symbol id="i-pods" viewBox="0 0 16 16"><path d="M4.3 1.2a2.6 2.6 0 0 1 2.6 2.6v1.5A1.7 1.7 0 0 1 5.2 7h-.6v6.3a1.1 1.1 0 0 1-2.2 0V3.8a2.6 2.6 0 0 1 1.9-2.6zm7.4 0a2.6 2.6 0 0 1 1.9 2.6v9.5a1.1 1.1 0 0 1-2.2 0V7h-.6a1.7 1.7 0 0 1-1.7-1.7V3.8a2.6 2.6 0 0 1 2.6-2.6z"/></symbol>
   <symbol id="i-note" viewBox="0 0 16 16"><path d="M13.5.8a.8.8 0 0 1 .3.7v8.9a2.7 2.7 0 1 1-1.6-2.5V4.2L6.4 5.6v6.8a2.7 2.7 0 1 1-1.6-2.5V3.5a.8.8 0 0 1 .6-.8l7.4-1.9a.8.8 0 0 1 .7 0z"/></symbol>
   <symbol id="i-timer" viewBox="0 0 16 16"><circle cx="8" cy="9" r="5.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 9V5.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="6.2" y=".6" width="3.6" height="1.8" rx=".9"/><path d="M12.6 3.6l1 1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
-  <symbol id="i-cloudsun" viewBox="0 0 16 16"><circle cx="11" cy="5" r="3.2" fill="#ffd60a"/><g stroke="#ffd60a" stroke-width="1.3" stroke-linecap="round"><path d="M11 .5V1.3M15.5 5h-.8M14.2 1.8l-.6.6M14.2 8.2l-.6-.6M7.8 1.8l.6.6"/></g><path d="M4.5 14.5A3.2 3.2 0 0 1 4 8.1a4 4 0 0 1 7.7-.3 2.7 2.7 0 0 1 .3 5.4H4.5z" fill="#fff"/></symbol>
+  <!-- cloud.sun.fill as SF Symbols renders it in multicolor: a yellow sun with eight rays peeking over the cloud's top right; the cloud takes the text colour, white on the island -->
+  <symbol id="i-cloudsun" viewBox="0 0 16 16"><g fill="#ffd60a"><circle cx="11.7" cy="5.1" r="2.45"/><path d="M11.7 .4a.6.6 0 0 1 .6.6v.7a.6.6 0 0 1-1.2 0V1a.6.6 0 0 1 .6-.6zM15.1 4.5a.6.6 0 0 1 0 1.2h-.7a.6.6 0 0 1 0-1.2zM14.5 1.7a.6.6 0 0 1 .4 1l-.5.5a.6.6 0 0 1-.9-.8l.5-.5a.6.6 0 0 1 .5-.2zM8.9 1.7a.6.6 0 0 1 .5.2l.5.5a.6.6 0 0 1-.9.8l-.5-.5a.6.6 0 0 1 .4-1zM14.9 7.3a.6.6 0 0 1 0 .9.6.6 0 0 1-.9 0l-.5-.5a.6.6 0 0 1 .9-.9z"/></g><path fill="currentColor" d="M4.4 15a2.9 2.9 0 0 1-.5-5.75 3.7 3.7 0 0 1 7.2-.9 2.75 2.75 0 0 1 1.35 5.3A2.9 2.9 0 0 1 11.3 15z"/></symbol>
+  <!-- the Claude desktop app's icon as the agents plugin shows it: a terracotta tile with the white eight-spoke spark -->
+  <symbol id="i-claude" viewBox="0 0 100 100"><rect width="100" height="100" rx="25" fill="#D97757"/><path d="M50 16v26M50 58v26M16 50h26M58 50h26M26 26l18.3 18.3M55.7 55.7L74 74M74 26L55.7 44.3M44.3 55.7L26 74" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round"/></symbol>
+  <!-- the agents plugin's pi tile, Plugins/agents/pi.svg -->
+  <symbol id="i-pi" viewBox="0 0 100 100"><rect width="100" height="100" rx="28" fill="#292929"/><rect x="18" y="18" width="16" height="16" fill="#F09082"/><rect x="34" y="18" width="16" height="16" fill="#F09082"/><rect x="50" y="18" width="16" height="16" fill="#F09082"/><rect x="50" y="34" width="16" height="16" fill="#F09082"/><rect x="18" y="34" width="16" height="16" fill="#4D9ABF"/><rect x="18" y="50" width="16" height="16" fill="#4D9ABF"/><rect x="18" y="66" width="16" height="16" fill="#4D9ABF"/><rect x="34" y="50" width="16" height="16" fill="#4D9ABF"/><rect x="66" y="50" width="16" height="16" fill="#F1BE58"/><rect x="66" y="66" width="16" height="16" fill="#F1BE58"/></symbol>
   <symbol id="i-clip" viewBox="0 0 16 16"><path d="M5.5 1.5h5a1 1 0 0 1 1 1v.7h1A1.5 1.5 0 0 1 14 4.7v8.8a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V4.7a1.5 1.5 0 0 1 1.5-1.5h1v-.7a1 1 0 0 1 1-1zm.5 1.4v1.4h4V2.9z"/></symbol>
   <symbol id="i-docs" viewBox="0 0 16 16"><path d="M5 1h5.5L14 4.5V11a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V2.5A1.5 1.5 0 0 1 5 1z"/><path d="M2 5v8.5A1.5 1.5 0 0 0 3.5 15h7.5v-1.3H3.6a.3.3 0 0 1-.3-.3V5z"/></symbol>
   <symbol id="i-tray" viewBox="0 0 16 16"><path d="M2.5 2h11A1.5 1.5 0 0 1 15 3.5V13a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 13V3.5A1.5 1.5 0 0 1 2.5 2zm.1 7.5V13h10.8V9.5h-2.3a3.2 3.2 0 0 1-6.2 0z"/><path d="M4 5h8v1.3H4zM4 7.2h8v1.3H4z" fill="#000"/></symbol>
@@ -364,7 +378,6 @@
   <symbol id="i-fwd" viewBox="0 0 16 16"><path d="M7.6 8L1 12.5v-9zM15 8l-6.6 4.5v-9z"/></symbol>
   <symbol id="i-pause" viewBox="0 0 16 16"><rect x="2.5" y="2" width="4" height="12" rx="1.2"/><rect x="9.5" y="2" width="4" height="12" rx="1.2"/></symbol>
   <symbol id="i-msg" viewBox="0 0 16 16"><path d="M8 2c3.9 0 7 2.5 7 5.6s-3.1 5.6-7 5.6c-.8 0-1.6-.1-2.3-.3L2.6 14l.6-2.6C1.9 10.4 1 9.1 1 7.6 1 4.5 4.1 2 8 2z"/></symbol>
-  <symbol id="i-star" viewBox="0 0 16 16"><path d="M8 0l1 5.4L13.7 2 10.6 6.6 16 8l-5.4 1.4L13.7 14 9 10.6 8 16l-1-5.4L2.3 14l3.1-4.6L0 8l5.4-1.4L2.3 2 7 5.4z"/></symbol>
   <symbol id="i-mic" viewBox="0 0 16 16"><rect x="5.5" y="1" width="5" height="8.5" rx="2.5"/><path d="M3.5 7.5a4.5 4.5 0 0 0 9 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 12v3M5.5 15h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
   <symbol id="i-lock" viewBox="0 0 16 16"><path d="M4.5 6.5V5a3.5 3.5 0 0 1 7 0v1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="2.5" y="6.5" width="11" height="8.5" rx="2.2"/></symbol>
   <symbol id="i-slack" viewBox="0 0 16 16"><rect width="16" height="16" rx="3.6" fill="#4a154b"/><rect x="5.6" y="2.6" width="2" height="4.6" rx="1" fill="#36c5f0"/><rect x="3" y="5.6" width="2" height="2" rx="1" fill="#36c5f0"/><rect x="8.8" y="5.6" width="4.6" height="2" rx="1" fill="#2eb67d"/><rect x="8.4" y="3" width="2" height="2" rx="1" fill="#2eb67d"/><rect x="8.4" y="8.8" width="2" height="4.6" rx="1" fill="#ecb22e"/><rect x="11" y="8.4" width="2" height="2" rx="1" fill="#ecb22e"/><rect x="2.6" y="8.4" width="4.6" height="2" rx="1" fill="#e01e5a"/><rect x="5.6" y="11" width="2" height="2" rx="1" fill="#e01e5a"/></symbol>
@@ -382,11 +395,8 @@
   <div class="bar">
     <a class="brand" href="#"><img src="assets/icon.png" alt="" width="26" height="26" style="border-radius:7px"> Sylt</a>
     <div class="links">
-      <a href="#wings">Wings</a>
-      <a href="#builtin">Built in</a>
-      <a href="#expanded">Expanded</a>
+      <a href="#features">Features</a>
       <a href="#plugins">Plugins</a>
-      <a href="#how">How it works</a>
       <a href="#customise">Customise</a>
       <a href="#create">Create one</a>
       <a href="#install">Install</a>
@@ -412,46 +422,62 @@
   </div>
 </header>
 
-<section id="wings">
+<section id="features">
   <div class="wrap">
-    <h2>Two wings</h2>
-    <p class="lead">Closed, the island hugs the notch and shows only live state, one wing on each side. Each wing is sized to its own content, and an empty side adds nothing. Select a state to see it.</p>
-    <div class="layer"><div class="mini scene" id="wg"><div class="cap" id="wgCap"></div></div><div class="blocks" id="wgBlocks"></div></div>
-  </div>
-</section>
-
-<section id="builtin">
-  <div class="wrap">
-    <h2>Built in</h2>
-    <p class="lead">What comes from the system is part of the app. Each change shows as a short overlay out of the notch, and some things stay in a wing while they are true. A one-sided overlay never touches the other wing. Every kind can be switched off in Settings, and a slider sets how long they stay. Select one to see it on the island.</p>
-    <div class="group">
+    <h2>Features</h2>
+    <p class="lead">Closed, the island hugs the notch and shows only live state in two wings. What comes from the system is part of the app: each change shows as a short overlay out of the notch, and a one-sided overlay never touches the other wing. Every kind can be switched off in Settings, and a slider sets how long they stay. Select anything to see it on the island.</p>
+    <div class="group" id="wings">
+      <h3>Two wings</h3>
+      <p class="glead">Each wing is sized to its own content, and an empty side adds nothing.</p>
+      <div class="layer flip"><div class="mini scene" id="wg"></div><div class="blocks" id="wgBlocks"></div></div>
+    </div>
+    <div class="group" id="builtin">
       <h3>Sound and light</h3>
       <p class="glead">Volume, brightness and mute use the right wing only, and a track change keeps both wings and adds a title row.</p>
-      <div class="layer"><div class="mini scene" id="g1"><div class="cap" id="g1Cap"></div></div><div class="blocks" id="g1Blocks"></div></div>
+      <div class="layer"><div class="mini scene" id="g1"></div><div class="blocks" id="g1Blocks"></div></div>
     </div>
     <div class="group">
       <h3>Power and connections</h3>
       <p class="glead">Battery levels and the charger, Bluetooth devices with their charge, the network link, and the Mac running hot.</p>
-      <div class="layer flip"><div class="mini scene" id="g2"><div class="cap" id="g2Cap"></div></div><div class="blocks" id="g2Blocks"></div></div>
+      <div class="layer flip"><div class="mini scene" id="g2"></div><div class="blocks" id="g2Blocks"></div></div>
     </div>
     <div class="group">
       <h3>Calendar and focus</h3>
       <p class="glead">The next meeting, a Focus mode, the microphone and camera, and the keyboard.</p>
-      <div class="layer"><div class="mini scene" id="g3"><div class="cap" id="g3Cap"></div></div><div class="blocks" id="g3Blocks"></div></div>
+      <div class="layer"><div class="mini scene" id="g3"></div><div class="blocks" id="g3Blocks"></div></div>
     </div>
     <div class="group">
       <h3>Lock screen and notifications</h3>
       <p class="glead">The island stays on the lock screen, springs open on unlock, and can mirror Notification Center banners.</p>
-      <div class="layer flip"><div class="mini scene" id="g4"><div class="cap" id="g4Cap"></div></div><div class="blocks" id="g4Blocks"></div></div>
+      <div class="layer flip"><div class="mini scene" id="g4"></div><div class="blocks" id="g4Blocks"></div></div>
     </div>
-  </div>
-</section>
-
-<section id="expanded">
-  <div class="wrap">
-    <h2>Expanded</h2>
-    <p class="lead">Click or swipe down and the island opens on what is relevant, two sections to a page. Swipe sideways to turn the page; the Layout pane decides which sections share one.</p>
-    <div class="layer"><div class="mini scene" id="ex"><div class="cap" id="exCap"></div></div><div class="blocks" id="exBlocks"></div></div>
+    <div class="group" id="expanded">
+      <h3>Expanded</h3>
+      <p class="glead">Click or swipe down and the island opens on what is relevant, two sections to a page. Swipe sideways to turn the page; the Layout pane decides which sections share one.</p>
+      <div class="layer"><div class="mini scene" id="ex"></div><div class="blocks" id="exBlocks"></div></div>
+    </div>
+    <div class="group" id="how">
+      <h3>How it works</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="demo scene" id="dWings"></div>
+          <b>Two independent wings</b><p>An overlay uses one side or both. The other side keeps its content and its width.</p>
+        </div>
+        <div class="step">
+          <div class="demo scene" id="dAbove"><div class="win w1"></div><div class="win w2"></div><div class="win w3"></div></div>
+          <b>Above every window</b><p>The panel lives in its own WindowServer space at the lock-screen level, so it stays over full-screen apps and the login window.</p>
+        </div>
+        <div class="step">
+          <div class="demo scene" id="dClick"><div class="click"></div><div class="cursor"></div></div>
+          <b>Click-through</b><p>The panel accepts the mouse only while the cursor is over the island. Everywhere else, clicks reach the window underneath.</p>
+        </div>
+        <div class="step">
+          <div class="demo scene" id="dLock"></div>
+          <b>On the lock screen</b><p>The island stays visible while the Mac is locked, showing a padlock and the time. On unlock the padlock opens and a greeting replaces the time.</p>
+        </div>
+      </div>
+      <p class="glead" style="margin:24px 0 0;max-width:none">Built-in sources are Swift monitors with a kind of overlay each; everything else is a plugin. Now-playing data is the odd one out: MediaRemote withholds metadata from third-party apps on recent macOS, so it comes from a small adapter hosted in Apple's own <code class="inline">perl</code>, with AppleScript for Spotify and Music and a session-store lookup for Firefox.</p>
+    </div>
   </div>
 </section>
 
@@ -462,51 +488,27 @@
     <div class="group">
       <h3>Work</h3>
       <p class="glead">Coding agents, window-manager workspaces, a terminal and Slack.</p>
-      <div class="layer flip"><div class="mini scene" id="p1"><div class="cap" id="p1Cap"></div></div><div class="blocks" id="p1Blocks"></div></div>
+      <div class="layer flip"><div class="mini scene" id="p1"></div><div class="blocks" id="p1Blocks"></div></div>
     </div>
     <div class="group">
       <h3>Day to day</h3>
       <p class="glead">Reminders, the time, a countdown and the weather.</p>
-      <div class="layer"><div class="mini scene" id="p2"><div class="cap" id="p2Cap"></div></div><div class="blocks" id="p2Blocks"></div></div>
+      <div class="layer"><div class="mini scene" id="p2"></div><div class="blocks" id="p2Blocks"></div></div>
     </div>
     <div class="group">
       <h3>Files</h3>
       <p class="glead">Downloads as they land, a shelf for files you drop on the island, and what you copied.</p>
-      <div class="layer flip"><div class="mini scene" id="p3"><div class="cap" id="p3Cap"></div></div><div class="blocks" id="p3Blocks"></div></div>
+      <div class="layer flip"><div class="mini scene" id="p3"></div><div class="blocks" id="p3Blocks"></div></div>
     </div>
-  </div>
-</section>
-
-<section id="how">
-  <div class="wrap">
-    <h2>How it works</h2>
-    <div class="steps">
-      <div class="step">
-        <div class="demo scene" id="dWings"></div>
-        <b>Two independent wings</b><p>An overlay uses one side or both. The other side keeps its content and its width.</p>
-      </div>
-      <div class="step">
-        <div class="demo scene" id="dAbove"><div class="win w1"></div><div class="win w2"></div><div class="win w3"></div></div>
-        <b>Above every window</b><p>The panel lives in its own WindowServer space at the lock-screen level, so it stays over full-screen apps and the login window.</p>
-      </div>
-      <div class="step">
-        <div class="demo scene" id="dClick"><div class="click"></div><div class="cursor"></div></div>
-        <b>Click-through</b><p>The panel accepts the mouse only while the cursor is over the island. Everywhere else, clicks reach the window underneath.</p>
-      </div>
-      <div class="step">
-        <div class="demo scene" id="dLock"></div>
-        <b>On the lock screen</b><p>The island stays visible while the Mac is locked, showing a padlock and the time. On unlock the padlock opens and a greeting replaces the time.</p>
-      </div>
-    </div>
-    <p class="lead" style="margin:28px 0 0">Built-in sources are Swift monitors with a kind of overlay each; everything else is a plugin. Now-playing data is the odd one out: MediaRemote withholds metadata from third-party apps on recent macOS, so it comes from a small adapter hosted in Apple's own <code class="inline">perl</code>, with AppleScript for Spotify and Music and a session-store lookup for Firefox.</p>
   </div>
 </section>
 
 <section id="customise">
   <div class="wrap">
     <h2>Make it yours</h2>
-    <p class="lead" style="margin-bottom:0">Settings has an Effects pane for the pointer and a Layout pane for the wings and the expanded view. All of it is a choice.</p>
-    <h3 class="sub">The pointer</h3>
+    <p class="lead">Settings has an Effects pane for the pointer and a Layout pane for the wings and the expanded view. All of it is a choice.</p>
+    <div class="group">
+    <h3>The pointer</h3>
     <div class="steps">
       <div class="step">
         <div class="demo scene" id="dHold"><div class="cursor"></div></div>
@@ -525,7 +527,9 @@
         <b>Knows when you let go</b><p>On the trackpad the island keeps its lean while a finger is down and settles when it lifts. The pointer is kept off the top edge of the screen while held, so the menu bar stays put.</p>
       </div>
     </div>
-    <h3 class="sub">The layout</h3>
+    </div>
+    <div class="group">
+    <h3>The layout</h3>
     <div class="steps three">
       <div class="step">
         <div class="demo scene" id="dArrange"><div class="pane">
@@ -550,6 +554,7 @@
         <b>Put sections on pages</b><p>The expanded view holds two sections to a page. The Layout pane lists the pages; drag a section to another page or to a new one, and arrows move a whole page earlier or later. The island opens on the result.</p>
       </div>
     </div>
+    </div>
   </div>
 </section>
 
@@ -557,18 +562,20 @@
   <div class="wrap">
     <h2>Create one</h2>
     <p class="lead">A plugin is a folder with a manifest and a program. Put it in the plugins folder (Settings, Plugins, Open plugins folder) and it starts. The eleven shipped plugins are the reference.</p>
-<pre><span class="c"># plugin.json</span>
-{ "protocol": 1, "id": "coffee", "name": "Coffee", "symbol": "cup.and.saucer.fill", "run": "coffee.sh",
-  "settings": [{ "key": "goal", "title": "Daily goal", "type": "number", "default": 3 }] }
-
-<span class="c"># coffee.sh: one JSON object per line, each replacing one thing</span>
-read start                               <span class="c"># {"event":"start","settings":{...},"dataDir":"..."}</span>
-echo '{"wing": {"side": "right", "items": [{"symbol": "cup.and.saucer.fill", "text": "2"}]}}'
-echo '{"hud": {"symbol": "cup.and.saucer.fill", "tint": "orange", "text": "Coffee logged"}}'
-echo '{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup"}]}}'
-while read event; do                     <span class="c"># {"event":"click","row":"log"}</span>
-  case "$event" in *'"click"'*) echo '{"wing": {"side": "right", "items": [{"symbol": "cup.and.saucer.fill", "text": "3"}]}}';; esac
-done</pre>
+    <div class="code"><div class="tab">plugin.json</div>
+<pre>{ <span class="k">"protocol"</span>: <span class="n">1</span>, <span class="k">"id"</span>: <span class="s">"coffee"</span>, <span class="k">"name"</span>: <span class="s">"Coffee"</span>, <span class="k">"symbol"</span>: <span class="s">"cup.and.saucer.fill"</span>, <span class="k">"run"</span>: <span class="s">"coffee.sh"</span>,
+  <span class="k">"settings"</span>: [{ <span class="k">"key"</span>: <span class="s">"goal"</span>, <span class="k">"title"</span>: <span class="s">"Daily goal"</span>, <span class="k">"type"</span>: <span class="s">"number"</span>, <span class="k">"default"</span>: <span class="n">3</span> }] }</pre>
+    </div>
+    <div class="code"><div class="tab">coffee.sh</div>
+<pre><span class="c"># one JSON object per line, each replacing one thing</span>
+<span class="kw">read</span> start                               <span class="c"># {"event":"start","settings":{...},"dataDir":"..."}</span>
+<span class="kw">echo</span> <span class="s">'{"wing": {"side": "right", "items": [{"symbol": "cup.and.saucer.fill", "text": "2"}]}}'</span>
+<span class="kw">echo</span> <span class="s">'{"hud": {"symbol": "cup.and.saucer.fill", "tint": "orange", "text": "Coffee logged"}}'</span>
+<span class="kw">echo</span> <span class="s">'{"section": {"title": "Coffee", "rows": [{"id": "log", "title": "Log a cup"}]}}'</span>
+<span class="kw">while</span> <span class="kw">read</span> event; <span class="kw">do</span>                     <span class="c"># {"event":"click","row":"log"}</span>
+  <span class="kw">case</span> <span class="s">"$event"</span> <span class="kw">in</span> *<span class="s">'"click"'</span>*) <span class="kw">echo</span> <span class="s">'{"wing": {"side": "right", "items": [{"symbol": "cup.and.saucer.fill", "text": "3"}]}}'</span>;; <span class="kw">esac</span>
+<span class="kw">done</span></pre>
+    </div>
     <p class="lead" style="margin-top:18px">A plugin prints <code class="inline">wing</code> for its badge, <code class="inline">hud</code> for an overlay, <code class="inline">section</code> for its expanded section, <code class="inline">sound</code>, <code class="inline">activate</code> to bring an app forward and <code class="inline">open</code> for a file or URL. The app writes <code class="inline">start</code>, <code class="inline">settings</code>, <code class="inline">click</code>, <code class="inline">button</code>, <code class="inline">action</code>, <code class="inline">drop</code>, <code class="inline">clipboard</code>, <code class="inline">remove</code> and <code class="inline">stop</code> to its stdin.</p>
     <p class="lead">The manifest can set an <code class="inline">interval</code> to run once per interval instead of staying running, <code class="inline">accepts</code> for file drops or clipboard changes, a default <code class="inline">side</code>, and settings of type bool, text, number or choice, which Settings turns into a form. Plugins run as you, with your permissions; scripts without an executable bit run through the interpreter their extension implies. The full protocol is in the <a href="https://github.com/zenodea/sylt#writing-a-plugin">README</a>.</p>
   </div>
@@ -578,13 +585,15 @@ done</pre>
   <div class="wrap">
     <h2>Install</h2>
     <p class="lead">macOS 14 or later, on a Mac with a notch.</p>
+    <div class="code"><div class="tab">Terminal</div>
 <pre><span class="c"># clone, build a release bundle and launch it</span>
-git clone https://github.com/zenodea/sylt.git
-cd sylt
-make open
+<span class="kw">git</span> clone https://github.com/zenodea/sylt.git
+<span class="kw">cd</span> sylt
+<span class="kw">make</span> open
 
 <span class="c"># run the tests</span>
-make test</pre>
+<span class="kw">make</span> test</pre>
+    </div>
     <p class="lead" style="margin-top:18px">Right-click the island for Settings, including <code class="inline">Open at login</code>. Each permission is asked for the first time its plugin needs it, and each plugin can be switched off:</p>
     <ul class="perms">
       <li>Accessibility: to take over the volume and brightness keys, mirror notifications, and raise an agent's terminal window.</li>
@@ -667,7 +676,7 @@ make test</pre>
     const here = gecko ? { opacity: 1 } : { opacity: 1, filter: 'blur(0)', transform: 'none' };
     // Every swap cancels what the region was doing and carries on from how it looks now; a
     // swap that has been superseded does nothing when its fade-out ends.
-    function swap(node, html, cls) {
+    function swap(node, html, cls, instant) {
       html = norm(html);
       const token = node._token = (node._token || 0) + 1;
       if (node.innerHTML === html) { settle(node); return; }
@@ -688,11 +697,11 @@ make test</pre>
         settle(node);
         node.innerHTML = html;
         if (cls !== undefined) node.classList.toggle('h', cls);
-        if (html && !reduced) {
+        if (html && !reduced && !instant) {
           Object.assign(node.style, gone(6));
           const anim = node.animate([gone(6), here], { duration: 280, easing: 'ease-out', fill: 'forwards' });
-          anim.onfinish = () => settle(node);
-        }
+          anim.onfinish = () => { settle(node); if (node === region.row) marquee(); };
+        } else if (node === region.row) marquee();
         node.querySelectorAll('.bars').forEach(startBars);
       };
       if (!node.innerHTML || reduced) return enter();
@@ -701,6 +710,11 @@ make test</pre>
       const was = gecko ? { opacity: now.opacity } : { opacity: now.opacity, filter: now.filter, transform: now.transform };
       Object.assign(node.style, was);
       node.animate([{ ...was, opacity }, gone(4)], { duration: 110 * opacity, easing: 'ease-in', fill: 'forwards' }).onfinish = enter;
+    }
+    // A row longer than the island scrolls back and forth, as the app's title row does.
+    function marquee() {
+      const c = region.row, over = c.scrollWidth - (width() - 24);
+      if (over > 0 && !reduced) c.animate([{ transform: 'none' }, { transform: 'none', offset: .15 }, { transform: `translateX(${-over}px)`, offset: .85 }, { transform: `translateX(${-over}px)` }], { duration: 2000 + over * 40, iterations: Infinity, direction: 'alternate' });
     }
     function flip(art) {
       const a = curve('flip'), b = curve('pop'), c = curve('unpop');
@@ -713,26 +727,29 @@ make test</pre>
       if (!reduced) art.animate(frames, { duration: T * 1000, easing: 'linear' });
     }
 
-    // A page turn: the old page slides out and fades, the new one slides in from the other edge, and the
-    // dots move. The content is replaced in one go once the slide has ended.
+    // A page turn: the old page slides out and fades, the new one slides in from the other edge and stays,
+    // and the dots move. The new page is drawn once; nothing is rebuilt when the slide ends.
     function turn(node, html, dir) {
       html = norm(html);
-      const token = node._token = (node._token || 0) + 1;
-      const exp = node.firstElementChild, old = exp && exp.querySelector('.pg'), tpl = document.createElement('template');
+      node._token = (node._token || 0) + 1;
+      const exp = node.firstElementChild, pages = exp ? [...exp.querySelectorAll('.pg')] : [], tpl = document.createElement('template');
       tpl.innerHTML = html;
-      const next = tpl.content.querySelector('.pg');
+      const next = tpl.content.querySelector('.pg'), old = pages.pop();
       if (!old || !next || reduced) return swap(node, html);
       settle(node);
-      exp.querySelectorAll('.pgs i').forEach((dot, i) => dot.classList.toggle('on', tpl.content.querySelectorAll('.pgs i')[i].classList.contains('on')));
-      exp.appendChild(next);
-      const timing = { duration: 380, easing: 'cubic-bezier(.2,.9,.3,1)', fill: 'forwards' };
-      old.animate([{ transform: 'none', opacity: 1 }, { transform: `translateX(${-dir * 440}px)`, opacity: 0 }], timing);
-      next.animate([{ transform: `translateX(${dir * 440}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], timing).onfinish = () => { if (node._token === token) node.innerHTML = html; };
+      pages.forEach(page => page.remove());
+      const dots = tpl.content.querySelectorAll('.pgs i');
+      exp.querySelectorAll('.pgs i').forEach((dot, i) => dots[i].classList.contains('on') ? dot.setAttribute('class', 'on') : dot.removeAttribute('class'));
+      old.after(next);
+      const timing = { duration: 380, easing: 'cubic-bezier(.2,.9,.3,1)' };
+      old.animate([{ transform: 'none', opacity: 1 }, { transform: `translateX(${-dir * 440}px)`, opacity: 0 }], { ...timing, fill: 'forwards' }).onfinish = () => old.remove();
+      next.animate([{ transform: `translateX(${dir * 440}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], timing);
     }
 
     let last = null;
     function set(v, spring) {
-      const prev = last;
+      // The first state is placed, not animated, so an island appears at its size and never grows out of the notch.
+      const prev = last, first = !prev;
       last = v;
       const hud = v.mode === 'hud' || v.mode === 'locked', card = v.mode === 'card' || v.mode === 'expanded';
       const turning = card && prev && prev.mode === 'expanded' && v.mode === 'expanded' && v.page !== prev.page;
@@ -744,22 +761,24 @@ make test</pre>
         h = (v.row ? NH + 24 : hud ? NH + 2 : NH) + (v.hover ? 6 : 0);
       }
       const name = spring || (v.mode === 'expanded' ? 'expand' : v.mode === 'closed' ? 'collapse' : 'hud');
-      swap(region.l, card ? '' : v.l || '', !!v.hudL);
-      swap(region.r, card ? '' : v.r || '', !!v.hudR);
-      swap(region.row, card ? '' : v.row || '');
-      if (turning) turn(region.card, v.card, Math.sign(v.page - prev.page)); else swap(region.card, card ? v.card : '');
-      if (card) region.card.parentElement.style.width = px(v.w);
+      swap(region.l, card ? '' : v.l || '', !!v.hudL, first);
+      swap(region.r, card ? '' : v.r || '', !!v.hudR, first);
+      swap(region.row, card ? '' : v.row || '', undefined, first);
+      if (turning) turn(region.card, v.card, Math.sign(v.page - prev.page)); else swap(region.card, card ? v.card : '', undefined, first);
+      if (first) [wing.l, wing.r].forEach(el => el.style.transition = 'none');
       isl.classList.toggle('hud', hud);
       const from = { wl: num(getComputedStyle(wing.l).width), wr: num(getComputedStyle(wing.r).width), h: num(getComputedStyle(bg).height), w: num(getComputedStyle(bg).width) };
       const w = wl + NOTCH + wr;
       Object.assign(size, { wl, wr, h });
       mode = v.mode;
       const at = k => from.wl + (wl - from.wl) * k;
-      tween(wing.l, 'w', name, k => ({ width: px(at(k)) }));
-      tween(wing.r, 'w', name, k => ({ width: px(from.wr + (wr - from.wr) * k) }));
-      tween(bg, 'box', name, k => { const hh = from.h + (h - from.h) * k, r = radius(hh), g = Math.max(0, hh - NH); return { left: px(-at(k)), width: px(from.w + (w - from.w) * k), height: px(hh), borderRadius: `0 0 ${r}px ${r}px`, boxShadow: `0 ${2 + g * .03}px ${10 + g * .12}px rgba(0,0,0,.4)` }; });
+      const move = first ? (el, key, frame) => Object.assign(el.style, frame(1)) : (el, key, frame) => tween(el, key, name, frame);
+      move(wing.l, 'w', k => ({ width: px(at(k)) }));
+      move(wing.r, 'w', k => ({ width: px(from.wr + (wr - from.wr) * k) }));
+      move(bg, 'box', k => { const hh = from.h + (h - from.h) * k, r = radius(hh), g = Math.max(0, hh - NH); return { left: px(-at(k)), width: px(from.w + (w - from.w) * k), height: px(hh), borderRadius: `0 0 ${r}px ${r}px`, boxShadow: `0 ${2 + g * .03}px ${10 + g * .12}px rgba(0,0,0,.4)` }; });
       // The cut-out follows the box as it slides, so the light effects never reach the notch mid-transition.
-      tween(fx, 'cut', name, k => ({ clipPath: cut(at(k), 0) }));
+      move(fx, 'cut', k => ({ clipPath: cut(at(k), 0) }));
+      if (first) [wing.l, wing.r].forEach(el => { el.offsetHeight; el.style.transition = ''; });
       liquid.style.left = px(-wl - 12);
       liquid.style.clipPath = cut(wl, 12);
       frameId++;
@@ -896,7 +915,7 @@ make test</pre>
   // ---- Content.
   const ic = (name, cls = '') => `<svg class="ic ${cls}"><use href="#${name}"/></svg>`;
   const calendar = `<span class="cal">${ic('i-cal')}13m</span>`;
-  const agentIcon = (kind, status) => `<i class="ai ${kind}${status === 'waiting' ? ' wait' : ''}"><span class="f">${kind === 'claude' ? ic('i-star') : 'π'}</span><b class="${status === 'working' ? 'on' : status === 'done' ? 'done' : ''}"></b></i>`;
+  const agentIcon = (kind, status) => `<i class="ai ${kind}${status === 'waiting' ? ' wait' : ''}"><span class="f">${ic('i-' + kind)}</span><b class="${status === 'working' ? 'on' : status === 'done' ? 'done' : ''}"></b></i>`;
   const agents = `<span class="ag">${agentIcon('claude', 'working')}${agentIcon('claude', 'waiting')}${agentIcon('pi', 'waiting')}</span>`;
   const music = (b, playing = true) => `<span class="art${b ? ' b' : ''}"></span><span class="bars ${b ? 'cb' : 'ca'}${playing ? '' : ' paused'}"><i></i><i></i><i></i><i></i></span>`;
   const headphones = `<span class="hp">${ic('i-pods')}72</span>`;
@@ -915,7 +934,7 @@ make test</pre>
   const lock = open => `<span class="lock${open ? ' open' : ''}"></span>`;
   const time = `<span class="time">12:19</span>`, greeting = `<span class="greet">Welcome back, Alex</span>`;
   const track = `Harbour Lights &nbsp;·&nbsp; Tidal Lines`;
-  const note = `<div class="note"><span class="app">${ic('i-msg')}</span><span><b>Alex</b><small>Running five minutes late</small></span></div>`;
+  const appTile = `<span class="app">${ic('i-msg')}</span>`, noteRow = `Alex &nbsp;·&nbsp; Running five minutes late`;
   const mediaCard = `<div class="mc" style="--i:0"><div class="top"><span class="cover"><span class="src"><i>${ic('i-note')}</i></span></span><div class="meta"><div><div class="ti">Sundown</div><div class="ar">Tidal Lines</div></div><div class="prog"><span>1:22</span><span class="bar"><i style="--v:.38"></i></span><span>3:34</span></div><div class="ctl"><span>${ic('i-back')}</span><span class="big">${ic('i-pause')}</span><span>${ic('i-fwd')}</span></div></div></div><div class="out">${ic('i-spk')}<span class="sl"></span><span class="dev">AirPods Pro</span></div></div>`;
   const eventRow = `<div class="ev" style="--i:1"><span class="tm"><b>14:30</b><small>15:00</small></span><span>Design review</span><span class="join">${ic('i-video')}Join</span></div>`;
   const weatherSection = i => `<div class="sec" style="--i:${i}"><div class="rows"><div class="rw lg">${ic('i-cloudsun')}<span class="ttl">12°&nbsp; Clear<div class="dtl">H 18° · L 11° · wind 9 km/h</div></span></div></div></div>`;
@@ -924,7 +943,7 @@ make test</pre>
   const expanded = (sections, heights, page = 0, h) => {
     h = h || 60 + heights.reduce((a, b) => a + b, 0) + (heights.length - 1) * 10 + 14;
     const dots = [0, 1, 2].map(i => i === page ? '<i class="on"></i>' : '<i></i>').join('');
-    return { mode: 'expanded', w: 440, h, page, card: `<div class="exp" style="width:440px;height:${h}px"><div class="pg">${sections}</div><div class="pgs">${dots}</div></div>` };
+    return { mode: 'expanded', w: 440, h, page, card: `<div class="exp"><div class="pg">${sections}</div><div class="pgs">${dots}</div></div>` };
   };
   const herdr = `<div class="sec" style="--i:2"><div class="hd">🐑 Herdr<span class="sp"><span class="tl"><i class="dot gn"></i>1</span><span class="tl"><i class="dot bl"></i>1</span><span class="tl"><i class="dot o"></i>1</span></span></div><div class="rows"><div class="rw hi">${agentIcon('claude', 'working')}<span class="ttl">Refactor the parser</span><span class="wd"><i></i><i></i><i></i></span></div><div class="rw">${agentIcon('claude', 'done')}<span class="ttl">Write the release notes</span><span class="tr">4m</span><span class="st d"></span></div><div class="rw">${agentIcon('pi', 'waiting')}<span class="ttl">π · bundle</span><span class="tr">15m</span><span class="st a"></span></div></div></div>`;
   const clipboard = `<div class="sec" style="--i:0"><div class="hd">${ic('i-clip')}Clipboard</div><div class="rows"><div class="rw">${ic('i-docs')}<span class="ttl">git rebase -i HEAD~3</span></div><div class="rw">${ic('i-docs')}<span class="ttl">https://example.com/notes</span></div><div class="rw">${ic('i-docs')}<span class="ttl">Meeting moved to 15:00</span></div></div></div>`;
@@ -981,16 +1000,16 @@ make test</pre>
   const heroSteps = [
     [1400, () => { say('Volume'); hero.set({ mode: 'hud', l: `${calendar}${agents}`, r: volume(.65), hudR: true }); }],
     [1200, () => { say('Closed'); hero.set(heroClosed(false)); }],
-    [2200, () => { say('Track change'); hero.set({ mode: 'hud', l: `${calendar}${agents}`, r: `${weather}${music(true)}`, row: track }); }],
+    [2200, () => { say('Playing'); hero.set({ mode: 'hud', l: `${calendar}${agents}`, r: `${weather}${music(true)}`, row: track }); }],
     [1200, () => { say('Closed'); hero.set(heroClosed(true)); }],
-    [2400, () => { say('Bluetooth device connected'); hero.set({ mode: 'hud', l: rune, r: bluetooth, hudL: true, hudR: true }); }],
+    [2400, () => { say('Bluetooth'); hero.set({ mode: 'hud', l: rune, r: bluetooth, hudL: true, hudR: true }); }],
     [1200, () => { say('Closed'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}` }); }],
-    [3000, () => { say('Notification'); hero.set({ mode: 'card', w: 381, h: 76, card: note }); }],
+    [3000, () => { say('Notification'); hero.set({ mode: 'hud', l: appTile, r: `${headphones}${weather}${music(true)}`, row: noteRow }); }],
     [1200, () => { say('Closed'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}` }); }],
     [2200, () => { say('Locked'); hero.set({ mode: 'locked', l: lock(false), r: time, hudL: true, hudR: true }); }],
     [1400, () => { say('Unlocked'); hero.set({ mode: 'locked', l: lock(true), r: greeting, hudL: true, hudR: true }); }],
     [1400, () => { say('Closed'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}` }); }],
-    [500, () => { say('Pointer over'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}`, hover: true }, 'peek'); }],
+    [500, () => { say('Pointer'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}`, hover: true }, 'peek'); }],
     [160, () => { hero.press(true); }],
     [3600, () => { say('Expanded'); hero.press(false); hero.set(expanded(mediaCard + eventRow, [138, 34])); }],
     [2400, () => { say('Closed'); hero.set(heroClosed(false)); }],
@@ -1001,7 +1020,7 @@ make test</pre>
   // clicking the selected block again shows its other state.
   const showcases = {};
   function showcase(id, items) {
-    const engine = island(document.getElementById(id)), capEl = document.getElementById(id + 'Cap'), blocksEl = document.getElementById(id + 'Blocks');
+    const engine = island(document.getElementById(id)), blocksEl = document.getElementById(id + 'Blocks');
     let index = 0, alt = false, shown = 0;
     const blocks = items.map((item, i) => {
       const b = document.createElement('button');
@@ -1017,7 +1036,6 @@ make test</pre>
       blocks.forEach((b, j) => b.setAttribute('aria-selected', j === i));
       engine.set(v.intro || v.view);
       if (v.intro && !reduced) setTimeout(() => { if (shown === token) engine.set(v.view); }, 2000);
-      capEl.textContent = v.caption;
     }
     select(0, false);
     showcases[id] = { engine, items, select };
@@ -1027,71 +1045,71 @@ make test</pre>
   const hudBoth = (l, r) => ({ mode: 'hud', l, r, hudL: true, hudR: true });
   const show = showcase;
   show('wg', [
-    { icon: 'i-term', name: 'Agents and a meeting', view: { mode: 'closed', l: baseL, r: `${headphones}${weather}${music(false)}` }, caption: 'Left: 13 minutes to the next meeting, then the agents, the working one bright and the idle ones faded. Right: headphone charge, the weather and the cover with live audio bars.' },
-    { icon: 'i-timer', name: 'Timer and reminders', view: { mode: 'closed', l: `${timerWing}${todosWing}`, r: `${weather}${music(false, false)}` }, caption: 'A running timer and the open reminders on the left. Paused music keeps its cover and the bars go flat.' },
-    { icon: 'i-grid', name: 'Workspaces and Focus', view: { mode: 'closed', l: `${workspaces}${agents}`, r: `${focusWing}${weather}` }, caption: 'AeroSpace workspaces on the left, the current one bright. A Focus mode shows as a moon on the right while it is on.' },
-    { icon: 'i-mic', name: 'On a call', view: { mode: 'closed', l: calendar, r: `${dots}${headphones}${clockWing}` }, caption: 'An orange dot while the microphone is in use and a green one for the camera, then headphone charge and the clock plugin\'s time.' },
-    { icon: 'i-slack', name: 'Slack and the time', view: { mode: 'closed', l: agents, r: `${slackWing}${clockWing}${music(true)}` }, caption: 'Slack\'s unread count and the time share the right wing with the cover. Each wing is only as wide as what is in it.' },
-    { icon: 'i-circle', name: 'An empty side', view: { mode: 'closed', l: '', r: weather }, caption: 'Nothing on the left, so there is no left wing: the island is the notch and the weather.' },
+    { icon: 'i-term', name: 'Agents and a meeting', view: { mode: 'closed', l: baseL, r: `${headphones}${weather}${music(false)}` } },
+    { icon: 'i-timer', name: 'Timer and reminders', view: { mode: 'closed', l: `${timerWing}${todosWing}`, r: `${weather}${music(false, false)}` } },
+    { icon: 'i-grid', name: 'Workspaces and Focus', view: { mode: 'closed', l: `${workspaces}${agents}`, r: `${focusWing}${weather}` } },
+    { icon: 'i-mic', name: 'On a call', view: { mode: 'closed', l: calendar, r: `${dots}${headphones}${clockWing}` } },
+    { icon: 'i-slack', name: 'Slack and the time', view: { mode: 'closed', l: agents, r: `${slackWing}${clockWing}${music(true)}` } },
+    { icon: 'i-circle', name: 'An empty side', view: { mode: 'closed', l: '', r: weather } },
   ]);
   show('g1', [
-    { icon: 'i-spk', name: 'Volume', view: { mode: 'hud', l: baseL, r: volume(.65), hudR: true }, caption: 'Volume: the right wing shows the level; the left wing is unchanged.' },
-    { icon: 'i-sun', name: 'Brightness', view: { mode: 'hud', l: baseL, r: brightness(.45), hudR: true }, caption: 'Brightness, for changes made through the keys or the island, never for auto-brightness.' },
-    { icon: 'i-spk', name: 'Mute', view: { mode: 'hud', l: baseL, r: volume(.65, true), hudR: true }, caption: 'Mute: a slash is drawn over the speaker and the bar empties. Select again to unmute.',
-      alt: { view: { mode: 'hud', l: baseL, r: volume(.65), hudR: true }, caption: 'Unmute: the slash wipes away and the bar fills back to the level.' } },
-    { icon: 'i-note', name: 'Track change', view: { mode: 'hud', l: baseL, r: `${headphones}${music(true)}`, row: track }, caption: 'Track change: the cover flips and the title appears below the notch. Both wings stay as they are.' },
+    { icon: 'i-spk', name: 'Volume', view: { mode: 'hud', l: baseL, r: volume(.65), hudR: true } },
+    { icon: 'i-sun', name: 'Brightness', view: { mode: 'hud', l: baseL, r: brightness(.45), hudR: true } },
+    { icon: 'i-spk', name: 'Mute', view: { mode: 'hud', l: baseL, r: volume(.65, true), hudR: true },
+      alt: { view: { mode: 'hud', l: baseL, r: volume(.65), hudR: true } } },
+    { icon: 'i-note', name: 'Track change', view: { mode: 'hud', l: baseL, r: `${headphones}${music(true)}`, row: track } },
   ]);
   show('g2', [
-    { icon: 'i-batt', name: 'Battery', view: hudBoth(battery, label('Low battery', 'red')), caption: 'Battery: a message at 80, 60, 40, 20, 15, 10, 5 and 0 percent, and when the charger comes or goes.' },
-    { icon: 'i-bt', name: 'Bluetooth', view: hudBoth(rune, bluetooth), caption: 'Bluetooth: the rune draws itself in, then the device name and a gauge filling to its charge. Low-battery warnings at 20 and 10 percent.' },
-    { icon: 'i-wifi', name: 'Network', view: hudBoth(wifi, label('Wi-Fi')), caption: 'Network: the Wi-Fi arcs light up one by one, a cable clicks in, a slashed Wi-Fi when you go offline.' },
-    { icon: 'i-flame', name: 'Thermals', view: hudBoth(glyph('i-flame', 'orange'), label('Hot · performance reduced')), caption: 'Thermals: when the Mac gets hot enough to throttle. Select again for the cool-down.',
-      alt: { view: hudBoth(glyph('i-snow', 'cyan'), label('Cooled down')), caption: 'Cooled down again.' } },
+    { icon: 'i-batt', name: 'Battery', view: hudBoth(battery, label('Low battery', 'red')) },
+    { icon: 'i-bt', name: 'Bluetooth', view: hudBoth(rune, bluetooth) },
+    { icon: 'i-wifi', name: 'Network', view: hudBoth(wifi, label('Wi-Fi')) },
+    { icon: 'i-flame', name: 'Thermals', view: hudBoth(glyph('i-flame', 'orange'), label('Hot · performance reduced')),
+      alt: { view: hudBoth(glyph('i-snow', 'cyan'), label('Cooled down')) } },
   ]);
   show('g3', [
-    { icon: 'i-cal', name: 'Calendar', view: hudBoth(glyph('i-cal', 'orange'), `<span class="evt">${label('Design review')}${label('in 4m', 'orange num')}</span>`), caption: 'Calendar: the next event five minutes before it starts and again at the start. A countdown sits in the wing until then.' },
-    { icon: 'i-moon', name: 'Focus', view: hudBoth(glyph('i-moon', 'indigo'), label('Work')), caption: 'Focus: the mode name when it changes, then a moon in the wing while it is on.' },
-    { icon: 'i-mic', name: 'Mic & camera', view: hudBoth(dots, label('Mic and camera on')), caption: 'Mic and camera: an orange dot while the microphone is in use, green for the camera.' },
-    { icon: 'i-kbd', name: 'Keyboard', view: { mode: 'hud', l: baseL, r: `<span class="g">${ic('i-caps')}</span>${label('Caps Lock on')}`, hudR: true }, caption: 'Keyboard: Caps Lock on or off and layout changes, on the right only.' },
+    { icon: 'i-cal', name: 'Calendar', view: hudBoth(glyph('i-cal', 'orange'), `<span class="evt">${label('Design review')}${label('in 4m', 'orange num')}</span>`) },
+    { icon: 'i-moon', name: 'Focus', view: hudBoth(glyph('i-moon', 'indigo'), label('Work')) },
+    { icon: 'i-mic', name: 'Mic & camera', view: hudBoth(dots, label('Mic and camera on')) },
+    { icon: 'i-kbd', name: 'Keyboard', view: { mode: 'hud', l: baseL, r: `<span class="g">${ic('i-caps')}</span>${label('Caps Lock on')}`, hudR: true } },
   ]);
   show('g4', [
-    { icon: 'i-lock', name: 'Lock screen', view: { mode: 'locked', l: lock(false), r: time, hudL: true, hudR: true }, caption: 'Lock screen: a padlock and the time, visible over the login window. Select again to see the unlock.',
-      alt: { view: { mode: 'locked', l: lock(true), r: greeting, hudL: true, hudR: true }, caption: 'Unlock: the padlock springs open and a greeting replaces the time.' } },
-    { icon: 'i-msg', name: 'Notifications', view: { mode: 'card', w: 381, h: 76, card: note }, caption: 'Notifications: Notification Center banners mirrored as a card. Experimental.' },
+    { icon: 'i-lock', name: 'Lock screen', view: { mode: 'locked', l: lock(false), r: time, hudL: true, hudR: true },
+      alt: { view: { mode: 'locked', l: lock(true), r: greeting, hudL: true, hudR: true } } },
+    { icon: 'i-msg', name: 'Notifications', view: { mode: 'hud', l: appTile, r: baseR, row: noteRow } },
   ]);
 
   show('ex', [
-    { icon: 'i-note', name: 'Media card', view: expanded(mediaCard, [138]), caption: 'The media card: artwork with the source app, title, a seek bar, transport, and an output slider with the device name.' },
-    { icon: 'i-video', name: 'Next event', view: expanded(mediaCard + eventRow, [138, 34]), caption: 'The next event under it, with a Join button for Zoom, Meet, Teams and Webex links.' },
-    { icon: 'i-puzzle2', name: 'Second page', view: expanded(weatherSection(0) + clipboard.replace('--i:0', '--i:1'), [32, 22 + 72], 1, 256), caption: 'Swipe sideways and the next page holds the plugins\' sections, two to a page: here the weather with the day\'s range and the clipboard history. The tallest page sets the height, so turning never resizes.' },
-    { icon: 'i-term', name: 'Third page', view: expanded(herdr.replace('--i:2', '--i:0') + timerSection.replace('--i:0', '--i:1'), [22 + 72, 30], 2, 256), caption: 'The agents, with the time since each last changed, and the running timer. Which sections share a page is set in the Layout pane.' },
+    { icon: 'i-note', name: 'Media card', view: expanded(mediaCard, [138]) },
+    { icon: 'i-video', name: 'Next event', view: expanded(mediaCard + eventRow, [138, 34]) },
+    { icon: 'i-puzzle2', name: 'Second page', view: expanded(weatherSection(0) + clipboard.replace('--i:0', '--i:1'), [32, 22 + 72], 1, 256) },
+    { icon: 'i-term', name: 'Third page', view: expanded(herdr.replace('--i:2', '--i:0') + timerSection.replace('--i:0', '--i:1'), [22 + 72, 30], 2, 256) },
   ]);
 
   show('p1', [
-    { icon: 'i-term', name: 'Agents', view: expanded(herdr, [22 + 72], 1), caption: 'Agents: working first, then done, then waiting, with the time since the last change. Selecting one raises its terminal. Select again for a finished agent.',
-      alt: { view: { mode: 'hud', l: `<span class="g" style="font-size:14px">${ic('i-term')}</span>${label('Refactor the pars…')}<span class="pop green" style="display:inline-grid">${ic('i-check')}</span>`, r: `${weather}`, hudL: true }, caption: 'An agent finishing: its title and a tick on the left; the right wing stays as it is.' } },
-    { icon: 'i-grid', name: 'AeroSpace', view: { mode: 'closed', l: `${workspaces}${agents}`, r: weather }, caption: 'AeroSpace workspaces, the current one bright. Click a row to switch. Select again to expand.',
-      alt: { view: expanded(aerospace, [64], 1), caption: 'Expanded: each workspace with its apps; the current row is highlighted.' } },
-    { icon: 'i-termo', name: 'Ghostty', view: expanded(ghosttySection, [32], 1), caption: 'A quick terminal from the island: Ghostty\'s quick terminal through your keybind, or a new window. Select again for the wing badge.',
-      alt: { view: { mode: 'closed', l: agents, r: `<span class="pi">${ic('i-termo')}</span>${weather}` }, caption: 'With the badge option on, a terminal button sits in the wing.' } },
-    { icon: 'i-slack', name: 'Slack', intro: slackHUD, view: { mode: 'closed', l: agents, r: `${slackWing}${weather}${music(false)}` }, caption: 'Slack\'s badge in the wing: mentions and direct messages as a count, unread channels as a dot. A flash when new ones arrive. No token needed. Select again to expand.',
-      alt: { view: expanded(slackRow, [32], 1), caption: 'Expanded: one row to open Slack, with the unread count.' } },
+    { icon: 'i-term', name: 'Agents', view: expanded(herdr, [22 + 72], 1),
+      alt: { view: { mode: 'hud', l: `<span class="g" style="font-size:14px">${ic('i-term')}</span>${label('Refactor the pars…')}<span class="pop green" style="display:inline-grid">${ic('i-check')}</span>`, r: `${weather}`, hudL: true } } },
+    { icon: 'i-grid', name: 'AeroSpace', view: { mode: 'closed', l: `${workspaces}${agents}`, r: weather },
+      alt: { view: expanded(aerospace, [64], 1) } },
+    { icon: 'i-termo', name: 'Ghostty', view: expanded(ghosttySection, [32], 1),
+      alt: { view: { mode: 'closed', l: agents, r: `<span class="pi">${ic('i-termo')}</span>${weather}` } } },
+    { icon: 'i-slack', name: 'Slack', intro: slackHUD, view: { mode: 'closed', l: agents, r: `${slackWing}${weather}${music(false)}` },
+      alt: { view: expanded(slackRow, [32], 1) } },
   ]);
   show('p2', [
-    { icon: 'i-list', name: 'Todos', view: { mode: 'closed', l: `${todosWing}${agents}`, r: weather }, caption: 'Open reminders from the Reminders app. Click one to tick it off. Select again to expand.',
-      alt: { view: expanded(todosSection, [24 + 32 + 30], 1), caption: 'Expanded: the open reminders, with a button to open the app.' } },
-    { icon: 'i-clock', name: 'Clock', view: { mode: 'closed', l: agents, r: `${clockWing}${weather}${music(false)}` }, caption: 'The time, in whichever wing you put it. Seconds and 24-hour are options. Select again to expand.',
-      alt: { view: expanded(clockRow, [32], 1), caption: 'Expanded: the date and the week number.' } },
-    { icon: 'i-timer', name: 'Timer', view: { mode: 'closed', l: `${timerWing}${agents}`, r: weather }, caption: 'Timer: a ring draining with the time left, in the left wing. Select again for the end.',
-      alt: { view: { mode: 'hud', l: glyph('i-timer', 'orange'), r: label('25 min timer done'), hudL: true, hudR: true }, caption: 'When it ends: an overlay with a chime, and the ring leaves the wing.' } },
-    { icon: 'i-cloudsun', name: 'Weather', view: { mode: 'closed', l: agents, r: `${weather}${music(false)}` }, caption: 'Weather: temperature in the wing; conditions and the day\'s range when expanded. Data from Open-Meteo. Select again to expand.',
-      alt: { view: expanded(weatherSection(0), [32], 1), caption: 'Expanded: the weather row with the day\'s range.' } },
+    { icon: 'i-list', name: 'Todos', view: { mode: 'closed', l: `${todosWing}${agents}`, r: weather },
+      alt: { view: expanded(todosSection, [24 + 32 + 30], 1) } },
+    { icon: 'i-clock', name: 'Clock', view: { mode: 'closed', l: agents, r: `${clockWing}${weather}${music(false)}` },
+      alt: { view: expanded(clockRow, [32], 1) } },
+    { icon: 'i-timer', name: 'Timer', view: { mode: 'closed', l: `${timerWing}${agents}`, r: weather },
+      alt: { view: { mode: 'hud', l: glyph('i-timer', 'orange'), r: label('25 min timer done'), hudL: true, hudR: true } } },
+    { icon: 'i-cloudsun', name: 'Weather', view: { mode: 'closed', l: agents, r: `${weather}${music(false)}` },
+      alt: { view: expanded(weatherSection(0), [32], 1) } },
   ]);
   show('p3', [
-    { icon: 'i-down', name: 'Downloads', view: { mode: 'hud', l: glyph('i-down', 'blue'), r: label('report-final.pdf'), hudL: true, hudR: true }, caption: 'Downloads: an overlay when a browser download starts. Select again for the finish.',
-      alt: { view: { mode: 'hud', l: glyph('i-check', 'green'), r: label('report-final.pdf'), hudL: true, hudR: true }, caption: 'Finished: the same overlay with a green tick.' } },
-    { icon: 'i-tray', name: 'File shelf', view: expanded(shelf, [22 + 56], 1), caption: 'File shelf: drop files onto the island to keep them handy; drag them out when needed.' },
-    { icon: 'i-clip', name: 'Clipboard', view: expanded(clipboard, [22 + 72], 1), caption: 'Clipboard: recent text copies in the expanded view; selecting one copies it again. Password managers are excluded.' },
+    { icon: 'i-down', name: 'Downloads', view: { mode: 'hud', l: glyph('i-down', 'blue'), r: label('report-final.pdf'), hudL: true, hudR: true },
+      alt: { view: { mode: 'hud', l: glyph('i-check', 'green'), r: label('report-final.pdf'), hudL: true, hudR: true } } },
+    { icon: 'i-tray', name: 'File shelf', view: expanded(shelf, [22 + 56], 1) },
+    { icon: 'i-clip', name: 'Clipboard', view: expanded(clipboard, [22 + 72], 1) },
   ]);
 
   // ---- The small demos.
@@ -1204,7 +1222,7 @@ make test</pre>
   const warm = document.createElement('div');
   warm.className = 'isl';
   warm.style.cssText = 'position:fixed;left:0;top:0;opacity:.01;pointer-events:none;width:auto';
-  warm.innerHTML = `<div class="w"><span class="c">${[calendar, agents, music(false), music(true), headphones, weather, timerWing, workspaces, slackWing, clockWing, todosWing, focusWing, dots, volume(.65), volume(.65, true), brightness(.45), rune, bluetooth, wifi, battery, glyph('i-cal'), label('x'), lock(false), lock(true), time, greeting].join('')}</span></div><div class="card" style="width:440px"><span class="c">${note}<div class="exp">${mediaCard}${eventRow}${weatherSection(0)}${herdr}${clipboard}${shelf}${timerSection}${aerospace}${slackRow}${clockRow}${todosSection}${ghosttySection}</div></span></div>`;
+  warm.innerHTML = `<div class="w"><span class="c">${[calendar, agents, music(false), music(true), headphones, weather, timerWing, workspaces, slackWing, clockWing, todosWing, focusWing, dots, volume(.65), volume(.65, true), brightness(.45), rune, bluetooth, wifi, battery, glyph('i-cal'), label('x'), lock(false), lock(true), time, greeting].join('')}</span></div><div class="card" style="width:440px"><span class="c"><div class="exp">${mediaCard}${eventRow}${weatherSection(0)}${herdr}${clipboard}${shelf}${timerSection}${aerospace}${slackRow}${clockRow}${todosSection}${ghosttySection}</div></span></div>`;
   document.body.appendChild(warm);
   warm.offsetWidth;
   setTimeout(() => warm.remove(), 400);
@@ -1216,7 +1234,7 @@ make test</pre>
     const step = () => { heroSteps[k % heroSteps.length][1](); if (++k < total) setTimeout(step, ms); };
     step();
   }
-  window.sylt = { stop: () => loops.clear(), cycle, heroSteps, showcases, island: hero, wings: wings.engine, lock: lockDemo.engine, hold: hold.engine, out: out.engine, force: force.engine, pad: pad.engine, views: { closed: heroClosed, volume, brightness, music, lock, time, greeting, note, expanded, mediaCard, eventRow, weatherSection, herdr, clipboard, shelf, rune, bluetooth, agents, calendar, headphones, weather, track } };
+  window.sylt = { stop: () => loops.clear(), cycle, heroSteps, showcases, island: hero, wings: wings.engine, lock: lockDemo.engine, hold: hold.engine, out: out.engine, force: force.engine, pad: pad.engine, views: { closed: heroClosed, volume, brightness, music, lock, time, greeting, appTile, noteRow, expanded, mediaCard, eventRow, weatherSection, herdr, clipboard, shelf, rune, bluetooth, agents, calendar, headphones, weather, track } };
 
   // The Layout pane: a tile crosses to the other wing, then one is hidden; the island re-flows each time.
   const arrange = demo('dArrange'), tile = { wxR: arrange.scene.querySelector('.tile.wx:not(.gone)'), wxL: arrange.scene.querySelector('.tile.wx.gone'), hp: arrange.scene.querySelector('.tile.hp') };
@@ -1257,7 +1275,13 @@ make test</pre>
   function applyTheme(mode) { root.dataset.theme = mode; }
   let stored = null; try { stored = localStorage.getItem('theme'); } catch (e) {}
   applyTheme(stored || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
-  themeButton.onclick = () => { const next = root.dataset.theme === 'light' ? 'dark' : 'light'; applyTheme(next); try { localStorage.setItem('theme', next); } catch (e) {} };
+  let theming = 0;
+  themeButton.onclick = () => {
+    const next = root.dataset.theme === 'light' ? 'dark' : 'light';
+    root.classList.add('theming'); clearTimeout(theming); theming = setTimeout(() => root.classList.remove('theming'), 450);
+    applyTheme(next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+  };
 })();
 </script>
 </body>

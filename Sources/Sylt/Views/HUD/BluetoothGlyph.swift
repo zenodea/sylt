@@ -37,6 +37,16 @@ struct BluetoothGlyph: View {
     }
 }
 
+/// The rune on its own, for places that only need to say "Bluetooth".
+struct RuneMark: View {
+    var body: some View {
+        Rune()
+            .stroke(.blue, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+            .frame(width: 8, height: 15)
+            .frame(width: 16, height: 16)
+    }
+}
+
 private struct Rune: Shape {
     func path(in rect: CGRect) -> Path {
         let w = rect.width, h = rect.height

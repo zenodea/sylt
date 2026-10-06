@@ -68,7 +68,7 @@ struct LayoutPane: View {
         .onPreferenceChange(BoardFramesKey.self) { wingBoard.report($0) }
         .overlay(alignment: .topLeading) {
             if let id = wingBoard.dragging, let item = WingItem(id: id) {
-                let frame = wingBoard.frame(of: id)
+                let frame = wingBoard.liftFrame
                 tile(item, in: nil)
                     .frame(width: frame.width)
                     .scaleEffect(1.03)
@@ -247,7 +247,7 @@ struct LayoutPane: View {
         .onPreferenceChange(BoardFramesKey.self) { pageBoard.report($0) }
         .overlay(alignment: .topLeading) {
             if let id = pageBoard.dragging, let section = ExpandedSection(id: id) {
-                let frame = pageBoard.frame(of: id)
+                let frame = pageBoard.liftFrame
                 sectionTile(section)
                     .frame(width: frame.width)
                     .scaleEffect(1.03)

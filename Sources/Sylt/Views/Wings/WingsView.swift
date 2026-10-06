@@ -19,6 +19,9 @@ struct WingsView: View {
             if mode == .hud(.nowPlaying) {
                 TrackRow().transition(IslandAnimation.content)
             }
+            if case .hud(.notification(let notification)) = mode {
+                NotificationRow(notification: notification).transition(IslandAnimation.content)
+            }
         }
         .font(.system(size: 13, weight: .medium, design: .rounded))
         .foregroundStyle(.white)
@@ -45,7 +48,9 @@ struct WingsView: View {
     }
 
     private func hudKind(claiming side: HUDWing.Side) -> HUDKind? {
-        guard case .hud(let kind) = mode, case .compact(let leading, let trailing) = kind.style else { return nil }
+        guard case .hud(let kind) = mode else { return nil }
+        if case .notification = kind { return side == .leading ? kind : nil }
+        guard case .compact(let leading, let trailing) = kind.style else { return nil }
         return (side == .leading ? leading : trailing) == nil ? nil : kind
     }
 }

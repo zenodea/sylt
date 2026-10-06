@@ -14,6 +14,9 @@ final class DragBoard: ObservableObject {
     @Published private(set) var dragging: String?
     @Published private(set) var translation: CGSize = .zero
     @Published private(set) var drop: Drop?
+    /// Where the lifted tile was when picked up; the floating copy starts there and
+    /// moves only by the pointer's travel, whatever the lists below do meanwhile.
+    private(set) var liftFrame: CGRect = .zero
     private(set) var frames: [String: CGRect] = [:]
     /// Tiles per column, in order, as currently rendered.
     var columns: [String: [String]] = [:]
@@ -24,6 +27,7 @@ final class DragBoard: ObservableObject {
 
     func update(_ item: String, location: CGPoint, translation: CGSize) {
         if dragging != item {
+            liftFrame = frame(of: item)
             var transaction = Transaction()
             transaction.disablesAnimations = true
             withTransaction(transaction) { dragging = item }

@@ -8,6 +8,13 @@ final class VolumeMonitor: ObservableObject {
     @Published private(set) var level: Float = 0   // 0...1
     @Published private(set) var isMuted = false
     @Published private(set) var outputName = ""
+    @Published private(set) var outputIsBluetooth = false
+    @Published private(set) var outputs: [OutputDevice] = []
+
+    struct OutputDevice: Identifiable, Equatable {
+        let id: AudioDeviceID
+        let name: String
+    }
     let changes = PassthroughSubject<Void, Never>()
     let muteChanges = PassthroughSubject<Bool, Never>()
     private var reportedMute = false
@@ -32,6 +39,11 @@ final class VolumeMonitor: ObservableObject {
         mSelector: kAudioObjectPropertyName,
         mScope: kAudioObjectPropertyScopeGlobal,
         mElement: kAudioObjectPropertyElementMain)
+    private var devicesAddress = AudioObjectPropertyAddress(
+        mSelector: kAudioHardwarePropertyDevices,
+        mScope: kAudioObjectPropertyScopeGlobal,
+        mElement: kAudioObjectPropertyElementMain)
+    private var devicesBlock: AudioObjectPropertyListenerBlock?
 
     func start() {
         guard defaultDeviceBlock == nil else { return }
@@ -41,6 +53,51 @@ final class VolumeMonitor: ObservableObject {
         }
         defaultDeviceBlock = block
         AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &defaultDeviceAddress, .main, block)
+        let devices: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+            Task { @MainActor in self?.refreshOutputs() }
+        }
+        devicesBlock = devices
+        AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &devicesAddress, .main, devices)
+        refreshOutputs()
+    }
+
+    /// Every device that can play sound, for the output picker.
+    private func refreshOutputs() {
+        var size: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &devicesAddress, 0, nil, &size) == noErr else { return }
+        var ids = [AudioDeviceID](repeating: 0, count: Int(size) / MemoryLayout<AudioDeviceID>.size)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &devicesAddress, 0, nil, &size, &ids) == noErr else { return }
+        let found = ids.compactMap { id -> OutputDevice? in
+            var streams = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyStreams, mScope: kAudioDevicePropertyScopeOutput, mElement: kAudioObjectPropertyElementMain)
+            var streamSize: UInt32 = 0
+            guard AudioObjectGetPropertyDataSize(id, &streams, 0, nil, &streamSize) == noErr, streamSize > 0 else { return nil }
+            return OutputDevice(id: id, name: Self.name(of: id))
+        }
+        if found != outputs { outputs = found }
+    }
+
+    /// Make this device the system's output; the volume follows it through the listener.
+    func selectOutput(_ id: AudioDeviceID) {
+        var device = id
+        AudioObjectSetPropertyData(AudioObjectID(kAudioObjectSystemObject), &defaultDeviceAddress, 0, nil, UInt32(MemoryLayout<AudioDeviceID>.size), &device)
+    }
+
+    private static func name(of id: AudioDeviceID) -> String {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioObjectPropertyName, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var name = "" as CFString
+        var size = UInt32(MemoryLayout<CFString>.size)
+        return AudioObjectGetPropertyData(id, &address, 0, nil, &size, &name) == noErr ? name as String : "Output"
+    }
+
+    private static func isBluetooth(_ id: AudioDeviceID) -> Bool {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyTransportType, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var transport: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        guard AudioObjectGetPropertyData(id, &address, 0, nil, &size, &transport) == noErr else { return false }
+        return transport == kAudioDeviceTransportTypeBluetooth || transport == kAudioDeviceTransportTypeBluetoothLE
     }
 
     func stop() {
@@ -50,6 +107,10 @@ final class VolumeMonitor: ObservableObject {
                 AudioObjectID(kAudioObjectSystemObject), &defaultDeviceAddress, .main, defaultDeviceBlock)
         }
         defaultDeviceBlock = nil
+        if let devicesBlock {
+            AudioObjectRemovePropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &devicesAddress, .main, devicesBlock)
+        }
+        devicesBlock = nil
         deviceID = kAudioObjectUnknown
     }
 
@@ -72,6 +133,7 @@ final class VolumeMonitor: ObservableObject {
         if AudioObjectGetPropertyData(id, &nameAddress, 0, nil, &nameSize, &name) == noErr {
             outputName = name as String
         }
+        outputIsBluetooth = Self.isBluetooth(id)
 
         let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
             Task { @MainActor in self?.read(notify: true) }

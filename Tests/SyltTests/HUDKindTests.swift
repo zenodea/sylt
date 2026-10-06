@@ -72,7 +72,7 @@ final class HUDKindTests: XCTestCase {
         XCTAssertEqual(IslandMode.hud(.volume).contentIdentity, .closed)
         XCTAssertEqual(IslandMode.hud(.nowPlaying).contentIdentity, .closed)
         let note = SystemNotification(appName: "a", title: "t", body: "b", bundleIdentifier: nil)
-        XCTAssertEqual(IslandMode.hud(.notification(note)).contentIdentity, .hud(.notification(note)))
+        XCTAssertEqual(IslandMode.hud(.notification(note)).contentIdentity, .closed)
         XCTAssertEqual(IslandMode.expanded.contentIdentity, .expanded)
     }
 }

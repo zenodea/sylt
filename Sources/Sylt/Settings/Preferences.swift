@@ -9,11 +9,16 @@ final class Preferences: ObservableObject {
     @Published var enabledHUDs: Set<HUDCategory>
     @Published var hudDurationScale: Double
     @Published var playsUnlockSound: Bool
+    @Published var playsLockSound: Bool
+    @Published var lockShowsStatus: Bool
     @Published var absorbsPointer: Bool
     @Published var holdsPointer: Bool
     @Published var releaseForce: Double
     @Published var releaseEffect: ReleaseEffect
     @Published var rippleStrength: Double
+    @Published var rippleWidth: Double
+    @Published var leansWithSwipes: Bool
+    @Published var swipeLeanStrength: Double
     @Published var showsRimGlow: Bool
     @Published var hapticsOnRelease: Bool
     @Published var wingLayout: WingLayout
@@ -28,11 +33,16 @@ final class Preferences: ObservableObject {
         static let huds = "enabledHUDs"
         static let hudDuration = "hudDurationScale"
         static let unlockSound = "playsUnlockSound"
+        static let lockSound = "playsLockSound"
+        static let lockStatus = "lockShowsStatus"
         static let releaseEffect = "releaseEffect"
         static let absorbsPointer = "absorbsPointer"
         static let holdsPointer = "holdsPointer"
         static let releaseForce = "releaseForce"
         static let rippleStrength = "rippleStrength"
+        static let rippleWidth = "rippleWidth"
+        static let swipeLean = "leansWithSwipes"
+        static let swipeLeanStrength = "swipeLeanStrength"
         static let rimGlow = "showsRimGlow"
         static let haptics = "hapticsOnRelease"
         static let knownPlugins = "knownPlugins"
@@ -62,11 +72,16 @@ final class Preferences: ObservableObject {
         }
         hudDurationScale = defaults.object(forKey: Key.hudDuration) as? Double ?? 1
         playsUnlockSound = defaults.object(forKey: Key.unlockSound) as? Bool ?? true
+        playsLockSound = defaults.object(forKey: Key.lockSound) as? Bool ?? true
+        lockShowsStatus = defaults.object(forKey: Key.lockStatus) as? Bool ?? false
         releaseEffect = ReleaseEffect(rawValue: defaults.string(forKey: Key.releaseEffect) ?? "") ?? .ripple
         absorbsPointer = defaults.object(forKey: Key.absorbsPointer) as? Bool ?? true
         holdsPointer = defaults.object(forKey: Key.holdsPointer) as? Bool ?? true
         releaseForce = defaults.object(forKey: Key.releaseForce) as? Double ?? 1
         rippleStrength = defaults.object(forKey: Key.rippleStrength) as? Double ?? 1
+        rippleWidth = defaults.object(forKey: Key.rippleWidth) as? Double ?? 1
+        leansWithSwipes = defaults.object(forKey: Key.swipeLean) as? Bool ?? true
+        swipeLeanStrength = defaults.object(forKey: Key.swipeLeanStrength) as? Double ?? 1
         showsRimGlow = defaults.object(forKey: Key.rimGlow) as? Bool ?? true
         hapticsOnRelease = defaults.object(forKey: Key.haptics) as? Bool ?? true
         wingLayout = defaults.data(forKey: Key.wingLayout).flatMap { try? JSONDecoder().decode(WingLayout.self, from: $0) } ?? WingLayout()
@@ -92,6 +107,14 @@ final class Preferences: ObservableObject {
             .dropFirst()
             .sink { defaults.set($0, forKey: Key.unlockSound) }
             .store(in: &cancellables)
+        $playsLockSound
+            .dropFirst()
+            .sink { defaults.set($0, forKey: Key.lockSound) }
+            .store(in: &cancellables)
+        $lockShowsStatus
+            .dropFirst()
+            .sink { defaults.set($0, forKey: Key.lockStatus) }
+            .store(in: &cancellables)
         $releaseEffect
             .dropFirst()
             .sink { defaults.set($0.rawValue, forKey: Key.releaseEffect) }
@@ -111,6 +134,18 @@ final class Preferences: ObservableObject {
         $rippleStrength
             .dropFirst()
             .sink { defaults.set($0, forKey: Key.rippleStrength) }
+            .store(in: &cancellables)
+        $rippleWidth
+            .dropFirst()
+            .sink { defaults.set($0, forKey: Key.rippleWidth) }
+            .store(in: &cancellables)
+        $leansWithSwipes
+            .dropFirst()
+            .sink { defaults.set($0, forKey: Key.swipeLean) }
+            .store(in: &cancellables)
+        $swipeLeanStrength
+            .dropFirst()
+            .sink { defaults.set($0, forKey: Key.swipeLeanStrength) }
             .store(in: &cancellables)
         $showsRimGlow
             .dropFirst()
@@ -155,7 +190,7 @@ final class Preferences: ObservableObject {
 
 /// What the island does when it lets the pointer go.
 enum ReleaseEffect: String, CaseIterable, Identifiable {
-    case ripple = "splash", ring, glass, none
+    case ripple = "splash", ring, glass, sparks, blackHole, none
 
     var id: String { rawValue }
 
@@ -164,6 +199,8 @@ enum ReleaseEffect: String, CaseIterable, Identifiable {
         case .ripple: "Ripple"
         case .ring: "Ring of light"
         case .glass: "Liquid glass"
+        case .sparks: "Sparks"
+        case .blackHole: "Black hole"
         case .none: "Nothing"
         }
     }

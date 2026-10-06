@@ -6,6 +6,8 @@ import SwiftUI
 struct LockedView: View {
     let layout: IslandLayout
     let unlocked: Bool
+    /// Locking shows the padlock open for an instant and closes it, the unlock in reverse.
+    @State private var closing = false
 
     static let greeting = "Welcome back, \(NSFullUserName().split(separator: " ").first.map(String.init) ?? NSUserName())"
     static let leadingWing = HUDKind.wing(13)
@@ -19,7 +21,10 @@ struct LockedView: View {
     var body: some View {
         let gap = IslandLayout.notchGap
         HStack(spacing: 0) {
-            LockGlyph(open: unlocked)
+            if layout.lockShowsStatus, !unlocked {
+                ClosedWing(side: .leading, layout: layout).padding(.horizontal, IslandLayout.wingPadding)
+            }
+            LockGlyph(open: unlocked || closing)
                 .frame(width: Self.leadingWing - gap, alignment: .trailing)
                 .padding(.trailing, gap)
             Spacer().frame(width: layout.notchWidth)
@@ -28,8 +33,16 @@ struct LockedView: View {
                 .foregroundStyle(.white.opacity(0.85))
                 .frame(width: trailingWing - gap, alignment: .leading)
                 .padding(.leading, gap)
+            if layout.lockShowsStatus, !unlocked {
+                ClosedWing(side: .trailing, layout: layout).padding(.horizontal, IslandLayout.wingPadding)
+            }
         }
         .frame(height: layout.notchHeight + IslandLayout.notchOverlap)
+        .onAppear {
+            guard !unlocked else { return }
+            closing = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { withAnimation(IslandAnimation.unlock) { closing = false } }
+        }
     }
 
     private var trailingWing: CGFloat {

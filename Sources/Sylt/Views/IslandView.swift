@@ -47,18 +47,18 @@ struct IslandView: View {
                 .clipShape(shape)
             }
             .background {
-                Liquid(shape: shape, event: state.liquid, strength: state.preferences.rippleStrength)
+                Liquid(shape: shape, event: state.liquid, strength: state.preferences.rippleStrength, width: state.preferences.rippleWidth)
                     .frame(width: canvas.width, height: canvas.height)
+                if let sparks = state.sparks, state.preferences.releaseEffect == .sparks {
+                    Sparks(event: sparks).frame(width: canvas.width, height: canvas.height).id(sparks.id)
+                }
             }
             .frame(width: canvas.width, height: canvas.height, alignment: .top)
             .animation(IslandAnimation.value, value: state.layout)
             .contentShape(shape)
             .modifier(CursorPull(cursor: state.cursor, enabled: state.isHovering && state.mode != .expanded))
             .scaleEffect(y: isPressed ? 0.95 : 1, anchor: .top)
-            .modifier(SwipeStretch(pull: CGVector(
-                dx: min(max(state.swipePull.dx + state.cursorPull.dx, -1), 1),
-                dy: min(max(state.swipePull.dy + state.cursorPull.dy, -1), 1)
-            )))
+            .modifier(SwipeStretch(pull: state.cursorPull))
             .gesture(pressGesture, including: state.mode == .expanded ? .subviews : .all)
             .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
                 Task { state.dropped(await Self.urls(from: providers)) }
@@ -116,11 +116,7 @@ struct IslandView: View {
         case .locked, .hud(.unlocked): LockedView(layout: state.layout, unlocked: state.mode != .locked)
         case .closed, .hud:
             // One branch for closed and wing-based HUDs, so the wings keep their identity between them.
-            if case .hud(.notification(let notification)) = state.mode {
-                NotificationCard(notification: notification, layout: state.layout)
-            } else {
-                WingsView(mode: state.mode, layout: state.layout)
-            }
+            WingsView(mode: state.mode, layout: state.layout)
         case .expanded: ExpandedView(notchHeight: state.notchHeight, layout: state.layout, pageDirection: state.pageDirection)
         }
     }
@@ -132,6 +128,7 @@ private struct Liquid: View, Animatable {
     var shape: IslandShape
     let event: LiquidEvent?
     let strength: Double
+    let width: Double
 
     var animatableData: IslandShape.AnimatableData {
         get { shape.animatableData }
@@ -143,7 +140,7 @@ private struct Liquid: View, Animatable {
             Canvas { graphics, size in
                 guard let event else { return }
                 let t = context.date.timeIntervalSince(event.start)
-                graphics.fill(Ripple.path(in: CGRect(origin: .zero, size: size), shape: shape, origin: event.point, at: t, strength: strength), with: .color(.black))
+                graphics.fill(Ripple.path(in: CGRect(origin: .zero, size: size), shape: shape, origin: event.point, at: t, strength: strength, width: width), with: .color(.black))
             }
         }
         .allowsHitTesting(false)
@@ -158,11 +155,12 @@ private enum Ripple {
     private static let height: CGFloat = 3.6
     private static let step: CGFloat = 1
 
-    static func path(in rect: CGRect, shape: IslandShape, origin: CGPoint, at t: TimeInterval, strength: Double) -> Path {
+    static func path(in rect: CGRect, shape: IslandShape, origin: CGPoint, at t: TimeInterval, strength: Double, width: Double) -> Path {
         let time = CGFloat(t)
         let decay = exp(-2.8 * time)
         guard decay > 0.04 else { return Path() }
         let height = Self.height * CGFloat(strength)
+        let spread = CGFloat(width)
         let outline = shape.outline(in: rect, step: step)
         guard outline.count > 1 else { return Path() }
         var nearest = 0
@@ -174,7 +172,7 @@ private enum Ripple {
         var path = Path()
         for (index, sample) in outline.enumerated() {
             let distance = CGFloat(abs(index - nearest)) * step
-            let wave = sin(distance / 9 - time * 18) * exp(-distance / 24)
+            let wave = sin(distance / (9 * spread) - time * 18) * exp(-distance / (24 * spread))
             let swell = max(0, wave) * height * decay - 0.5
             let point = CGPoint(x: sample.point.x + sample.normal.dx * swell, y: sample.point.y + sample.normal.dy * swell)
             if index == 0 { path.move(to: point) } else { path.addLine(to: point) }
@@ -216,6 +214,47 @@ private struct GlassFlash: View {
         .blendMode(.plusLighter)
         .allowsHitTesting(false)
         .onAppear { withAnimation(.easeOut(duration: 0.6)) { fired = true } }
+    }
+}
+
+/// Sparks: a short shower of bright specks thrown out along the push and fading, or,
+/// when the pointer arrives, drawn in to the point it went in at.
+private struct Sparks: View {
+    let event: SparkEvent
+    private static let count = 16
+    private static let life: TimeInterval = 0.6
+
+    var body: some View {
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSince(event.start)
+            Canvas { graphics, _ in
+                guard t < Self.life else { return }
+                for index in 0..<Self.count {
+                    let spark = Self.spark(index, at: t, event: event)
+                    guard spark.alpha > 0.02 else { continue }
+                    let rect = CGRect(x: spark.position.x - spark.size / 2, y: spark.position.y - spark.size / 2, width: spark.size, height: spark.size)
+                    graphics.fill(Circle().path(in: rect), with: .color(spark.colour.opacity(spark.alpha)))
+                }
+            }
+            .blendMode(.plusLighter)
+        }
+        .allowsHitTesting(false)
+    }
+
+    private static func spark(_ index: Int, at t: TimeInterval, event: SparkEvent) -> (position: CGPoint, size: CGFloat, alpha: Double, colour: Color) {
+        let seed = CGFloat((index * 73) % 17) / 16
+        let seed2 = CGFloat((index * 31) % 13) / 12
+        let base = event.inward ? CGFloat(index) / CGFloat(count) * .pi * 2 : atan2(event.direction.dy, event.direction.dx)
+        let angle = base + (event.inward ? 0 : (seed - 0.5) * 1.6)
+        let speed: CGFloat = 90 + seed2 * 180
+        let drag: CGFloat = 5
+        let time = CGFloat(t)
+        let travel = speed * (1 - exp(-drag * time)) / drag
+        let reach = event.inward ? max(0, 26 + seed * 20 - travel) : travel
+        let position = CGPoint(x: event.point.x + cos(angle) * reach, y: event.point.y + sin(angle) * reach)
+        let fade = max(0, 1 - Double(time) / life)
+        let colour = seed2 > 0.6 ? Color(red: 1, green: 0.85, blue: 0.5) : .white
+        return (position, 1.4 + seed * 1.6, fade * fade, colour)
     }
 }
 
@@ -312,8 +351,8 @@ private struct SwipeStretch: ViewModifier {
     func body(content: Content) -> some View {
         content
             .scaleEffect(
-                x: 1 + abs(pull.dx) * 0.04,
-                y: 1 + max(0, pull.dy) * 0.08,
+                x: 1 + abs(pull.dx) * 0.025,
+                y: 1 + max(0, pull.dy) * 0.05,
                 anchor: UnitPoint(x: pull.dx > 0 ? 0 : 1, y: 0)
             )
     }

@@ -59,7 +59,17 @@ final class IslandState: ObservableObject {
     var notchWidth: CGFloat { layout.notchWidth }
     var canvasSize: CGSize { layout.canvasSize }
 
-    var islandFrame: IslandFrame { layout.frame(for: mode, hovering: isHovering) }
+    /// The island's frame, leaning into a swipe: its edge reaches a little that way while
+    /// the content inside stays where it is, so it moves like a body, not like jelly.
+    var islandFrame: IslandFrame {
+        var frame = layout.frame(for: mode, hovering: isHovering)
+        guard mode != .expanded, preferences.leansWithSwipes else { return frame }
+        let strength = CGFloat(preferences.swipeLeanStrength)
+        frame.size.width += abs(swipePull.dx) * 14 * strength
+        frame.size.height += max(0, swipePull.dy) * 10 * strength
+        frame.centerOffset += swipePull.dx * 7 * strength
+        return frame
+    }
     var hitFrame: CGRect { layout.hitFrame(for: mode, hovering: isHovering) }
 
     /// The island takes the cursor in everywhere except the expanded panel, which has controls to click.
@@ -152,6 +162,9 @@ final class IslandState: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.refreshExpandedPages() }
             .store(in: &cancellables)
+        preferences.$lockShowsStatus
+            .sink { [weak self] in self?.layout.lockShowsStatus = $0 }
+            .store(in: &cancellables)
     }
 
     private func refreshPluginLayout() {
@@ -224,8 +237,24 @@ final class IslandState: ObservableObject {
     }
 
     /// The island just took the pointer at this canvas point: the surface ripples there.
-    func cursorAbsorbed(at point: CGPoint) {
-        splash(LiquidEvent(point: point))
+    /// The island just took the pointer at this canvas point.
+    func cursorHeld(at point: CGPoint) {
+        heldOrigin = point
+        switch preferences.releaseEffect {
+        case .ripple: splash(LiquidEvent(point: point))
+        case .sparks: spark(at: point, direction: .zero, inward: true)
+        case .blackHole: spark(at: point, direction: .zero, inward: true)
+        default: break
+        }
+    }
+
+    /// A one-shot shower of sparks at a point; inward ones are drawn to it.
+    @Published private(set) var sparks: SparkEvent?
+
+    private func spark(at point: CGPoint, direction: CGVector, inward: Bool) {
+        let event = SparkEvent(point: point, direction: direction, inward: inward)
+        sparks = event
+        Timer.after(0.9) { [weak self] in if self?.sparks?.id == event.id { self?.sparks = nil } }
     }
 
     private func splash(_ event: LiquidEvent) {
@@ -242,19 +271,28 @@ final class IslandState: ObservableObject {
         }
     }
 
-    /// Where a push in this direction meets the island's rim, optionally a little
-    /// past it, in canvas coordinates. Pushing up goes nowhere: the screen ends there.
+    /// Where the pointer went in, in canvas coordinates: pushes are measured from here,
+    /// so it comes out wherever that push leads, not always at the middle of a side.
+    private var heldOrigin: CGPoint?
+
+    /// Where a push in this direction meets the island's rim, optionally a little past
+    /// it, in canvas coordinates, starting from where the pointer went in. Pushing up
+    /// goes nowhere: the screen ends there.
     func rimPoint(toward travel: CGVector, outside: CGFloat) -> CGPoint {
-        let island = layout.hitFrame(for: mode, hovering: true)
-        let centre = CGPoint(x: island.midX, y: island.midY)
+        let island = layout.hitFrame(for: mode, hovering: true).insetBy(dx: 1, dy: 1)
+        let origin = CGPoint(
+            x: min(max(heldOrigin?.x ?? island.midX, island.minX), island.maxX),
+            y: min(max(heldOrigin?.y ?? island.midY, island.minY), island.maxY)
+        )
         let direction = CGVector(dx: travel.dx, dy: max(0, travel.dy))
         let length = hypot(direction.dx, direction.dy)
-        guard length > 0.001 else { return centre }
+        guard length > 0.001 else { return origin }
         var scale = CGFloat.greatestFiniteMagnitude
-        if direction.dx != 0 { scale = min(scale, ((direction.dx > 0 ? island.maxX : island.minX) - centre.x) / direction.dx) }
-        if direction.dy > 0 { scale = min(scale, (island.maxY - centre.y) / direction.dy) }
+        if direction.dx != 0 { scale = min(scale, ((direction.dx > 0 ? island.maxX : island.minX) - origin.x) / direction.dx) }
+        if direction.dy > 0 { scale = min(scale, (island.maxY - origin.y) / direction.dy) }
+        if scale == .greatestFiniteMagnitude { scale = 0 }
         let unit = CGVector(dx: direction.dx / length, dy: direction.dy / length)
-        return CGPoint(x: centre.x + direction.dx * scale + unit.dx * outside, y: centre.y + direction.dy * scale + unit.dy * outside)
+        return CGPoint(x: origin.x + direction.dx * scale + unit.dx * outside, y: origin.y + direction.dy * scale + unit.dy * outside)
     }
 
     func cursorReleased(toward direction: CGVector) {
@@ -277,8 +315,10 @@ final class IslandState: ObservableObject {
         guard length > 0.001, mode != .expanded else { return }
         let id = UUID()
         let point = rimPoint(toward: direction, outside: 0)
-        burst = (point, CGVector(dx: direction.dx / length, dy: max(0, direction.dy) / length), id)
+        let unit = CGVector(dx: direction.dx / length, dy: max(0, direction.dy) / length)
+        burst = (point, unit, id)
         if preferences.releaseEffect == .ripple { splash(LiquidEvent(point: point)) }
+        if preferences.releaseEffect == .sparks || preferences.releaseEffect == .blackHole { spark(at: point, direction: unit, inward: false) }
         Timer.after(1.1) { [weak self] in if self?.burst?.id == id { self?.burst = nil } }
     }
 
@@ -325,6 +365,7 @@ final class IslandState: ObservableObject {
     private func locked() {
         hudTimer?.invalidate()
         collapseTimer?.invalidate()
+        if preferences.playsLockSound { Sounds.lock() }
         transition(to: .locked)
     }
 
@@ -428,6 +469,15 @@ final class IslandState: ObservableObject {
 /// One disturbance of the island's liquid surface: where the pointer went in or came out.
 struct LiquidEvent: Equatable {
     let point: CGPoint
+    let start = Date()
+    let id = UUID()
+}
+
+/// Sparks at a point: thrown out along a push, or drawn in when the pointer arrives.
+struct SparkEvent: Equatable {
+    let point: CGPoint
+    let direction: CGVector
+    let inward: Bool
     let start = Date()
     let id = UUID()
 }

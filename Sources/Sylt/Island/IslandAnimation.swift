@@ -27,7 +27,7 @@ enum IslandAnimation {
     }
 
     static let swipeFollow = Animation.interactiveSpring(response: 0.2, dampingFraction: 0.8)
-    static let swipeRebound = Animation.spring(response: 0.38, dampingFraction: 0.55)
+    static let swipeRebound = Animation.spring(response: 0.34, dampingFraction: 0.78)
 
     static func stagger(_ index: Int) -> Animation {
         .spring(response: 0.4, dampingFraction: 0.8).delay(0.12 + Double(index) * 0.06)

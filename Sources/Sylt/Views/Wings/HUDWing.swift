@@ -36,7 +36,18 @@ struct HUDWing: View {
             case "right": EmptyView()
             default: externalGlyph(external)
             }
-        case .volume, .brightness, .mute, .nowPlaying, .notification, .unlocked, .capsLock, .inputSource: EmptyView()
+        case .notification(let notification):
+            // The app's icon, where album art would sit.
+            Group {
+                if let icon = notification.icon {
+                    Image(nsImage: icon).resizable()
+                } else {
+                    Image(systemName: "bell.fill").foregroundStyle(.white)
+                }
+            }
+            .frame(width: layout.artworkSize, height: layout.artworkSize)
+            .clipShape(RoundedRectangle(cornerRadius: layout.artworkSize * 0.25, style: .continuous))
+        case .volume, .brightness, .mute, .nowPlaying, .unlocked, .capsLock, .inputSource: EmptyView()
         }
     }
 
@@ -44,7 +55,7 @@ struct HUDWing: View {
     private var trailing: some View {
         if let muted = mutedState {
             // One view for mute and volume, so the bar slides and the speaker morphs between them.
-            level(MuteGlyph(muted: muted, level: Double(volume.level)), muted ? 0 : Double(volume.level))
+            level(MuteGlyph(muted: muted, level: Double(volume.level), bluetooth: volume.outputIsBluetooth), muted ? 0 : Double(volume.level))
         } else {
             trailingSwitch
         }

@@ -5,6 +5,10 @@ enum Sounds {
         NSSound(named: "Glass")?.play()
     }
 
+    static func lock() {
+        NSSound(named: "Tink")?.play()
+    }
+
     static func play(_ name: String) {
         NSSound(named: name)?.play()
     }

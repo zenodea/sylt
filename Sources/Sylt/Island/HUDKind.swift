@@ -44,7 +44,7 @@ enum HUDKind: Hashable {
         case .battery: .compact(leading: Self.wing(48), trailing: Self.wing(Self.text(Self.batteryMessages)))
         case .unlocked: .compact(leading: LockedView.leadingWing, trailing: LockedView.greetingWing)
         case .nowPlaying: .twoRow
-        case .notification: .card
+        case .notification: .twoRow
         case .bluetooth(let event): Self.glyph(trailing: Self.device(event.device))
         case .peripheralBattery(let device): Self.glyph(trailing: Self.device(device))
         case .network: Self.glyph(trailing: Self.text(NetworkMonitor.Link.allCases.map(\.title)))

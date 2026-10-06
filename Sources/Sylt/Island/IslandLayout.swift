@@ -12,6 +12,8 @@ struct IslandLayout: Equatable {
     var privacyDots = 0
     var showsFocus = false
     var showsHeadphones = false
+    /// The locked island keeps the closed wings beside the padlock and the time.
+    var lockShowsStatus = false
     /// Which items each closed wing shows, in order, and how wide each plugin's badge is.
     var wings = ResolvedWings()
     var pluginWidths: [String: CGFloat] = [:]
@@ -153,13 +155,13 @@ struct IslandLayout: Equatable {
         case .closed:
             IslandFrame(size: CGSize(width: closedWidth, height: notchHeight + Self.notchOverlap), centerOffset: (rightWing - leftWing) / 2)
         case .locked:
-            compact(leading: LockedView.leadingWing, trailing: LockedView.timeWing)
+            compact(leading: LockedView.leadingWing + (lockShowsStatus ? leftWing : 0), trailing: LockedView.timeWing + (lockShowsStatus ? rightWing : 0))
         case .hud(let kind):
             switch kind.style {
             case .compact:
                 compact(leading: wingWidths(for: mode).leading, trailing: wingWidths(for: mode).trailing)
             case .twoRow:
-                IslandFrame(size: CGSize(width: closedWidth, height: notchHeight + Self.notchOverlap + Self.hudRowHeight + 6), centerOffset: (rightWing - leftWing) / 2)
+                twoRowFrame(for: mode)
             case .card:
                 centred(CGSize(width: notchWidth + Self.cardWings, height: Self.hudHeight))
             }
@@ -168,10 +170,24 @@ struct IslandLayout: Equatable {
         }
     }
 
-    /// A wing a HUD doesn't claim keeps its closed width.
+    /// The wings stay as they are and a row opens underneath; a notification's icon
+    /// needs a left wing, which may widen.
+    private func twoRowFrame(for mode: IslandMode) -> IslandFrame {
+        let widths = wingWidths(for: mode)
+        return IslandFrame(
+            size: CGSize(width: notchWidth + Self.sideOverlap * 2 + widths.leading + widths.trailing, height: notchHeight + Self.notchOverlap + Self.hudRowHeight + 6),
+            centerOffset: (widths.trailing - widths.leading) / 2
+        )
+    }
+
+    /// A wing a HUD doesn't claim keeps its closed width. A notification puts the app's
+    /// icon in the left wing, which widens to fit it if it had nothing.
     func wingWidths(for mode: IslandMode) -> (leading: CGFloat, trailing: CGFloat) {
         if case .hud(let kind) = mode, case .compact(let leading, let trailing) = kind.style {
             return (leading ?? leftWing, trailing ?? rightWing)
+        }
+        if case .hud(.notification) = mode {
+            return (max(leftWing, HUDKind.wing(artworkSize)), rightWing)
         }
         return (leftWing, rightWing)
     }
