@@ -28,6 +28,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self, let screen = NotchGeometry.preferredScreen() else { return }
             self.panel?.relayout(on: screen)
         }
+        for name in [NSWorkspace.didWakeNotification, NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.screensDidWakeNotification] {
+            NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.panel?.ensurePlacement() }
+            }
+        }
+        // Displays settle late at login; keep checking the placement, often at first, then rarely.
+        var checks = 0
+        Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] timer in
+            MainActor.assumeIsolated {
+                guard let self, let panel = self.panel else { return timer.invalidate() }
+                panel.ensurePlacement()
+                checks += 1
+                if checks == 30 {
+                    timer.invalidate()
+                    Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { _ in MainActor.assumeIsolated { panel.ensurePlacement() } }
+                }
+            }
+        }
         // Launched while the menu bar is away, the notch can't be measured yet: keep asking.
         if !panel.isMeasured {
             Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] timer in

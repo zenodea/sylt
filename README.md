@@ -75,12 +75,12 @@ Each is asked for the first time its plugin needs it, and each plugin can be swi
 
 - The island is a transparent panel over the notch, drawn with SwiftUI. It is moved into its own WindowServer space pinned at the lock-screen level through the private SkyLight framework, which is what keeps it above full-screen apps and the login window.
 - The panel only takes the mouse while the cursor is over the island, so the rest of the strip stays click-through.
-- Built-in sources are Swift `Monitor`s with a `HUDKind` for their overlay. Everything else is a plugin: a program in any language that prints JSON, rendered by the island with the same badges, overlays and sections. Eleven ship in the app: weather, downloads, timer, clipboard, file shelf, agents, AeroSpace workspaces, Slack, a clock, todos from Reminders and a Ghostty quick terminal.
+- Built-in sources are Swift `Monitor`s with a `HUDKind` for their overlay. Everything else is a plugin: a program in any language that prints JSON, rendered by the island with the same badges, overlays and sections. Thirteen ship in the app: weather, downloads, timer, clipboard, file shelf, agents, AeroSpace workspaces, Slack, a clock, todos from Reminders, a Ghostty quick terminal, Tailscale and Mullvad VPN.
 - MediaRemote withholds metadata from third-party apps on recent macOS, so now-playing data comes from a small adapter hosted in Apple's own `perl`, with AppleScript for Spotify and Music and a session-store lookup for Firefox.
 
 ## Writing a plugin
 
-A plugin is a folder with a `plugin.json` and a program. Drop it in `~/Library/Application Support/Sylt/Plugins` and it starts; Settings has a button for the folder. The eleven shipped plugins in `Plugins/` are the reference.
+A plugin is a folder with a `plugin.json` and a program. Drop it in `~/Library/Application Support/Sylt/Plugins` and it starts; Settings has a button for the folder. The thirteen shipped plugins in `Plugins/` are the reference.
 
 ```json
 {

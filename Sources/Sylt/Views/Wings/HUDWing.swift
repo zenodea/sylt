@@ -143,9 +143,10 @@ struct HUDWing: View {
     }
 
     private static func privacyText(_ use: PrivacyMonitor.Use) -> String {
-        switch (use.microphone, use.camera) {
-        case (true, true): "Mic and camera on"
-        case (true, false): "Microphone on"
+        let app = use.microphoneApp.map { " · " + AppIcons.name(for: $0) } ?? ""
+        return switch (use.microphone, use.camera) {
+        case (true, true): "Mic and camera on" + app
+        case (true, false): "Microphone on" + app
         case (false, true): "Camera on"
         case (false, false): "Mic and camera off"
         }

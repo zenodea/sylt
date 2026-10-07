@@ -1,0 +1,14 @@
+{
+  "protocol": 1,
+  "id": "mullvad",
+  "name": "Mullvad VPN",
+  "description": "Whether the VPN is on and where you come out, with a flash when it changes.",
+  "symbol": "lock.shield.fill",
+  "run": "mullvad.py",
+  "side": "right",
+  "enabledByDefault": false,
+  "settings": [
+    { "key": "announce", "title": "Flash when it connects or disconnects", "type": "bool", "default": true },
+    { "key": "showWhenOff", "title": "Show a dimmed badge while off", "type": "bool", "default": true }
+  ]
+}

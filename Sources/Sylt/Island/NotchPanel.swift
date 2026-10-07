@@ -88,10 +88,24 @@ final class NotchPanel: NSPanel {
 
     func relayout(on screen: NSScreen) {
         let next = NotchGeometry(screen: screen)
-        guard next != geometry else { return }
-        geometry = next
-        state.apply(geometry)
+        if next != geometry {
+            geometry = next
+            state.apply(geometry)
+        }
         applyFrame()
+    }
+
+    /// The panel must sit centred on the notch screen's top edge. Display changes at
+    /// login, wake and space switches can leave it elsewhere; this puts it back.
+    func ensurePlacement() {
+        guard let screen = NotchGeometry.preferredScreen() else { return }
+        let size = state.canvasSize
+        let expected = NSRect(x: screen.frame.midX - size.width / 2, y: screen.frame.maxY - size.height, width: size.width, height: size.height)
+        if frame != expected || geometry.screen != screen {
+            relayout(on: screen)
+            SkyLight.pinAboveLockScreen(self)
+            orderFrontRegardless()
+        }
     }
 
     private func trackCursor() {

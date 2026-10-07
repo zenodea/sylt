@@ -1,0 +1,13 @@
+{
+  "protocol": 1,
+  "id": "tailscale",
+  "name": "Tailscale",
+  "description": "Whether Tailscale is up, the exit node in use, and the peers online.",
+  "symbol": "point.3.filled.connected.trianglepath.dotted",
+  "run": "tailscale.py",
+  "side": "right",
+  "settings": [
+    { "key": "announce", "title": "Flash when it connects or disconnects", "type": "bool", "default": true },
+    { "key": "showWhenOff", "title": "Show a dimmed badge while off", "type": "bool", "default": false }
+  ]
+}
