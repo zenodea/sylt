@@ -37,6 +37,10 @@ struct PluginBadge: View {
                     if let ring = item.ring {
                         TimerRing(fraction: ring, size: 12)
                     }
+                    if let graph = item.graph {
+                        Sparkline(values: graph, tint: Color(tint: item.tint ?? "white"))
+                            .frame(width: PluginItem.graphWidth, height: 14)
+                    }
                 }
             }
         }

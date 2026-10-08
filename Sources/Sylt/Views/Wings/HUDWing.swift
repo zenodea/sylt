@@ -88,7 +88,7 @@ struct HUDWing: View {
         case .capsLock(let on): rightOnly("capslock.fill", on ? "Caps Lock on" : "Caps Lock off", dimmed: !on)
         case .inputSource(let name): rightOnly("keyboard.fill", name)
         case .focus(let mode): HUDLabel(text: mode ?? "Focus off", dimmed: mode == nil)
-        case .privacy(let use): HUDLabel(text: Self.privacyText(use), dimmed: !use.any)
+        case .privacy(let use): HUDLabel(text: use.message, dimmed: !use.any)
         case .thermal(let state): HUDLabel(text: state == .nominal ? "Cooled down" : "\(state.title) · performance reduced")
         case .external(let external):
             switch external.hud.side {
@@ -137,16 +137,6 @@ struct HUDWing: View {
                     .monospacedDigit()
             }
             .padding(.trailing, IslandLayout.wingEdge)
-        }
-    }
-
-    private static func privacyText(_ use: PrivacyMonitor.Use) -> String {
-        let app = use.microphoneApp.map { " · " + AppIcons.name(for: $0) } ?? ""
-        return switch (use.microphone, use.camera) {
-        case (true, true): "Mic and camera on" + app
-        case (true, false): "Microphone on" + app
-        case (false, true): "Camera on"
-        case (false, false): "Mic and camera off"
         }
     }
 

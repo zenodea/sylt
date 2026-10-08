@@ -3,6 +3,8 @@ import UniformTypeIdentifiers
 
 struct PluginSectionView: View {
     @ObservedObject var plugin: ExternalPlugin
+    /// Height the page has spared for this list beyond its first rows.
+    var extraHeight: CGFloat = 0
 
     var body: some View {
         if let section = plugin.section {
@@ -31,7 +33,7 @@ struct PluginSectionView: View {
                             }
                         }
                     }
-                    .frame(minHeight: rows.prefix(PluginSection.maxRows).reduce(0) { $0 + $1.height } - 3, maxHeight: .infinity)
+                    .frame(height: rows.prefix(PluginSection.maxRows).reduce(0) { $0 + $1.height } - 3 + extraHeight)
                     .background(GeometryReader { proxy in
                         Color.clear.preference(key: ListFramesKey.self, value: [proxy.frame(in: .named(ListFramesKey.space))])
                     })
@@ -49,7 +51,6 @@ struct PluginSectionView: View {
                     .frame(height: PluginSection.buttonsHeight - 4)
                 }
             }
-            .frame(maxHeight: section.rows?.isEmpty == false ? .infinity : nil, alignment: .top)
             .animation(IslandAnimation.value, value: section)
         }
     }
@@ -103,6 +104,9 @@ private struct PluginRowView: View {
                     }
                 }
                 Spacer()
+                if let graph = row.graph {
+                    Sparkline(values: graph, tint: Color(tint: row.tint ?? "white")).frame(width: 72, height: 14)
+                }
                 if let progress = row.progress {
                     LevelBar(value: progress).frame(width: 60)
                 }

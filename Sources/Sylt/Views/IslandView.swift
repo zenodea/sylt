@@ -32,7 +32,9 @@ struct IslandView: View {
                         .id(state.mode.contentIdentity)
                         .transition(IslandAnimation.content)
                     if state.absorbsCursor, state.preferences.showsRimGlow, state.preferences.holdsPointer {
-                        RimGlow(shape: shape, point: state.exitPoint, strength: state.pullStrength).fadeTop()
+                        RimGlow(shape: shape, point: state.exitPoint, strength: state.pullStrength, notchWidth: state.notchWidth).fadeTop()
+                    } else if state.approachStrength > 0 {
+                        RimGlow(shape: shape, point: state.approachPoint, strength: state.approachStrength * 0.7, notchWidth: state.notchWidth).fadeTop()
                     }
                     if let burst = state.burst {
                         switch state.preferences.releaseEffect {

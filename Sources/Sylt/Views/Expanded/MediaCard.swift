@@ -6,6 +6,41 @@ struct MediaCard: View {
 
     var body: some View {
         if let track = nowPlaying.track {
+            card(for: track)
+        } else {
+            idle
+        }
+    }
+
+    /// The card with nothing playing: the same shape in grey, the output row still live.
+    private var idle: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(.white.opacity(0.08))
+                    .frame(width: 60, height: 60)
+                    .overlay(Image(systemName: "music.note").font(.system(size: 22, weight: .semibold)).foregroundStyle(.white.opacity(0.3)))
+                VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Nothing playing")
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.5))
+                        Text("Press play in any app")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white.opacity(0.3))
+                    }
+                    LevelBar(value: 0).frame(height: 6).opacity(0.5)
+                    controls.opacity(0.3).disabled(true)
+                }
+            }
+            output
+        }
+        .padding(10)
+        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.white.opacity(0.1), lineWidth: 1))
+    }
+
+    private func card(for track: NowPlayingTrack) -> some View {
             VStack(spacing: 8) {
                 HStack(spacing: 12) {
                     ArtworkView(image: track.artwork, size: 60)
@@ -44,7 +79,6 @@ struct MediaCard: View {
                         lineWidth: 1
                     )
             )
-        }
     }
 
     /// The source app. With more than one player going, it is a menu to pick which to show.

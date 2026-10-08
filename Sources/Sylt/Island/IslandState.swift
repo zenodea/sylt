@@ -14,6 +14,9 @@ final class IslandState: ObservableObject {
     @Published var cursorPull: CGVector = .zero
     @Published var pullStrength: CGFloat = 0
     @Published var exitPoint: CGPoint = .zero
+    /// A free pointer coming close: where on the rim, and how close, 0 to 1.
+    @Published var approachPoint: CGPoint = .zero
+    @Published var approachStrength: CGFloat = 0
     /// Where the pointer went in, in canvas coordinates; pushes are measured from here.
     var heldOrigin: CGPoint?
 

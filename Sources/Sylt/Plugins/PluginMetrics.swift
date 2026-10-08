@@ -39,6 +39,11 @@ extension PluginSection {
         if !(buttons ?? []).isEmpty { height += Self.buttonsHeight }
         return height
     }
+
+    /// How much taller the list would be with every row showing instead of scrolling.
+    var hiddenRowsHeight: CGFloat {
+        (rows ?? []).dropFirst(Self.maxRows).reduce(0) { $0 + $1.height }
+    }
 }
 
 extension PluginRow {

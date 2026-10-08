@@ -86,7 +86,9 @@ final class NotchPanel: NSPanel {
 
     /// Hover follows the free pointer; the panel is click-through unless it's over the island.
     func followPointer() {
-        state.cursorMoved(to: canvasPoint(of: NSEvent.mouseLocation))
+        let point = canvasPoint(of: NSEvent.mouseLocation)
+        state.cursorMoved(to: point)
+        state.cursorApproached(point)
         ignoresMouseEvents = state.lock.isLocked || !state.isHovering
     }
 

@@ -9,7 +9,7 @@ final class TopEdgeGuard {
 
     /// Screen x-range under guard, in CoreGraphics coordinates; read from the tap's thread.
     nonisolated(unsafe) private static var span: ClosedRange<CGFloat>?
-    private static let margin: CGFloat = 2
+    private static let margin: CGFloat = 3
     private var tap: CFMachPort?
 
     func guardSpan(_ range: ClosedRange<CGFloat>) {
@@ -27,6 +27,7 @@ final class TopEdgeGuard {
             if location.y < TopEdgeGuard.margin, span.contains(location.x) {
                 location.y = TopEdgeGuard.margin
                 event.location = location
+                CGWarpMouseCursorPosition(location)
             }
             return Unmanaged.passUnretained(event)
         }

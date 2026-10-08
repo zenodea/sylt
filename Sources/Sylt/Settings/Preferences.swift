@@ -12,6 +12,7 @@ final class Preferences: ObservableObject {
     @Published var playsLockSound: Bool
     @Published var lockShowsStatus: Bool
     @Published var absorbsPointer: Bool
+    @Published var approachGlow: Bool
     @Published var holdsPointer: Bool
     @Published var releaseForce: Double
     @Published var releaseEffect: ReleaseEffect
@@ -37,6 +38,7 @@ final class Preferences: ObservableObject {
         static let lockStatus = "lockShowsStatus"
         static let releaseEffect = "releaseEffect"
         static let absorbsPointer = "absorbsPointer"
+        static let approachGlow = "approachGlow"
         static let holdsPointer = "holdsPointer"
         static let releaseForce = "releaseForce"
         static let rippleStrength = "rippleStrength"
@@ -76,6 +78,7 @@ final class Preferences: ObservableObject {
         lockShowsStatus = defaults.value(Key.lockStatus, or: false)
         releaseEffect = ReleaseEffect(rawValue: defaults.string(forKey: Key.releaseEffect) ?? "") ?? .ripple
         absorbsPointer = defaults.value(Key.absorbsPointer, or: true)
+        approachGlow = defaults.value(Key.approachGlow, or: true)
         holdsPointer = defaults.value(Key.holdsPointer, or: true)
         releaseForce = defaults.value(Key.releaseForce, or: 1)
         rippleStrength = defaults.value(Key.rippleStrength, or: 1)
@@ -96,6 +99,7 @@ final class Preferences: ObservableObject {
         persist($lockShowsStatus, as: Key.lockStatus)
         persist($releaseEffect, as: Key.releaseEffect, \.rawValue)
         persist($absorbsPointer, as: Key.absorbsPointer)
+        persist($approachGlow, as: Key.approachGlow)
         persist($holdsPointer, as: Key.holdsPointer)
         persist($releaseForce, as: Key.releaseForce)
         persist($rippleStrength, as: Key.rippleStrength)

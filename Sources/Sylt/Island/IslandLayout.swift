@@ -91,7 +91,7 @@ struct IslandLayout: Equatable {
     /// Every section with something to show right now, in natural order.
     var availableSections: [ExpandedSection] {
         var sections: [ExpandedSection] = []
-        if showsMediaCard { sections.append(.media) }
+        sections.append(.media)
         if showsNextEvent { sections.append(.event) }
         sections += pluginSectionHeights.filter { $0.value > 0 }.keys.sorted().map(ExpandedSection.plugin)
         return sections

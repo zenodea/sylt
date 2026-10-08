@@ -49,7 +49,7 @@ enum HUDKind: Hashable {
         case .network: Self.glyph(trailing: Self.text(NetworkMonitor.Link.allCases.map(\.title)))
         case .calendar(let event): Self.glyph(trailing: min(Self.text(event.title), 150) + 6 + Self.text("in 30m"))
         case .focus(let mode): Self.glyph(trailing: Self.text(mode ?? "Focus off"))
-        case .privacy: Self.glyph(trailing: Self.text(Self.privacyMessages))
+        case .privacy(let use): Self.glyph(trailing: Self.text(use.message))
         case .thermal(let state): Self.glyph(trailing: Self.text(state == .nominal ? "Cooled down" : "\(state.title) · performance reduced"))
         case .capsLock: .compact(leading: nil, trailing: Self.wing(Self.glyphWidth + Self.glyphGap + Self.text(["Caps Lock on", "Caps Lock off"])))
         case .inputSource(let name): .compact(leading: nil, trailing: Self.wing(Self.glyphWidth + Self.glyphGap + min(Self.text(name), 140)))
@@ -64,7 +64,6 @@ enum HUDKind: Hashable {
     }
 
     static let batteryMessages = ["Charging", "On battery", "Fully charged", "Critically low", "Low battery", "Battery"]
-    static let privacyMessages = ["Mic and camera on", "Microphone on", "Camera on", "Mic and camera off"]
 
     /// A symbol in a wing, the gap after it, a level bar, and the wing a leading symbol alone takes.
     static let glyphWidth: CGFloat = 16
@@ -144,7 +143,7 @@ struct ExternalHUD: Hashable {
     var style: HUDKind.Style {
         switch hud.side {
         case "right": .compact(leading: nil, trailing: HUDKind.wing((hasGlyph ? HUDKind.glyphWidth + HUDKind.glyphGap : 0) + content))
-        case "left": .compact(leading: HUDKind.wing(content + (hasGlyph ? HUDKind.glyphWidth + 6 : 0)), trailing: nil)
+        case "left": .compact(leading: HUDKind.wing(content + (hasGlyph ? HUDKind.glyphWidth + HUDKind.glyphGap : 0)), trailing: nil)
         default: .compact(leading: hasGlyph ? HUDKind.glyphWing : nil, trailing: HUDKind.wing(content))
         }
     }

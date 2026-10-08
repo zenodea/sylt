@@ -32,15 +32,16 @@ struct ExpandedView: View {
         .clipped()
     }
 
-    /// Lists grow to take whatever height the page has; a page with no list keeps its
-    /// sections at the top.
+    /// The page's spare height goes to its lists: each gets what its hidden rows need,
+    /// shared evenly when there isn't enough for all. Anything left stays at the bottom.
     private var page: some View {
         VStack(alignment: .leading, spacing: IslandLayout.sectionGap) {
             let sections = layout.currentPageSections
+            let extras = spareHeight(for: sections)
             ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-                view(for: section).modifier(Staggered(index: index))
+                view(for: section, extra: extras[section.id] ?? 0).modifier(Staggered(index: index))
             }
-            if !sections.contains(where: hasList) { Spacer(minLength: 0) }
+            Spacer(minLength: 0)
             if sections.isEmpty {
                 Text("Nothing playing")
                     .foregroundStyle(.white.opacity(0.5))
@@ -50,20 +51,38 @@ struct ExpandedView: View {
         }
     }
 
-    private func hasList(_ section: ExpandedSection) -> Bool {
-        guard case .plugin(let id) = section else { return false }
-        return plugins.plugins.first { $0.id == id }?.section?.rows?.isEmpty == false
+    private func spareHeight(for sections: [ExpandedSection]) -> [String: CGFloat] {
+        var wants: [(id: String, need: CGFloat)] = []
+        for section in sections {
+            guard case .plugin(let id) = section, let need = plugins.plugins.first(where: { $0.id == id })?.section?.hiddenRowsHeight, need > 0 else { continue }
+            wants.append((section.id, need))
+        }
+        guard !wants.isEmpty else { return [:] }
+        let used = sections.map(layout.height(of:)).reduce(0, +) + CGFloat(max(0, sections.count - 1)) * IslandLayout.sectionGap
+        let dots: CGFloat = layout.expandedPages.count > 1 ? IslandLayout.pageDotsHeight : 0
+        var spare = max(0, layout.expandedHeight - IslandLayout.expandedBaseHeight - dots - used)
+        var granted: [String: CGFloat] = [:]
+        // Water-filling: the smallest need is met first, the rest share what remains.
+        var open = wants.sorted { $0.need < $1.need }
+        while !open.isEmpty, spare > 0 {
+            let share = spare / CGFloat(open.count)
+            let first = open.removeFirst()
+            let given = min(first.need, share)
+            granted[first.id] = given
+            spare -= given
+        }
+        return granted
     }
 
     @ViewBuilder
-    private func view(for section: ExpandedSection) -> some View {
+    private func view(for section: ExpandedSection, extra: CGFloat) -> some View {
         switch section {
         case .media:
             MediaCard(nowPlaying: nowPlaying)
         case .event:
             if let event = calendar.next { EventRow(event: event) }
         case .plugin(let id):
-            if let plugin = plugins.plugins.first(where: { $0.id == id }) { PluginSectionView(plugin: plugin) }
+            if let plugin = plugins.plugins.first(where: { $0.id == id }) { PluginSectionView(plugin: plugin, extraHeight: extra) }
         }
     }
 }

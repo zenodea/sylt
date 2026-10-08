@@ -60,4 +60,26 @@ extension IslandState {
         let unit = push.unit
         return CGPoint(x: origin.x + push.dx * scale + unit.dx * outside, y: origin.y + push.dy * scale + unit.dy * outside)
     }
+
+    /// Reach within which a free pointer makes the rim glow.
+    static let approachReach: CGFloat = 70
+
+    /// Called with the free pointer's canvas position; the glow follows the nearest rim
+    /// point and brightens as the gap closes, fading out beyond reach.
+    func cursorApproached(_ point: CGPoint) {
+        guard preferences.approachGlow, mode != .expanded, !isHovering else { return clearApproach() }
+        let island = layout.hitFrame(for: mode, hovering: false).insetBy(dx: IslandLayout.hitMargin, dy: 0)
+        let nearest = CGPoint(x: min(max(point.x, island.minX), island.maxX), y: min(max(point.y, island.minY), island.maxY))
+        let gap = hypot(point.x - nearest.x, point.y - nearest.y)
+        guard gap < Self.approachReach else { return clearApproach() }
+        withAnimation(IslandAnimation.cursor) {
+            approachPoint = nearest
+            approachStrength = 1 - gap / Self.approachReach
+        }
+    }
+
+    func clearApproach() {
+        guard approachStrength > 0 else { return }
+        withAnimation(IslandAnimation.cursor) { approachStrength = 0 }
+    }
 }

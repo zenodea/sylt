@@ -76,8 +76,8 @@ final class IslandLayoutTests: XCTestCase {
 
     func testExpandedHeightStacksSections() {
         var layout = layout
-        XCTAssertEqual(layout.expandedHeight, IslandLayout.expandedBaseHeight + IslandLayout.emptyExpandedHeight)
-        layout.showsMediaCard = true
+        layout.expandedPages = ExpandedLayout().resolve(available: layout.availableSections)
+        XCTAssertEqual(layout.expandedHeight, IslandLayout.expandedBaseHeight + IslandLayout.mediaCardHeight, "the media card is always there")
         layout.pluginSectionHeights = ["a": 34]
         layout.expandedPages = ExpandedLayout().resolve(available: layout.availableSections)
         XCTAssertEqual(

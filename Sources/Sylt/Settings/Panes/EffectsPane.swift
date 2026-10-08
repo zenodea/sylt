@@ -5,6 +5,7 @@ struct EffectsPane: View {
 
     var body: some View {
         Section("Pointer") {
+            Toggle("Glow as the pointer comes near", isOn: $preferences.approachGlow)
             Toggle("Take the pointer in", isOn: $preferences.absorbsPointer)
             if preferences.absorbsPointer {
                 Toggle("Hold it until pushed", isOn: $preferences.holdsPointer)

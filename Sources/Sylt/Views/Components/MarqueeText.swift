@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Text that doesn't fit starts at its end and slides right to reveal the beginning,
+/// Text that doesn't fit starts at its beginning and slides left to reveal the end,
 /// pausing briefly at the start of each pass.
 struct MarqueeText: View {
     let text: String
@@ -16,7 +16,7 @@ struct MarqueeText: View {
                 let overflow = max(0, textWidth - containerWidth)
                 let cycle = overflow / speed + 2.5
                 let t = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: cycle)
-                let offset = -overflow + min(overflow, max(0, t - 1.5) * speed)
+                let offset = -min(overflow, max(0, t - 1.5) * speed)
                 Text(text)
                     .font(font)
                     .lineLimit(1)
