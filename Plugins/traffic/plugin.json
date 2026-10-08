@@ -1,0 +1,14 @@
+{
+  "protocol": 1,
+  "id": "traffic",
+  "name": "Network traffic",
+  "description": "Bytes in and out as two small graphs, with the current rate.",
+  "symbol": "arrow.up.arrow.down",
+  "run": "traffic.py",
+  "side": "right",
+  "enabledByDefault": false,
+  "settings": [
+    { "key": "interface", "title": "Interface (blank for the busiest)", "type": "text", "default": "" },
+    { "key": "rateAbove", "title": "Show the rate above, in kB/s", "type": "number", "default": 50 }
+  ]
+}

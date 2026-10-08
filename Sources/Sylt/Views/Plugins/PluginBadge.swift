@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A plugin's items in a wing.
 struct PluginBadge: View {
     let items: [PluginItem]
     var spacing: CGFloat = 8
@@ -12,7 +11,7 @@ struct PluginBadge: View {
                     if let status = item.status, item.symbol == nil, item.image == nil {
                         StatusMark(status: status, size: 6)
                     } else if let dot = item.dot {
-                        Circle().fill(Color(tint: dot)).frame(width: 7, height: 7).shadow(color: Color(tint: dot).opacity(0.8), radius: 3)
+                        GlowDot(color: Color(tint: dot))
                     }
                     if item.symbol != nil || item.image != nil {
                         PluginGlyph(symbol: item.symbol, image: item.image, tint: item.tint)
@@ -29,7 +28,7 @@ struct PluginBadge: View {
                     }
                     if let text = item.text, !text.isEmpty {
                         Text(text)
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .font(.badge)
                             .foregroundStyle(Color(tint: item.tint ?? "white").opacity(item.tint == nil ? 0.85 : 1))
                             .monospacedDigit()
                             .lineLimit(1)

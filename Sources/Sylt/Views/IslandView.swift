@@ -32,16 +32,14 @@ struct IslandView: View {
                         .id(state.mode.contentIdentity)
                         .transition(IslandAnimation.content)
                     if state.absorbsCursor, state.preferences.showsRimGlow, state.preferences.holdsPointer {
-                        RimGlow(shape: shape, point: state.exitPoint, strength: state.pullStrength)
-                            .modifier(FadeTop())
+                        RimGlow(shape: shape, point: state.exitPoint, strength: state.pullStrength).fadeTop()
                     }
-                    if let burst = state.burst, state.preferences.releaseEffect == .ring {
-                        ReleaseBurst(point: burst.point).id(burst.id)
-                            .modifier(FadeTop())
-                    }
-                    if let burst = state.burst, state.preferences.releaseEffect == .glass {
-                        GlassFlash(shape: shape, point: burst.point, direction: burst.direction).id(burst.id)
-                            .modifier(FadeTop())
+                    if let burst = state.burst {
+                        switch state.preferences.releaseEffect {
+                        case .ring: ReleaseBurst(point: burst.point).id(burst.id).fadeTop()
+                        case .glass: GlassFlash(shape: shape, point: burst.point, direction: burst.direction).id(burst.id).fadeTop()
+                        default: EmptyView()
+                        }
                     }
                 }
                 .clipShape(shape)
@@ -72,7 +70,7 @@ struct IslandView: View {
             }
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .top)
-        .coordinateSpace(name: "canvas")
+        .coordinateSpace(name: ListFramesKey.space)
         .onPreferenceChange(ListFramesKey.self) { frames in state.listFrames = state.mode == .expanded ? frames : [] }
         .environmentObject(state.battery)
         .environmentObject(state.volume)
@@ -110,250 +108,13 @@ struct IslandView: View {
             }
     }
 
+    /// Closed and wing-based HUDs share one branch so the wings keep their identity between them.
     @ViewBuilder
     private var content: some View {
         switch state.mode {
         case .locked, .hud(.unlocked): LockedView(layout: state.layout, unlocked: state.mode != .locked)
-        case .closed, .hud:
-            // One branch for closed and wing-based HUDs, so the wings keep their identity between them.
-            WingsView(mode: state.mode, layout: state.layout)
+        case .closed, .hud: WingsView(mode: state.mode, layout: state.layout)
         case .expanded: ExpandedView(notchHeight: state.notchHeight, layout: state.layout, pageDirection: state.pageDirection)
         }
-    }
-}
-
-/// The island's liquid surface. Always mounted so it animates with the island's own
-/// spring; a `LiquidEvent` plays a small ripple on the edge where the pointer went in or out.
-private struct Liquid: View, Animatable {
-    var shape: IslandShape
-    let event: LiquidEvent?
-    let strength: Double
-    let width: Double
-
-    var animatableData: IslandShape.AnimatableData {
-        get { shape.animatableData }
-        set { shape.animatableData = newValue }
-    }
-
-    var body: some View {
-        TimelineView(.animation(paused: event == nil)) { context in
-            Canvas { graphics, size in
-                guard let event else { return }
-                let t = context.date.timeIntervalSince(event.start)
-                graphics.fill(Ripple.path(in: CGRect(origin: .zero, size: size), shape: shape, origin: event.point, at: t, strength: strength, width: width), with: .color(.black))
-            }
-        }
-        .allowsHitTesting(false)
-    }
-}
-
-/// A ripple running along the island's rim from where the pointer went in or out, dying
-/// out within a few dozen points: the surface bulges outward in a damped wave, never
-/// inward, so the content behind is never uncovered. The path is the whole outline,
-/// nudged a touch inside where the surface is still, so it only shows where it swells.
-private enum Ripple {
-    private static let height: CGFloat = 3.6
-    private static let step: CGFloat = 1
-
-    static func path(in rect: CGRect, shape: IslandShape, origin: CGPoint, at t: TimeInterval, strength: Double, width: Double) -> Path {
-        let time = CGFloat(t)
-        let decay = exp(-2.8 * time)
-        guard decay > 0.04 else { return Path() }
-        let height = Self.height * CGFloat(strength)
-        let spread = CGFloat(width)
-        let outline = shape.outline(in: rect, step: step)
-        guard outline.count > 1 else { return Path() }
-        var nearest = 0
-        var best = CGFloat.greatestFiniteMagnitude
-        for (index, sample) in outline.enumerated() {
-            let gap = hypot(sample.point.x - origin.x, sample.point.y - origin.y)
-            if gap < best { best = gap; nearest = index }
-        }
-        var path = Path()
-        for (index, sample) in outline.enumerated() {
-            let distance = CGFloat(abs(index - nearest)) * step
-            let wave = sin(distance / (9 * spread) - time * 18) * exp(-distance / (24 * spread))
-            let swell = max(0, wave) * height * decay - 0.5
-            let point = CGPoint(x: sample.point.x + sample.normal.dx * swell, y: sample.point.y + sample.normal.dy * swell)
-            if index == 0 { path.move(to: point) } else { path.addLine(to: point) }
-        }
-        path.closeSubpath()
-        return path
-    }
-}
-
-/// The island as thick dark glass: when the pointer leaves, light catches the rim there
-/// and a soft reflection sweeps back across the surface, away from the exit, then fades.
-private struct GlassFlash: View {
-    let shape: IslandShape
-    let point: CGPoint
-    let direction: CGVector
-    @State private var fired = false
-
-    var body: some View {
-        ZStack {
-            Ellipse()
-                .fill(RadialGradient(colors: [.white.opacity(0.7), .white.opacity(0.16), .clear], center: .center, startRadius: 0, endRadius: 70))
-                .frame(width: 220, height: 56)
-                .rotationEffect(.radians(atan2(direction.dy, direction.dx) * 0.3))
-                .blur(radius: 8)
-                .position(x: point.x - direction.dx * (fired ? 150 : 10), y: point.y - direction.dy * (fired ? 60 : 4))
-                .opacity(fired ? 0 : 1)
-            RimOutline(shape: shape)
-                .stroke(.white, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                .blur(radius: 0.6)
-                .mask(
-                    Circle()
-                        .fill(RadialGradient(colors: [.white, .white.opacity(0.5), .clear], center: .center, startRadius: 0, endRadius: 80))
-                        .frame(width: 160, height: 160)
-                        .scaleEffect(fired ? 2.4 : 0.6)
-                        .position(point)
-                )
-                .opacity(fired ? 0 : 0.95)
-        }
-        .blendMode(.plusLighter)
-        .allowsHitTesting(false)
-        .onAppear { withAnimation(.easeOut(duration: 0.6)) { fired = true } }
-    }
-}
-
-/// Sparks: a short shower of bright specks thrown out along the push and fading, or,
-/// when the pointer arrives, drawn in to the point it went in at.
-private struct Sparks: View {
-    let event: SparkEvent
-    private static let count = 16
-    private static let life: TimeInterval = 0.6
-
-    var body: some View {
-        TimelineView(.animation) { context in
-            let t = context.date.timeIntervalSince(event.start)
-            Canvas { graphics, _ in
-                guard t < Self.life else { return }
-                for index in 0..<Self.count {
-                    let spark = Self.spark(index, at: t, event: event)
-                    guard spark.alpha > 0.02 else { continue }
-                    let rect = CGRect(x: spark.position.x - spark.size / 2, y: spark.position.y - spark.size / 2, width: spark.size, height: spark.size)
-                    graphics.fill(Circle().path(in: rect), with: .color(spark.colour.opacity(spark.alpha)))
-                }
-            }
-            .blendMode(.plusLighter)
-        }
-        .allowsHitTesting(false)
-    }
-
-    private static func spark(_ index: Int, at t: TimeInterval, event: SparkEvent) -> (position: CGPoint, size: CGFloat, alpha: Double, colour: Color) {
-        let seed = CGFloat((index * 73) % 17) / 16
-        let seed2 = CGFloat((index * 31) % 13) / 12
-        let base = event.inward ? CGFloat(index) / CGFloat(count) * .pi * 2 : atan2(event.direction.dy, event.direction.dx)
-        let angle = base + (event.inward ? 0 : (seed - 0.5) * 1.6)
-        let speed: CGFloat = 90 + seed2 * 180
-        let drag: CGFloat = 5
-        let time = CGFloat(t)
-        let travel = speed * (1 - exp(-drag * time)) / drag
-        let reach = event.inward ? max(0, 26 + seed * 20 - travel) : travel
-        let position = CGPoint(x: event.point.x + cos(angle) * reach, y: event.point.y + sin(angle) * reach)
-        let fade = max(0, 1 - Double(time) / life)
-        let colour = seed2 > 0.6 ? Color(red: 1, green: 0.85, blue: 0.5) : .white
-        return (position, 1.4 + seed * 1.6, fade * fade, colour)
-    }
-}
-
-/// The flash where the pointer just left: a ring that expands and fades at the rim.
-private struct ReleaseBurst: View {
-    let point: CGPoint
-    @State private var fired = false
-
-    var body: some View {
-        Circle()
-            .stroke(.white.opacity(fired ? 0 : 0.7), lineWidth: fired ? 1 : 3)
-            .background(Circle().fill(.white.opacity(fired ? 0 : 0.25)))
-            .frame(width: 24, height: 24)
-            .scaleEffect(fired ? 3.2 : 0.4)
-            .position(point)
-            .allowsHitTesting(false)
-            .onAppear { withAnimation(.easeOut(duration: 0.45)) { fired = true } }
-    }
-}
-
-/// Light has no business on the island's top edge, which is the screen's edge: anything
-/// glowing there fades out over the first few points.
-private struct FadeTop: ViewModifier {
-    func body(content: Content) -> some View {
-        content.mask(
-            VStack(spacing: 0) {
-                LinearGradient(colors: [.clear, .white], startPoint: .top, endPoint: .bottom).frame(height: 12)
-                Color.white
-            }
-        )
-    }
-}
-
-/// The island's visible outline as an open path: down the left side, around the bottom,
-/// up the right side. The top edge sits against the screen's edge and is left out.
-private struct RimOutline: Shape {
-    var shape: IslandShape
-
-    var animatableData: IslandShape.AnimatableData {
-        get { shape.animatableData }
-        set { shape.animatableData = newValue }
-    }
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        for (index, sample) in shape.outline(in: rect, step: 2).enumerated() {
-            if index == 0 { path.move(to: sample.point) } else { path.addLine(to: sample.point) }
-        }
-        return path
-    }
-}
-
-/// The island's edge lighting up where the held pointer would come out, brighter the harder it is pushed.
-private struct RimGlow: View {
-    let shape: IslandShape
-    let point: CGPoint
-    let strength: CGFloat
-
-    var body: some View {
-        RimOutline(shape: shape)
-            .stroke(.white, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-            .blur(radius: 1.5)
-            .mask(
-                Circle()
-                    .fill(RadialGradient(colors: [.white, .white.opacity(0.5), .clear], center: .center, startRadius: 0, endRadius: 46))
-                    .frame(width: 92, height: 92)
-                    .position(point)
-            )
-            .opacity(0.15 + strength * 0.85)
-            .opacity(strength > 0.03 ? 1 : 0)
-            .animation(IslandAnimation.cursor, value: point)
-            .animation(IslandAnimation.cursor, value: strength)
-            .allowsHitTesting(false)
-    }
-}
-
-private struct CursorPull: ViewModifier {
-    let cursor: CGPoint
-    let enabled: Bool
-
-    func body(content: Content) -> some View {
-        let pull = enabled ? cursor : .zero
-        content
-            .scaleEffect(x: 1 + abs(pull.x) * 0.015, y: 1 + pull.y * 0.06, anchor: .top)
-            .animation(IslandAnimation.cursor, value: pull)
-    }
-}
-
-/// Leans the island toward a swipe by growing the far edge, so the edge over
-/// the notch and the top edge never move.
-private struct SwipeStretch: ViewModifier {
-    let pull: CGVector
-
-    func body(content: Content) -> some View {
-        content
-            .scaleEffect(
-                x: 1 + abs(pull.dx) * 0.025,
-                y: 1 + max(0, pull.dy) * 0.05,
-                anchor: UnitPoint(x: pull.dx > 0 ? 0 : 1, y: 0)
-            )
     }
 }

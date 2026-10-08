@@ -21,16 +21,19 @@ final class MediaKeyInterceptor: ObservableObject {
     private var retryTimer: Timer?
     private static let systemDefinedEvent = CGEventType(rawValue: 14)!
     private static let auxiliaryControlSubtype: Int16 = 8
+    private static let retryInterval: TimeInterval = 2
+    private static let debug = ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil
 
-    var isActive: Bool { tap != nil || retryTimer != nil }
     /// The tap is installed and keys are being swallowed.
     var isIntercepting: Bool { tap != nil }
+    private var isActive: Bool { tap != nil || retryTimer != nil }
 
     /// Asks macOS again, for the Settings pane, without prompting.
     func refreshAuthorization() {
         let trusted = AXIsProcessTrusted()
         if trusted != isAuthorized { isAuthorized = trusted }
-        if trusted, isActive, tap == nil { retryTimer?.invalidate(); retryTimer = nil; installTap() }
+        if trusted, retryTimer != nil { authorized() }
+        // `isIntercepting` isn't published; the pane re-reads it on this.
         objectWillChange.send()
     }
 
@@ -38,15 +41,12 @@ final class MediaKeyInterceptor: ObservableObject {
         guard !isActive else { return }
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
         isAuthorized = AXIsProcessTrustedWithOptions(options)
-        if ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil {
-            FileHandle.standardError.write(Data("media keys: activate trusted=\(isAuthorized)\n".utf8))
-        }
+        Self.log("activate trusted=\(isAuthorized)")
         isAuthorized ? installTap() : scheduleRetry()
     }
 
     func deactivate() {
-        retryTimer?.invalidate()
-        retryTimer = nil
+        stopRetrying()
         if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
         if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
         tap = nil
@@ -59,15 +59,21 @@ final class MediaKeyInterceptor: ObservableObject {
     }
 
     private func scheduleRetry() {
-        retryTimer = .scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self, AXIsProcessTrusted() else { return }
-                self.retryTimer?.invalidate()
-                self.retryTimer = nil
-                self.isAuthorized = true
-                self.installTap()
-            }
+        retryTimer = .every(Self.retryInterval) { [weak self] in
+            guard let self, AXIsProcessTrusted() else { return }
+            isAuthorized = true
+            authorized()
         }
+    }
+
+    private func authorized() {
+        stopRetrying()
+        installTap()
+    }
+
+    private func stopRetrying() {
+        retryTimer?.invalidate()
+        retryTimer = nil
     }
 
     /// The HID tap sees keys before anything else does, so Control Center never
@@ -82,9 +88,7 @@ final class MediaKeyInterceptor: ObservableObject {
         let mask = CGEventMask(1 << Self.systemDefinedEvent.rawValue)
         let created = CGEvent.tapCreate(tap: .cghidEventTap, place: .headInsertEventTap, options: .defaultTap, eventsOfInterest: mask, callback: callback, userInfo: info)
             ?? CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap, eventsOfInterest: mask, callback: callback, userInfo: info)
-        if ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil {
-            FileHandle.standardError.write(Data("media keys: trusted=\(AXIsProcessTrusted()) tap=\(created != nil)\n".utf8))
-        }
+        Self.log("trusted=\(AXIsProcessTrusted()) tap=\(created != nil)")
         guard let created else {
             isAuthorized = false
             scheduleRetry()
@@ -109,13 +113,16 @@ final class MediaKeyInterceptor: ObservableObject {
 
         let flags = nsEvent.data1 & 0xFFFF
         let isKeyDown = (flags & 0xFF00) >> 8 == 0xA
-        if ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil {
-            FileHandle.standardError.write(Data("media keys: \(key) down=\(isKeyDown) handler=\(handler != nil)\n".utf8))
-        }
+        Self.log("\(key) down=\(isKeyDown) handler=\(handler != nil)")
         if isKeyDown {
             let fine = nsEvent.modifierFlags.contains([.shift, .option])
             handler?(key, fine)
         }
         return nil
+    }
+
+    private static func log(_ message: String) {
+        guard debug else { return }
+        FileHandle.standardError.write(Data("media keys: \(message)\n".utf8))
     }
 }

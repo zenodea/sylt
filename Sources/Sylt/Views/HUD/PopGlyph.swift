@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A symbol that pops in once the HUD has opened, like a tick on a finished job.
 struct PopGlyph: View {
     let symbol: String
     var tint: Color = .green

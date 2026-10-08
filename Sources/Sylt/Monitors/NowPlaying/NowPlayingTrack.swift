@@ -44,8 +44,8 @@ struct NowPlayingTrack: Equatable {
         return Color(accent)
     }
 
-    var isSameSong: (NowPlayingTrack) -> Bool {
-        { $0.title == title && $0.artist == artist }
+    func isSameSong(_ other: NowPlayingTrack) -> Bool {
+        other.title == title && other.artist == artist
     }
 }
 

@@ -23,12 +23,8 @@ struct EventRow: View {
                     Haptics.press()
                 } label: {
                     Label("Join", systemImage: "video.fill")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(.green.opacity(0.9), in: Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(Pill(tint: .green.opacity(0.9)))
             }
         }
         .padding(.horizontal, 10)

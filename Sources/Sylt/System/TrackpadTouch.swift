@@ -9,7 +9,6 @@ final class TrackpadTouch {
     private(set) var isTouching = false
     /// Called on the main thread whenever contact starts or ends.
     var onChange: ((Bool) -> Void)?
-    private(set) var isAvailable = false
 
     private typealias Device = UnsafeMutableRawPointer
     private typealias Callback = @convention(c) (Device?, UnsafeMutableRawPointer?, Int32, Double, Int32) -> Int32
@@ -42,7 +41,6 @@ final class TrackpadTouch {
             unsafeBitCast(register, to: Register.self)(reference, callback)
             unsafeBitCast(startDevice, to: Start.self)(reference, 0)
         }
-        isAvailable = !devices.isEmpty
     }
 
     private func contactChanged(_ touching: Bool) {

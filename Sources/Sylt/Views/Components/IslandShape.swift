@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The island outline, hugging the top of its rect, centred on the notch plus
-/// an offset. Animates size and offset without moving the content behind it.
+/// The island outline, hugging the top of its rect and centred on the notch plus an offset.
 struct IslandShape: Shape {
     var frame: IslandFrame
     var notchHeight: CGFloat
@@ -19,10 +18,8 @@ struct IslandShape: Shape {
         CGPoint(x: rect.midX - frame.size.width / 2 + frame.centerOffset, y: rect.minY)
     }
 
-    /// The visible outline sampled about every `step` points, from the top of the left
-    /// side, down and around the bottom, to the top of the right side, with the outward
-    /// normal at each sample. Consecutive samples are a known distance apart, so an index
-    /// difference is a distance along the rim.
+    /// The visible outline sampled every `step` points from the top of the left side round to the
+    /// top of the right, with outward normals; an index difference is a distance along the rim.
     func outline(in rect: CGRect, step: CGFloat) -> [(point: CGPoint, normal: CGVector)] {
         let size = frame.size
         let origin = origin(in: rect)

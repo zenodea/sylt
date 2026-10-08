@@ -10,6 +10,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: NotchPanel?
     private var cancellables = Set<AnyCancellable>()
     private var activity: NSObjectProtocol?
+    private var placementTimer: Timer?
+    private var measureTimer: Timer?
+
+    /// Displays settle late at login: the placement is checked often at first, then rarely.
+    private static let earlyPlacementInterval: TimeInterval = 2
+    private static let earlyPlacementChecks = 30
+    private static let latePlacementInterval: TimeInterval = 15
+    private static let measureInterval: TimeInterval = 2
+    private static let mediaKeyStep: Float = 1 / 16
+    private static let fineMediaKeyStep: Float = 1 / 64
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         activity = ProcessInfo.processInfo.beginActivity(
@@ -20,42 +30,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.panel = panel
         state.start()
         bindMediaKeys()
-
-        NotificationCenter.default.addObserver(
-            forName: NSApplication.didChangeScreenParametersNotification,
-            object: nil, queue: .main
-        ) { [weak self] _ in
-            guard let self, let screen = NotchGeometry.preferredScreen() else { return }
-            self.panel?.relayout(on: screen)
-        }
-        for name in [NSWorkspace.didWakeNotification, NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.screensDidWakeNotification] {
-            NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.panel?.ensurePlacement() }
-            }
-        }
-        // Displays settle late at login; keep checking the placement, often at first, then rarely.
-        var checks = 0
-        Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] timer in
-            MainActor.assumeIsolated {
-                guard let self, let panel = self.panel else { return timer.invalidate() }
-                panel.ensurePlacement()
-                checks += 1
-                if checks == 30 {
-                    timer.invalidate()
-                    Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { _ in MainActor.assumeIsolated { panel.ensurePlacement() } }
-                }
-            }
-        }
-        // Launched while the menu bar is away, the notch can't be measured yet: keep asking.
-        if !panel.isMeasured {
-            Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] timer in
-                MainActor.assumeIsolated {
-                    guard let self, let panel = self.panel, let screen = NotchGeometry.preferredScreen() else { return timer.invalidate() }
-                    panel.relayout(on: screen)
-                    if panel.isMeasured { timer.invalidate() }
-                }
-            }
-        }
+        followDisplayChanges()
+        keepPlacement()
+        if !panel.isMeasured { measureNotchWhenMenuBarReturns() }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -63,9 +40,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         state.plugins.stop()
     }
 
+    private func followDisplayChanges() {
+        NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let screen = NotchGeometry.preferredScreen() else { return }
+                self?.panel?.relayout(on: screen)
+            }
+        }
+        for name in [NSWorkspace.didWakeNotification, NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.screensDidWakeNotification] {
+            NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.panel?.ensurePlacement() }
+            }
+        }
+    }
+
+    private func keepPlacement() {
+        var checks = 0
+        placementTimer = .every(Self.earlyPlacementInterval) { [weak self] in
+            guard let self else { return }
+            panel?.ensurePlacement()
+            checks += 1
+            guard checks == Self.earlyPlacementChecks else { return }
+            placementTimer?.invalidate()
+            placementTimer = .every(Self.latePlacementInterval) { [weak self] in self?.panel?.ensurePlacement() }
+        }
+    }
+
+    /// Launched while the menu bar is away, the notch can't be measured yet: keep asking.
+    private func measureNotchWhenMenuBarReturns() {
+        measureTimer = .every(Self.measureInterval) { [weak self] in
+            guard let self, let panel, let screen = NotchGeometry.preferredScreen() else { return }
+            panel.relayout(on: screen)
+            if panel.isMeasured { measureTimer?.invalidate() }
+        }
+    }
+
     private func bindMediaKeys() {
         mediaKeys.handler = { [state] key, fine in
-            let step: Float = fine ? 1 / 64 : 1 / 16
+            let step = fine ? Self.fineMediaKeyStep : Self.mediaKeyStep
             switch key {
             case .volumeUp: state.volume.step(step)
             case .volumeDown: state.volume.step(-step)

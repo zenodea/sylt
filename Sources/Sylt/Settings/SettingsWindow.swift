@@ -17,9 +17,9 @@ final class SettingsWindow {
         window.titleVisibility = .hidden
         window.toolbarStyle = .unified
         window.isReleasedWhenClosed = false
-        window.contentViewController = NSHostingController(
-            rootView: SettingsView(preferences: preferences, mediaKeys: mediaKeys, plugins: plugins))
-        window.setContentSize(window.contentViewController!.view.fittingSize)
+        let controller = NSHostingController(rootView: SettingsView(preferences: preferences, mediaKeys: mediaKeys, plugins: plugins))
+        window.contentViewController = controller
+        window.setContentSize(controller.view.fittingSize)
         window.center()
     }
 

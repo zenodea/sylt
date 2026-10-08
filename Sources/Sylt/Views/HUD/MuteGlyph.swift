@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Muting draws a slash through the speaker as it dips; unmuting wipes the slash
-/// away. The waves fill with the level, so the symbol itself never changes.
+/// The slash is drawn and wiped over one symbol whose waves fill with the level, so nothing ever swaps.
 struct MuteGlyph: View {
     let muted: Bool
     var level: Double = 1
@@ -27,10 +26,7 @@ struct MuteGlyph: View {
                     .trim(from: 0, to: slash)
                     .stroke(.white, style: StrokeStyle(lineWidth: 2, lineCap: .round))
             }
-            .onAppear {
-                // Appear in the current state; only a change of state is animated.
-                slash = muted ? 1 : 0
-            }
+            .onAppear { slash = muted ? 1 : 0 }
             .onChange(of: muted) { _, muted in
                 withAnimation(.easeOut(duration: 0.3)) { slash = muted ? 1 : 0 }
             }

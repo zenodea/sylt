@@ -8,7 +8,7 @@ struct HeadphonesBadge: View {
             Image(systemName: device.name.localizedCaseInsensitiveContains("airpods") ? "airpodspro" : "headphones")
                 .font(.system(size: 11, weight: .semibold))
             Text("\(device.battery ?? 0)")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(.badge)
                 .monospacedDigit()
                 .fixedSize()
         }

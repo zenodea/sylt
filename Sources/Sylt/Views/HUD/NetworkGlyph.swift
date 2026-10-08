@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Wi-Fi arcs light up one by one, a cable clicks in, a slashed Wi-Fi drops out.
 struct NetworkGlyph: View {
     let link: NetworkMonitor.Link
     @State private var shown = false

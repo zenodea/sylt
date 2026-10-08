@@ -11,15 +11,22 @@ def emit(message):
         sys.stdout.write(json.dumps(message) + "\n")
         sys.stdout.flush()
 
+def log(text):
+    emit({"log": text})
+
 def osascript(script):
+    """What the script printed, or None when Reminders refused (automation denied, app missing)."""
     try:
         done = subprocess.run(["/usr/bin/osascript", "-e", script], capture_output=True, text=True, timeout=20)
-        return done.stdout if done.returncode == 0 else None
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError) as error:
+        log("osascript failed: %s" % error)
         return None
+    if done.returncode != 0:
+        log("Reminders refused: %s" % done.stderr.strip())
+        return None
+    return done.stdout
 
 def fetch():
-    source = 'list "%s"' % settings["list"].replace('"', '') if settings["list"] else "default list's container"
     scope = 'reminders of list "%s"' % settings["list"].replace('"', '') if settings["list"] else "reminders"
     script = '''
     tell application "Reminders"
@@ -51,9 +58,8 @@ def publish():
         emit({"wing": {"side": "left", "items": []}})
         emit({"section": {"rows": [{"id": "open", "symbol": "checklist", "title": "Reminders not available", "detail": "Allow Sylt to control Reminders"}]}})
         return
-    count = len(items)
-    emit({"wing": {"side": "left", "items": [{"symbol": "checklist", "text": str(count)}] if count else []}})
-    rows = [{"id": i["id"], "symbol": "circle", "title": i["title"], "detail": i["due"] or None} for i in items[: int(settings["limit"]) or 6]]
+    emit({"wing": {"side": "left", "items": [{"symbol": "checklist", "text": str(len(items))}] if items else []}})
+    rows = [{"id": i["id"], "symbol": "circle", "title": i["title"], "detail": i["due"] or None} for i in items[:settings["limit"]]]
     if not rows:
         rows = [{"id": "open", "symbol": "checkmark.circle", "title": "All done"}]
     emit({"section": {"rows": rows, "buttons": [{"id": "open", "title": "Open Reminders"}]}})
@@ -69,32 +75,39 @@ def complete(identifier):
     emit({"sound": "Pop"})
     refresh()
 
+def handle(event):
+    kind = event.get("event")
+    if kind in ("start", "settings"):
+        values = event.get("settings") or {}
+        settings["list"] = str(values.get("list") or "")
+        settings["dueOnly"] = bool(values.get("dueOnly", False))
+        settings["limit"] = int(values.get("limit") or 6)
+        state["items"] = None
+        refresh()
+    elif kind == "click":
+        row = event.get("row", "")
+        if row == "open": emit({"open": "x-apple-reminderkit://"})
+        else: complete(row)
+    elif kind == "button":
+        emit({"activate": {"bundle": "com.apple.reminders"}})
+
 def listen():
     for line in sys.stdin:
         try:
             event = json.loads(line)
         except ValueError:
             continue
-        kind = event.get("event")
-        if kind in ("start", "settings"):
-            values = event.get("settings") or {}
-            settings["list"] = str(values.get("list", "") or "")
-            settings["dueOnly"] = bool(values.get("dueOnly", False))
-            try: settings["limit"] = int(values.get("limit", 6) or 6)
-            except (TypeError, ValueError): pass
-            state["items"] = None
-            refresh()
-        elif kind == "click":
-            row = event.get("row", "")
-            if row == "open": emit({"open": "x-apple-reminderkit://"})
-            else: complete(row)
-        elif kind == "button":
-            emit({"activate": {"bundle": "com.apple.reminders"}})
-        elif kind == "stop":
-            os._exit(0)
-    os._exit(0)  # the host went away
+        if event.get("event") == "stop": os._exit(0)
+        try:
+            handle(event)
+        except Exception as error:
+            log("%s failed: %s" % (event.get("event"), error))
+    os._exit(0)
 
 threading.Thread(target=listen, daemon=True).start()
 while True:
     time.sleep(30)
-    refresh()
+    try:
+        refresh()
+    except Exception as error:
+        log("refresh failed: %s" % error)

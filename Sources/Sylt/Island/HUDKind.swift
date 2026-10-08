@@ -40,11 +40,10 @@ enum HUDKind: Hashable {
     /// its widest so the island never resizes between them.
     var style: Style {
         switch self {
-        case .volume, .brightness, .mute: .compact(leading: nil, trailing: Self.wing(16 + 8 + 72))
+        case .volume, .brightness, .mute: .compact(leading: nil, trailing: Self.wing(Self.glyphWidth + Self.glyphGap + Self.levelWidth))
         case .battery: .compact(leading: Self.wing(48), trailing: Self.wing(Self.text(Self.batteryMessages)))
         case .unlocked: .compact(leading: LockedView.leadingWing, trailing: LockedView.greetingWing)
-        case .nowPlaying: .twoRow
-        case .notification: .twoRow
+        case .nowPlaying, .notification: .twoRow
         case .bluetooth(let event): Self.glyph(trailing: Self.device(event.device))
         case .peripheralBattery(let device): Self.glyph(trailing: Self.device(device))
         case .network: Self.glyph(trailing: Self.text(NetworkMonitor.Link.allCases.map(\.title)))
@@ -52,9 +51,9 @@ enum HUDKind: Hashable {
         case .focus(let mode): Self.glyph(trailing: Self.text(mode ?? "Focus off"))
         case .privacy: Self.glyph(trailing: Self.text(Self.privacyMessages))
         case .thermal(let state): Self.glyph(trailing: Self.text(state == .nominal ? "Cooled down" : "\(state.title) · performance reduced"))
-        case .capsLock: .compact(leading: nil, trailing: Self.wing(16 + 8 + Self.text(["Caps Lock on", "Caps Lock off"])))
+        case .capsLock: .compact(leading: nil, trailing: Self.wing(Self.glyphWidth + Self.glyphGap + Self.text(["Caps Lock on", "Caps Lock off"])))
+        case .inputSource(let name): .compact(leading: nil, trailing: Self.wing(Self.glyphWidth + Self.glyphGap + min(Self.text(name), 140)))
         case .external(let hud): hud.style
-        case .inputSource(let name): .compact(leading: nil, trailing: Self.wing(16 + 8 + min(Self.text(name), 140)))
         }
     }
 
@@ -67,13 +66,19 @@ enum HUDKind: Hashable {
     static let batteryMessages = ["Charging", "On battery", "Fully charged", "Critically low", "Low battery", "Battery"]
     static let privacyMessages = ["Mic and camera on", "Microphone on", "Camera on", "Mic and camera off"]
 
+    /// A symbol in a wing, the gap after it, a level bar, and the wing a leading symbol alone takes.
+    static let glyphWidth: CGFloat = 16
+    static let glyphGap: CGFloat = 8
+    static let levelWidth: CGFloat = 72
+    static let glyphWing = wing(18)
+
+    /// A wing just wide enough for this content, with the usual room either side of it.
     static func wing(_ content: CGFloat) -> Double {
         content + IslandLayout.notchGap + IslandLayout.wingEdge
     }
 
-    /// A glyph on the left and measured content on the right.
     private static func glyph(trailing: CGFloat) -> Style {
-        .compact(leading: wing(18), trailing: wing(trailing))
+        .compact(leading: glyphWing, trailing: wing(trailing))
     }
 
     private static func text(_ text: String) -> CGFloat { TextWidth.of(text, size: 11) }
@@ -133,14 +138,14 @@ struct ExternalHUD: Hashable {
     var hasGlyph: Bool { hud.symbol != nil || hud.image != nil }
 
     var content: CGFloat {
-        (hud.level != nil ? 72 : min(TextWidth.of(hud.text ?? "", size: 11), 160)) + (hud.trailingSymbol == nil ? 0 : 8 + 16)
+        (hud.level != nil ? HUDKind.levelWidth : min(TextWidth.of(hud.text ?? "", size: 11), 160)) + (hud.trailingSymbol == nil ? 0 : HUDKind.glyphGap + HUDKind.glyphWidth)
     }
 
     var style: HUDKind.Style {
         switch hud.side {
-        case "right": .compact(leading: nil, trailing: HUDKind.wing((hasGlyph ? 16 + 8 : 0) + content))
-        case "left": .compact(leading: HUDKind.wing(content + (hasGlyph ? 16 + 6 : 0)), trailing: nil)
-        default: .compact(leading: hasGlyph ? HUDKind.wing(18) : nil, trailing: HUDKind.wing(content))
+        case "right": .compact(leading: nil, trailing: HUDKind.wing((hasGlyph ? HUDKind.glyphWidth + HUDKind.glyphGap : 0) + content))
+        case "left": .compact(leading: HUDKind.wing(content + (hasGlyph ? HUDKind.glyphWidth + 6 : 0)), trailing: nil)
+        default: .compact(leading: hasGlyph ? HUDKind.glyphWing : nil, trailing: HUDKind.wing(content))
         }
     }
 }

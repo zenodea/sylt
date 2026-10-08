@@ -64,104 +64,54 @@ final class Preferences: ObservableObject {
         enabledPlugins = plugins
         defaults.set(Plugin.allCases.map(\.rawValue), forKey: Key.knownPlugins)
         defaults.set(plugins.map(\.rawValue).sorted(), forKey: Key.plugins)
-        replacesSystemOverlays = defaults.object(forKey: Key.overlays) as? Bool ?? true
+        replacesSystemOverlays = defaults.value(Key.overlays, or: true)
         if let stored = defaults.stringArray(forKey: Key.huds) {
             enabledHUDs = Set(stored.compactMap(HUDCategory.init(rawValue:)))
         } else {
             enabledHUDs = Set(HUDCategory.allCases)
         }
-        hudDurationScale = defaults.object(forKey: Key.hudDuration) as? Double ?? 1
-        playsUnlockSound = defaults.object(forKey: Key.unlockSound) as? Bool ?? true
-        playsLockSound = defaults.object(forKey: Key.lockSound) as? Bool ?? true
-        lockShowsStatus = defaults.object(forKey: Key.lockStatus) as? Bool ?? false
+        hudDurationScale = defaults.value(Key.hudDuration, or: 1)
+        playsUnlockSound = defaults.value(Key.unlockSound, or: true)
+        playsLockSound = defaults.value(Key.lockSound, or: true)
+        lockShowsStatus = defaults.value(Key.lockStatus, or: false)
         releaseEffect = ReleaseEffect(rawValue: defaults.string(forKey: Key.releaseEffect) ?? "") ?? .ripple
-        absorbsPointer = defaults.object(forKey: Key.absorbsPointer) as? Bool ?? true
-        holdsPointer = defaults.object(forKey: Key.holdsPointer) as? Bool ?? true
-        releaseForce = defaults.object(forKey: Key.releaseForce) as? Double ?? 1
-        rippleStrength = defaults.object(forKey: Key.rippleStrength) as? Double ?? 1
-        rippleWidth = defaults.object(forKey: Key.rippleWidth) as? Double ?? 1
-        leansWithSwipes = defaults.object(forKey: Key.swipeLean) as? Bool ?? true
-        swipeLeanStrength = defaults.object(forKey: Key.swipeLeanStrength) as? Double ?? 1
-        showsRimGlow = defaults.object(forKey: Key.rimGlow) as? Bool ?? true
-        hapticsOnRelease = defaults.object(forKey: Key.haptics) as? Bool ?? true
+        absorbsPointer = defaults.value(Key.absorbsPointer, or: true)
+        holdsPointer = defaults.value(Key.holdsPointer, or: true)
+        releaseForce = defaults.value(Key.releaseForce, or: 1)
+        rippleStrength = defaults.value(Key.rippleStrength, or: 1)
+        rippleWidth = defaults.value(Key.rippleWidth, or: 1)
+        leansWithSwipes = defaults.value(Key.swipeLean, or: true)
+        swipeLeanStrength = defaults.value(Key.swipeLeanStrength, or: 1)
+        showsRimGlow = defaults.value(Key.rimGlow, or: true)
+        hapticsOnRelease = defaults.value(Key.haptics, or: true)
         wingLayout = defaults.data(forKey: Key.wingLayout).flatMap { try? JSONDecoder().decode(WingLayout.self, from: $0) } ?? WingLayout()
         expandedLayout = defaults.data(forKey: Key.expandedLayout).flatMap { try? JSONDecoder().decode(ExpandedLayout.self, from: $0) } ?? ExpandedLayout()
 
-        $enabledPlugins
+        persist($enabledPlugins, as: Key.plugins) { $0.map(\.rawValue).sorted() }
+        persist($replacesSystemOverlays, as: Key.overlays)
+        persist($enabledHUDs, as: Key.huds) { $0.map(\.rawValue).sorted() }
+        persist($hudDurationScale, as: Key.hudDuration)
+        persist($playsUnlockSound, as: Key.unlockSound)
+        persist($playsLockSound, as: Key.lockSound)
+        persist($lockShowsStatus, as: Key.lockStatus)
+        persist($releaseEffect, as: Key.releaseEffect, \.rawValue)
+        persist($absorbsPointer, as: Key.absorbsPointer)
+        persist($holdsPointer, as: Key.holdsPointer)
+        persist($releaseForce, as: Key.releaseForce)
+        persist($rippleStrength, as: Key.rippleStrength)
+        persist($rippleWidth, as: Key.rippleWidth)
+        persist($leansWithSwipes, as: Key.swipeLean)
+        persist($swipeLeanStrength, as: Key.swipeLeanStrength)
+        persist($showsRimGlow, as: Key.rimGlow)
+        persist($hapticsOnRelease, as: Key.haptics)
+        persist($wingLayout, as: Key.wingLayout) { try? JSONEncoder().encode($0) }
+        persist($expandedLayout, as: Key.expandedLayout) { try? JSONEncoder().encode($0) }
+    }
+
+    private func persist<Value>(_ values: Published<Value>.Publisher, as key: String, _ stored: @escaping (Value) -> Any? = { $0 }) {
+        values
             .dropFirst()
-            .sink { defaults.set($0.map(\.rawValue).sorted(), forKey: Key.plugins) }
-            .store(in: &cancellables)
-        $replacesSystemOverlays
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.overlays) }
-            .store(in: &cancellables)
-        $enabledHUDs
-            .dropFirst()
-            .sink { defaults.set($0.map(\.rawValue).sorted(), forKey: Key.huds) }
-            .store(in: &cancellables)
-        $hudDurationScale
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.hudDuration) }
-            .store(in: &cancellables)
-        $playsUnlockSound
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.unlockSound) }
-            .store(in: &cancellables)
-        $playsLockSound
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.lockSound) }
-            .store(in: &cancellables)
-        $lockShowsStatus
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.lockStatus) }
-            .store(in: &cancellables)
-        $releaseEffect
-            .dropFirst()
-            .sink { defaults.set($0.rawValue, forKey: Key.releaseEffect) }
-            .store(in: &cancellables)
-        $absorbsPointer
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.absorbsPointer) }
-            .store(in: &cancellables)
-        $holdsPointer
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.holdsPointer) }
-            .store(in: &cancellables)
-        $releaseForce
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.releaseForce) }
-            .store(in: &cancellables)
-        $rippleStrength
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.rippleStrength) }
-            .store(in: &cancellables)
-        $rippleWidth
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.rippleWidth) }
-            .store(in: &cancellables)
-        $leansWithSwipes
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.swipeLean) }
-            .store(in: &cancellables)
-        $swipeLeanStrength
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.swipeLeanStrength) }
-            .store(in: &cancellables)
-        $showsRimGlow
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.rimGlow) }
-            .store(in: &cancellables)
-        $hapticsOnRelease
-            .dropFirst()
-            .sink { defaults.set($0, forKey: Key.haptics) }
-            .store(in: &cancellables)
-        $wingLayout
-            .dropFirst()
-            .sink { defaults.set(try? JSONEncoder().encode($0), forKey: Key.wingLayout) }
-            .store(in: &cancellables)
-        $expandedLayout
-            .dropFirst()
-            .sink { defaults.set(try? JSONEncoder().encode($0), forKey: Key.expandedLayout) }
+            .sink { [defaults] in defaults.set(stored($0), forKey: key) }
             .store(in: &cancellables)
     }
 
@@ -170,38 +120,25 @@ final class Preferences: ObservableObject {
     }
 
     func binding(for category: HUDCategory) -> Binding<Bool> {
-        Binding(
-            get: { self.enabledHUDs.contains(category) },
-            set: { enabled in
-                if enabled { self.enabledHUDs.insert(category) } else { self.enabledHUDs.remove(category) }
-            }
-        )
+        membership(\.enabledHUDs, of: category)
     }
 
     func binding(for plugin: Plugin) -> Binding<Bool> {
+        membership(\.enabledPlugins, of: plugin)
+    }
+
+    private func membership<Element: Hashable>(_ set: ReferenceWritableKeyPath<Preferences, Set<Element>>, of element: Element) -> Binding<Bool> {
         Binding(
-            get: { self.enabledPlugins.contains(plugin) },
+            get: { self[keyPath: set].contains(element) },
             set: { enabled in
-                if enabled { self.enabledPlugins.insert(plugin) } else { self.enabledPlugins.remove(plugin) }
+                if enabled { self[keyPath: set].insert(element) } else { self[keyPath: set].remove(element) }
             }
         )
     }
 }
 
-/// What the island does when it lets the pointer go.
-enum ReleaseEffect: String, CaseIterable, Identifiable {
-    case ripple = "splash", ring, glass, sparks, blackHole, none
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .ripple: "Ripple"
-        case .ring: "Ring of light"
-        case .glass: "Liquid glass"
-        case .sparks: "Sparks"
-        case .blackHole: "Black hole"
-        case .none: "Nothing"
-        }
+private extension UserDefaults {
+    func value<Value>(_ key: String, or fallback: Value) -> Value {
+        object(forKey: key) as? Value ?? fallback
     }
 }

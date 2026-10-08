@@ -17,7 +17,7 @@ final class ExternalPlugin: ObservableObject, Identifiable {
     @Published private(set) var isRunning = false
     let huds = PassthroughSubject<PluginHUD, Never>()
 
-    var id: String { manifest.id }
+    nonisolated var id: String { manifest.id }
 
     /// Everything the plugin put in a wing, left items first. The user picks the side.
     var wingItems: [PluginItem] { left + right }
@@ -89,18 +89,16 @@ final class ExternalPlugin: ObservableObject, Identifiable {
     }
 
     private func launch() {
-        let executable = folder.appendingPathComponent(manifest.run)
-        let process = PluginProcess(
-            executable: executable, folder: folder,
-            onMessage: { [weak self] message in Task { @MainActor in self?.handle(message) } },
-            onExit: { [weak self] status in Task { @MainActor in self?.exited(status) } }
-        )
+        let process = PluginProcess(executable: folder.appendingPathComponent(manifest.run), folder: folder)
         do {
-            try process.start()
+            try process.start(
+                onMessage: { [weak self] message in Task { @MainActor in self?.handle(message) } },
+                onExit: { [weak self, weak process] in Task { @MainActor in self?.exited(process) } }
+            )
             self.process = process
             process.send(PluginEvent(event: "start", settings: store.values(for: manifest), dataDir: dataDirectory.path, protocol: PluginProtocol.version))
         } catch {
-            isRunning = false
+            stop()
         }
     }
 
@@ -109,9 +107,11 @@ final class ExternalPlugin: ObservableObject, Identifiable {
         launch()
     }
 
-    /// A long-running plugin that dies comes back, slower each time.
-    private func exited(_ status: Int32) {
-        process = nil
+    /// A long-running plugin that dies comes back, slower each time. A run that was
+    /// already replaced by a newer one is ignored.
+    private func exited(_ process: PluginProcess?) {
+        guard let process, process === self.process else { return }
+        self.process = nil
         guard !stopping, !manifest.isOneShot else { return }
         crashes += 1
         guard crashes <= 5 else { isRunning = false; return }
@@ -126,6 +126,7 @@ final class ExternalPlugin: ObservableObject, Identifiable {
         if let section = message.section { self.section = section }
         if message.clearSection == true { section = nil }
         if let hud = message.hud { huds.send(hud) }
+        if let log = message.log { FileHandle.standardError.write(Data("\(manifest.id): \(log)\n".utf8)) }
         if let sound = message.sound { NSSound(named: sound)?.play() }
         if let activation = message.activate { activate(activation) }
         if let target = message.open {
@@ -144,7 +145,7 @@ final class ExternalPlugin: ObservableObject, Identifiable {
         NSApp.yieldActivation(to: host)
         host.activate()
         if let window = activation.window {
-            Timer.after(0.3) { WindowRaiser.raise(in: host, titleContaining: window) }
+            _ = Timer.after(0.3) { WindowRaiser.raise(in: host, titleContaining: window) }
         }
     }
 }

@@ -4,8 +4,7 @@ import Foundation
 final class MediaRemoteAdapterProcess {
     private var process: Process?
     private var input: FileHandle?
-    private var buffer = Data()
-    private let decoder = JSONDecoder()
+    private var reader: JSONLineReader<NowPlayingPayload>?
 
     static var libraryURL: URL? {
         let name = "libMediaRemoteAdapter.dylib"
@@ -29,39 +28,26 @@ final class MediaRemoteAdapterProcess {
         process.standardInput = stdin
         process.standardOutput = stdout
         process.standardError = FileHandle.nullDevice
-
-        stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
-            guard let self else { return }
-            let chunk = handle.availableData
-            guard !chunk.isEmpty else { return }
-            buffer.append(chunk)
-            while let newline = buffer.firstIndex(of: UInt8(ascii: "\n")) {
-                let line = buffer[..<newline]
-                buffer.removeSubrange(...newline)
-                if let payload = try? decoder.decode(NowPlayingPayload.self, from: line) {
-                    onPayload(payload)
-                }
-            }
-        }
-
+        reader = JSONLineReader(stdout.fileHandleForReading, onMessage: onPayload)
         do {
             try process.run()
             self.process = process
-            self.input = stdin.fileHandleForWriting
+            input = stdin.fileHandleForWriting
         } catch {
-            stdout.fileHandleForReading.readabilityHandler = nil
+            JSONLineReader<NowPlayingPayload>.stop(stdout.fileHandleForReading)
+            reader = nil
         }
     }
 
     func send(_ command: String) {
-        input?.write(Data((command + "\n").utf8))
+        try? input?.write(contentsOf: Data((command + "\n").utf8))
     }
 
     func stop() {
-        (process?.standardOutput as? Pipe)?.fileHandleForReading.readabilityHandler = nil
+        if let stdout = process?.standardOutput as? Pipe { JSONLineReader<NowPlayingPayload>.stop(stdout.fileHandleForReading) }
         process?.terminate()
         process = nil
         input = nil
-        buffer.removeAll()
+        reader = nil
     }
 }

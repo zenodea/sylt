@@ -68,7 +68,6 @@ struct ExpandedView: View {
     }
 }
 
-/// Which page is open, as the dots every pager uses.
 private struct PageDots: View {
     let count: Int
     let current: Int

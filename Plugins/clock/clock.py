@@ -11,6 +11,9 @@ def emit(message):
         sys.stdout.write(json.dumps(message) + "\n")
         sys.stdout.flush()
 
+def log(text):
+    emit({"log": text})
+
 def publish():
     now = time.localtime()
     if settings["twentyFour"]:
@@ -20,14 +23,20 @@ def publish():
     if text != last["text"]:
         last["text"] = text
         emit({"wing": {"side": "right", "items": [{"text": text}]}})
-    date = time.strftime("%A, %-d %B", now)
-    wanted = date if settings["date"] else ""
-    if wanted != last["date"]:
-        last["date"] = wanted
-        if wanted:
-            emit({"section": {"rows": [{"id": "today", "symbol": "calendar", "title": wanted, "detail": time.strftime("Week %V", now)}]}})
+    date = time.strftime("%A, %-d %B", now) if settings["date"] else ""
+    if date != last["date"]:
+        last["date"] = date
+        if date:
+            emit({"section": {"rows": [{"id": "today", "symbol": "calendar", "title": date, "detail": time.strftime("Week %V", now)}]}})
         else:
             emit({"clearSection": True})
+
+def handle(event):
+    if event.get("event") in ("start", "settings"):
+        for key in settings:
+            if key in (event.get("settings") or {}): settings[key] = bool(event["settings"][key])
+        last.update({"text": None, "date": None})
+        publish()
 
 def listen():
     for line in sys.stdin:
@@ -35,17 +44,17 @@ def listen():
             event = json.loads(line)
         except ValueError:
             continue
-        kind = event.get("event")
-        if kind in ("start", "settings"):
-            for key in settings:
-                if key in (event.get("settings") or {}): settings[key] = bool(event["settings"][key])
-            last.update({"text": None, "date": None})
-            publish()
-        elif kind == "stop":
-            os._exit(0)
-    os._exit(0)  # the host went away
+        if event.get("event") == "stop": os._exit(0)
+        try:
+            handle(event)
+        except Exception as error:
+            log("%s failed: %s" % (event.get("event"), error))
+    os._exit(0)
 
 threading.Thread(target=listen, daemon=True).start()
 while True:
     time.sleep(1 if settings["seconds"] else 5)
-    publish()
+    try:
+        publish()
+    except Exception as error:
+        log("refresh failed: %s" % error)

@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Album art. A new cover flips the tile over and pops it, with the image
-/// swapping mid-turn.
+/// Album art; a new cover flips the tile over, the image swapping mid-turn.
 struct ArtworkView: View {
     let image: NSImage?
     let size: CGFloat

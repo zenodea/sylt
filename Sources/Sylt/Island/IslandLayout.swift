@@ -4,6 +4,7 @@ struct IslandLayout: Equatable {
     var notchWidth: CGFloat = 180
     var notchHeight: CGFloat = 32
     var screenWidth: CGFloat = 1512
+    var isFullscreen = false
     var showsArtwork = false
     var showsAudioBars = false
     var showsMediaCard = false
@@ -33,19 +34,24 @@ struct IslandLayout: Equatable {
     /// The notification card's extra width.
     static let cardWings: CGFloat = 196
     static let hudRowHeight: CGFloat = 18
+    static let hudRowPadding: CGFloat = 6
     static let wingPadding: CGFloat = 6
     static let hitMargin: CGFloat = 6
     /// Wing content sits this close to the notch, with `wingEdge` left at the island's outer end.
     static let notchGap: CGFloat = 4
     static let wingEdge: CGFloat = 8
+    /// The space between the parts of one wing item, such as artwork and audio bars.
+    static let partGap: CGFloat = 8
     static let hoverGrowth = CGSize(width: 14, height: 6)
     /// The hardware notch runs a little deeper and wider than the area macOS reports; the
     /// island always covers it with room to spare, so its rounded corners begin on screen.
     static let notchOverlap: CGFloat = 4
     static let sideOverlap: CGFloat = 6
+    /// The canvas leaves room for this many full plugin sections, plus some slack.
+    private static let canvasPluginSections = 6
+    private static let canvasSlack: CGFloat = 80
 
     var artworkSize: CGFloat { notchHeight - 12 }
-    var isFullscreen = false
 
     /// Each closed wing fits its own content; an empty wing is zero.
     var leftWing: CGFloat { wing(wings.left) }
@@ -122,11 +128,12 @@ struct IslandLayout: Equatable {
         sections.reduce(0, +) + CGFloat(max(0, sections.count - 1)) * sectionGap
     }
 
+    /// The whole width of the screen, so the wings grow as long as their content needs,
+    /// and enough height for the tallest expanded panel there could be.
     var canvasSize: CGSize {
-        let tallest = Self.mediaCardHeight + Self.eventRowHeight
-            + 6 * (PluginSection.headerHeight + CGFloat(PluginSection.maxRows) * PluginSection.detailRowHeight + PluginSection.filesHeight + PluginSection.buttonsHeight + Self.sectionGap)
-        // The whole width of the screen: the wings grow as long as their content needs.
-        return CGSize(width: screenWidth, height: Self.expandedBaseHeight + tallest + 80)
+        let pluginSection = PluginSection.headerHeight + CGFloat(PluginSection.maxRows) * PluginSection.detailRowHeight + PluginSection.filesHeight + PluginSection.buttonsHeight + Self.sectionGap
+        let tallest = Self.mediaCardHeight + Self.eventRowHeight + CGFloat(Self.canvasPluginSections) * pluginSection
+        return CGSize(width: screenWidth, height: Self.expandedBaseHeight + tallest + Self.canvasSlack)
     }
 
     /// Island frame in canvas coordinates (top-left origin), grown by the hit margin.
@@ -153,31 +160,21 @@ struct IslandLayout: Equatable {
     private func restingFrame(for mode: IslandMode) -> IslandFrame {
         switch mode {
         case .closed:
-            IslandFrame(size: CGSize(width: closedWidth, height: notchHeight + Self.notchOverlap), centerOffset: (rightWing - leftWing) / 2)
+            wingsFrame(leading: leftWing, trailing: rightWing)
         case .locked:
-            compact(leading: LockedView.leadingWing + (lockShowsStatus ? leftWing : 0), trailing: LockedView.timeWing + (lockShowsStatus ? rightWing : 0))
+            wingsFrame(leading: LockedView.leadingWing + (lockShowsStatus ? leftWing : 0), trailing: LockedView.timeWing + (lockShowsStatus ? rightWing : 0))
         case .hud(let kind):
             switch kind.style {
             case .compact:
-                compact(leading: wingWidths(for: mode).leading, trailing: wingWidths(for: mode).trailing)
+                wingsFrame(wingWidths(for: mode))
             case .twoRow:
-                twoRowFrame(for: mode)
+                wingsFrame(wingWidths(for: mode), below: Self.hudRowHeight + Self.hudRowPadding)
             case .card:
-                centred(CGSize(width: notchWidth + Self.cardWings, height: Self.hudHeight))
+                IslandFrame(size: CGSize(width: notchWidth + Self.cardWings, height: Self.hudHeight), centerOffset: 0)
             }
         case .expanded:
-            centred(CGSize(width: Self.expandedWidth, height: expandedHeight))
+            IslandFrame(size: CGSize(width: Self.expandedWidth, height: expandedHeight), centerOffset: 0)
         }
-    }
-
-    /// The wings stay as they are and a row opens underneath; a notification's icon
-    /// needs a left wing, which may widen.
-    private func twoRowFrame(for mode: IslandMode) -> IslandFrame {
-        let widths = wingWidths(for: mode)
-        return IslandFrame(
-            size: CGSize(width: notchWidth + Self.sideOverlap * 2 + widths.leading + widths.trailing, height: notchHeight + Self.notchOverlap + Self.hudRowHeight + 6),
-            centerOffset: (widths.trailing - widths.leading) / 2
-        )
     }
 
     /// A wing a HUD doesn't claim keeps its closed width. A notification puts the app's
@@ -192,13 +189,14 @@ struct IslandLayout: Equatable {
         return (leftWing, rightWing)
     }
 
-    private func centred(_ size: CGSize) -> IslandFrame {
-        IslandFrame(size: size, centerOffset: 0)
+    private func wingsFrame(_ widths: (leading: CGFloat, trailing: CGFloat), below extraHeight: CGFloat = 0) -> IslandFrame {
+        wingsFrame(leading: widths.leading, trailing: widths.trailing, below: extraHeight)
     }
 
-    private func compact(leading: CGFloat, trailing: CGFloat) -> IslandFrame {
+    /// The notch with a wing either side, at notch height unless a row opens underneath.
+    private func wingsFrame(leading: CGFloat, trailing: CGFloat, below extraHeight: CGFloat = 0) -> IslandFrame {
         IslandFrame(
-            size: CGSize(width: notchWidth + Self.sideOverlap * 2 + leading + trailing, height: notchHeight + Self.notchOverlap),
+            size: CGSize(width: notchWidth + Self.sideOverlap * 2 + leading + trailing, height: notchHeight + Self.notchOverlap + extraHeight),
             centerOffset: (trailing - leading) / 2
         )
     }
@@ -206,6 +204,6 @@ struct IslandLayout: Equatable {
     private static func contentWidth(_ items: [CGFloat]) -> CGFloat {
         let visible = items.filter { $0 > 0 }
         guard !visible.isEmpty else { return 0 }
-        return visible.reduce(0, +) + CGFloat(visible.count - 1) * 8
+        return visible.reduce(0, +) + CGFloat(visible.count - 1) * partGap
     }
 }

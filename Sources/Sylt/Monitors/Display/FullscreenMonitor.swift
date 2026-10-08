@@ -1,7 +1,6 @@
 import AppKit
 import Combine
 
-/// Whether the active space is showing a full-screen app.
 @MainActor
 final class FullscreenMonitor: ObservableObject {
     @Published private(set) var isFullscreen = false

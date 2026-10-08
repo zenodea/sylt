@@ -10,6 +10,9 @@ def emit(message):
         sys.stdout.write(json.dumps(message) + "\n")
         sys.stdout.flush()
 
+def log(text):
+    emit({"log": text})
+
 def label(minutes):
     return "%d h" % (minutes // 60) if minutes >= 60 and minutes % 60 == 0 else "%d min" % minutes
 
@@ -30,9 +33,31 @@ def running():
 def apply_settings(settings):
     try:
         presets = [int(p) for p in str(settings.get("presets", "")).replace(";", ",").split(",") if p.strip()]
-        if presets: state["presets"] = presets
     except ValueError:
-        pass
+        log("presets must be minutes separated by commas")
+        return
+    if presets: state["presets"] = presets
+
+def finish():
+    minutes = state["duration"] // 60
+    state["end"] = None
+    emit({"sound": "Hero"})
+    emit({"hud": {"symbol": "timer", "tint": "orange", "text": "%d min timer done" % minutes, "duration": 3}})
+    idle()
+
+def handle(event):
+    kind = event.get("event")
+    if kind in ("start", "settings"):
+        apply_settings(event.get("settings") or {})
+        if state["end"] is None: idle()
+    elif kind == "button":
+        if event.get("id") == "cancel":
+            state["end"] = None
+            idle()
+        else:
+            state["duration"] = int(event["id"]) * 60
+            state["end"] = time.time() + state["duration"]
+            running()
 
 def listen():
     for line in sys.stdin:
@@ -40,32 +65,18 @@ def listen():
             event = json.loads(line)
         except ValueError:
             continue
-        kind = event.get("event")
-        if kind in ("start", "settings"):
-            apply_settings(event.get("settings") or {})
-            if state["end"] is None: idle()
-        elif kind == "button":
-            if event.get("id") == "cancel":
-                state["end"] = None
-                idle()
-            else:
-                minutes = int(event["id"])
-                state["duration"] = minutes * 60
-                state["end"] = time.time() + state["duration"]
-                running()
-        elif kind == "stop":
-            os._exit(0)
-    os._exit(0)  # the host went away
+        if event.get("event") == "stop": os._exit(0)
+        try:
+            handle(event)
+        except Exception as error:
+            log("%s failed: %s" % (event.get("event"), error))
+    os._exit(0)
 
 threading.Thread(target=listen, daemon=True).start()
 while True:
     time.sleep(1)
     if state["end"] is None: continue
-    if time.time() >= state["end"]:
-        minutes = state["duration"] // 60
-        state["end"] = None
-        emit({"sound": "Hero"})
-        emit({"hud": {"symbol": "timer", "tint": "orange", "text": "%d min timer done" % minutes, "duration": 3}})
-        idle()
-    else:
-        running()
+    try:
+        finish() if time.time() >= state["end"] else running()
+    except Exception as error:
+        log("tick failed: %s" % error)

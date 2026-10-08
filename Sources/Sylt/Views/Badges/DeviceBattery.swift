@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// An accessory's charge: the percentage beside a small gauge that fills to
-/// that exact level when it appears.
 struct DeviceBattery: View {
     let percent: Int
     @State private var fill: CGFloat = 0
@@ -14,7 +12,7 @@ struct DeviceBattery: View {
     var body: some View {
         HStack(spacing: 6) {
             Text("\(percent)%")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(.badge)
                 .monospacedDigit()
                 .lineLimit(1)
             gauge

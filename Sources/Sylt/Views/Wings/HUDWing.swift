@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// One side of a HUD.
 struct HUDWing: View {
     enum Side { case leading, trailing }
 
@@ -23,7 +22,7 @@ struct HUDWing: View {
         switch kind {
         case .battery: BatteryGlyph(snapshot: battery.snapshot, compact: true)
         case .bluetooth(let event):
-            if case .connected = event { BluetoothGlyph(connected: true) } else { BluetoothGlyph(connected: false) }
+            BluetoothGlyph(connected: event.isConnected)
         case .network(let link): NetworkGlyph(link: link)
         case .peripheralBattery: HUDGlyph(symbol: "battery.25percent", tint: .red)
         case .calendar: HUDGlyph(symbol: "calendar", tint: .orange)
@@ -37,7 +36,6 @@ struct HUDWing: View {
             default: externalGlyph(external)
             }
         case .notification(let notification):
-            // The app's icon, where album art would sit.
             Group {
                 if let icon = notification.icon {
                     Image(nsImage: icon).resizable()
@@ -54,7 +52,7 @@ struct HUDWing: View {
     @ViewBuilder
     private var trailing: some View {
         if let muted = mutedState {
-            // One view for mute and volume, so the bar slides and the speaker morphs between them.
+            // Mute and volume share one view so the bar slides and the speaker morphs between them.
             level(MuteGlyph(muted: muted, level: Double(volume.level), bluetooth: volume.outputIsBluetooth), muted ? 0 : Double(volume.level))
         } else {
             trailingSwitch
@@ -77,13 +75,13 @@ struct HUDWing: View {
             level(Image(systemName: "sun.max.fill", variableValue: Double(brightness.level)), Double(brightness.level))
         case .battery(let alert):
             Text(alert.message(onAC: battery.snapshot.onAC))
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(.badge)
                 .foregroundStyle(batteryColor(alert))
                 .lineLimit(1)
         case .bluetooth(let event): bluetooth(event)
         case .network(let link):
             Text(link.title)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(.badge)
                 .foregroundStyle(link == .offline ? Color.white.opacity(0.6) : .white)
         case .peripheralBattery(let device): bluetooth(.connected(device))
         case .calendar(let event): calendar(event)
@@ -103,13 +101,13 @@ struct HUDWing: View {
     }
 
     private func externalGlyph(_ external: ExternalHUD) -> some View {
-        PluginGlyph(symbol: external.hud.symbol, image: external.hud.image, tint: external.hud.tint, size: 16)
+        PluginGlyph(symbol: external.hud.symbol, image: external.hud.image, tint: external.hud.tint, size: HUDKind.glyphWidth)
             .symbolEffect(.bounce, options: .nonRepeating, value: external.id)
     }
 
     private func externalContent(_ external: ExternalHUD, leadingGlyph: Bool) -> some View {
-        HStack(spacing: 8) {
-            if leadingGlyph, external.hasGlyph { externalGlyph(external).frame(width: 16) }
+        HStack(spacing: HUDKind.glyphGap) {
+            if leadingGlyph, external.hasGlyph { externalGlyph(external).frame(width: HUDKind.glyphWidth) }
             if let level = external.hud.level {
                 LevelBar(value: level)
             } else {
@@ -123,8 +121,8 @@ struct HUDWing: View {
 
     /// Glyph and label on the right, for HUDs that leave the left wing alone.
     private func rightOnly(_ symbol: String, _ text: String, dimmed: Bool = false) -> some View {
-        HStack(spacing: 8) {
-            HUDGlyph(symbol: symbol, tint: dimmed ? .white.opacity(0.6) : .white).frame(width: 16)
+        HStack(spacing: HUDKind.glyphGap) {
+            HUDGlyph(symbol: symbol, tint: dimmed ? .white.opacity(0.6) : .white).frame(width: HUDKind.glyphWidth)
             HUDLabel(text: text, dimmed: dimmed)
         }
     }
@@ -134,7 +132,7 @@ struct HUDWing: View {
             HStack(spacing: 6) {
                 HUDLabel(text: event.title).frame(maxWidth: .infinity, alignment: .leading)
                 Text(event.start > context.date ? "in \(CalendarBadge.countdown(to: event.start, now: context.date))" : "now")
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.badge)
                     .foregroundStyle(.orange)
                     .monospacedDigit()
             }
@@ -153,27 +151,22 @@ struct HUDWing: View {
     }
 
     private func level(_ glyph: some View, _ value: Double) -> some View {
-        HStack(spacing: 8) {
-            glyph.frame(width: 16)
+        HStack(spacing: HUDKind.glyphGap) {
+            glyph.frame(width: HUDKind.glyphWidth)
             LevelBar(value: value)
         }
         .padding(.trailing, IslandLayout.wingEdge)
     }
 
     private func bluetooth(_ event: BluetoothMonitor.Event) -> some View {
-        let device: BluetoothMonitor.Device
-        switch event {
-        case .connected(let connected): device = connected
-        case .disconnected(let disconnected): device = disconnected
-        }
-        return HStack(spacing: 8) {
-            Text(device.name)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+        HStack(spacing: 8) {
+            Text(event.device.name)
+                .font(.badge)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .frame(maxWidth: 110, alignment: .leading)
-                .opacity(device.battery == nil ? 0.6 : 1)
-            if let battery = device.battery {
+                .opacity(event.device.battery == nil ? 0.6 : 1)
+            if let battery = event.device.battery {
                 DeviceBattery(percent: battery)
             }
         }
@@ -183,5 +176,11 @@ struct HUDWing: View {
     private func batteryColor(_ alert: BatteryAlert) -> Color {
         if case .level(let percent) = alert, percent <= 20 { return .red }
         return .white.opacity(0.8)
+    }
+}
+
+private extension BluetoothMonitor.Event {
+    var isConnected: Bool {
+        if case .connected = self { true } else { false }
     }
 }

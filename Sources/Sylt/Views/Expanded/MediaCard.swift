@@ -72,16 +72,12 @@ struct MediaCard: View {
                             .offset(x: 4, y: -4)
                     }
             }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .menuIndicator(.hidden)
-            .fixedSize()
+            .plainMenu()
         } else {
             SourceBadge(bundleIdentifier: track.bundleIdentifier)
         }
     }
 
-    /// Where the sound goes, and how loud.
     private var output: some View {
         HStack(spacing: 8) {
             LevelSlider(symbol: volume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill", value: volume.isMuted ? 0 : volume.level) {
@@ -107,10 +103,7 @@ struct MediaCard: View {
                 .font(.system(size: 10, weight: .medium, design: .rounded))
                 .foregroundStyle(.white.opacity(0.5))
             }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .menuIndicator(.hidden)
-            .fixedSize()
+            .plainMenu()
             .frame(maxWidth: 140, alignment: .trailing)
         }
         .padding(.horizontal, 2)
@@ -144,11 +137,10 @@ private struct PlaybackProgress: View {
                         .contentShape(Rectangle())
                         .gesture(
                             DragGesture(minimumDistance: 0)
-                                .onChanged { scrubbing = min(max($0.location.x / geo.size.width, 0), 1) }
+                                .onChanged { scrubbing = fraction(at: $0.location.x, of: geo.size.width) }
                                 .onEnded { value in
-                                    let fraction = min(max(value.location.x / geo.size.width, 0), 1)
                                     scrubbing = nil
-                                    if total > 0 { nowPlaying.seek(to: fraction * total) }
+                                    if total > 0 { nowPlaying.seek(to: fraction(at: value.location.x, of: geo.size.width) * total) }
                                     Haptics.press()
                                 }
                         )
@@ -159,6 +151,10 @@ private struct PlaybackProgress: View {
             .font(.system(size: 10, weight: .medium, design: .rounded).monospacedDigit())
             .foregroundStyle(.white.opacity(0.6))
         }
+    }
+
+    private func fraction(at x: CGFloat, of width: CGFloat) -> Double {
+        min(max(x / width, 0), 1)
     }
 
     private func timestamp(_ seconds: TimeInterval) -> String {
@@ -193,5 +189,14 @@ private struct TransportButton: View {
                         action()
                     }
             )
+    }
+}
+
+private extension View {
+    func plainMenu() -> some View {
+        menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
     }
 }

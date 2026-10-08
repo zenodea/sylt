@@ -7,7 +7,6 @@ final class BluetoothMonitor: NSObject, ObservableObject {
     struct Device: Hashable {
         let name: String
         let address: String
-        /// Percent, when the device reports one.
         var battery: Int?
         var isAudio = false
     }
@@ -26,7 +25,7 @@ final class BluetoothMonitor: NSObject, ObservableObject {
     let events = PassthroughSubject<Event, Never>()
     /// A connected device dropping to 20 and then 10 percent.
     let lowBattery = PassthroughSubject<Device, Never>()
-    /// Connected devices with a known charge, audio devices first.
+    /// Audio devices first.
     @Published private(set) var connected: [Device] = []
 
     var headphones: Device? { connected.first { $0.isAudio && $0.battery != nil } }

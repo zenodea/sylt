@@ -64,12 +64,39 @@ final class PluginTests: XCTestCase {
         XCTAssertTrue(store.showsHUDs(manifest))
         store.setShowsHUDs(false, manifest)
         XCTAssertFalse(store.showsHUDs(manifest))
+    }
+
+    func testManifestAcceptsClipboardOrFiles() throws {
         let clipboard = try JSONDecoder().decode(PluginManifest.self, from: Data(#"{"protocol": 1, "id": "c", "name": "C", "run": "c.py", "accepts": ["clipboard"]}"#.utf8))
         XCTAssertTrue(clipboard.wantsClipboard)
         XCTAssertFalse(clipboard.acceptsFiles)
+    }
+
+    func testTrailingSymbolReservesRoom() {
         let hud = ExternalHUD(pluginID: "a", hud: PluginHUD(symbol: "x", text: "Done", side: "left", trailingSymbol: "checkmark.circle.fill"))
         let plain = ExternalHUD(pluginID: "a", hud: PluginHUD(symbol: "x", text: "Done", side: "left"))
-        XCTAssertGreaterThan(hud.content, plain.content, "a trailing symbol reserves its room")
+        XCTAssertGreaterThan(hud.content, plain.content)
+    }
+
+    func testProcessReportsMessagesThenExit() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("island-process-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let script = folder.appendingPathComponent("once.sh")
+        try """
+        #!/bin/sh
+        read start
+        echo '{"wing": {"side": "left", "items": [{"text": "once"}]}}'
+        """.write(to: script, atomically: true, encoding: .utf8)
+        let process = PluginProcess(executable: script, folder: folder)
+        let gotMessage = expectation(description: "message"), exited = expectation(description: "exit")
+        var text: String?
+        try process.start(onMessage: { text = $0.wing?.items?.first?.text; gotMessage.fulfill() }, onExit: { exited.fulfill() })
+        process.send(PluginEvent(event: "start"))
+        wait(for: [gotMessage, exited], timeout: 5, enforceOrder: true)
+        XCTAssertEqual(text, "once")
+        XCTAssertFalse(process.isRunning)
+        process.send(PluginEvent(event: "stop"))
+        try? FileManager.default.removeItem(at: folder)
     }
 
     func testStoreDefaultsAndOverrides() throws {

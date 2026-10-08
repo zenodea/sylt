@@ -7,14 +7,14 @@ import AppKit
 final class TopEdgeGuard {
     static let shared = TopEdgeGuard()
 
-    /// Screen x-range (CoreGraphics coordinates) under guard; empty disables it.
+    /// Screen x-range under guard, in CoreGraphics coordinates; read from the tap's thread.
     nonisolated(unsafe) private static var span: ClosedRange<CGFloat>?
     private static let margin: CGFloat = 2
     private var tap: CFMachPort?
 
-    func guardSpan(_ range: ClosedRange<CGFloat>?) {
+    func guardSpan(_ range: ClosedRange<CGFloat>) {
         Self.span = range
-        if range != nil, tap == nil { install() }
+        if tap == nil { install() }
     }
 
     private func install() {

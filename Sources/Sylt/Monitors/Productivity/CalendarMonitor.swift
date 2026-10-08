@@ -20,6 +20,7 @@ final class CalendarMonitor: ObservableObject {
     let reminders = PassthroughSubject<Event, Never>()
 
     static let reminderLead: TimeInterval = 5 * 60
+    private static let links = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
 
     private let store = EKEventStore()
     private var timer: Timer?
@@ -84,9 +85,9 @@ final class CalendarMonitor: ObservableObject {
     private static func joinURL(in event: EKEvent) -> URL? {
         let hosts = ["zoom.us", "meet.google.com", "teams.microsoft.com", "webex.com", "whereby.com", "meet.jit.si"]
         let candidates = [event.url?.absoluteString, event.location, event.notes].compactMap { $0 }
+        guard let links else { return nil }
         for text in candidates {
-            guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else { continue }
-            let matches = detector.matches(in: text, range: NSRange(text.startIndex..., in: text))
+            let matches = links.matches(in: text, range: NSRange(text.startIndex..., in: text))
             if let url = matches.compactMap(\.url).first(where: { url in hosts.contains { url.host?.hasSuffix($0) == true } }) {
                 return url
             }

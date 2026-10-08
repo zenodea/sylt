@@ -67,7 +67,6 @@ enum Plugin: String, CaseIterable, Identifiable, Codable {
         }
     }
 
-    /// The colour of its icon tile, one per kind of thing, as System Settings does it.
     var tint: Color {
         switch self {
         case .battery: .green

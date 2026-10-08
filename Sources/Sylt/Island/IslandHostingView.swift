@@ -19,8 +19,6 @@ final class IslandHostingView: NSHostingView<IslandView> {
     private static let hardFlick: CGFloat = 20
     /// Over a list the island doesn't lean until the sideways travel is clearly a swipe.
     private static let intentTravel: CGFloat = 18
-    /// Beyond this the island is fully pulled; winding further would only delay a reversal.
-    private static let swipeLimit: CGFloat = 60
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
@@ -50,7 +48,7 @@ final class IslandHostingView: NSHostingView<IslandView> {
             if !overList || sidewaysTravel >= Self.intentTravel || upwardTravel >= Self.hardTravel {
                 state.swipeMoved(swipe)
             }
-            // Act while the fingers are still down: that's the only time the trackpad can tap back.
+            // Acted on while the fingers are still down: the only time the trackpad can tap back.
             if !swipeFired, let direction = SwipeDirection(vector: swipe), allows(direction) {
                 swipeFired = true
                 state.swiped(direction)
@@ -79,7 +77,7 @@ final class IslandHostingView: NSHostingView<IslandView> {
     }
 
     private static func clamp(_ value: CGFloat) -> CGFloat {
-        min(max(value, -swipeLimit), swipeLimit)
+        min(max(value, -IslandState.swipeReach), IslandState.swipeReach)
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {

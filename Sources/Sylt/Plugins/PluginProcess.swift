@@ -5,13 +5,12 @@ final class PluginProcess {
     private let process = Process()
     private let input = Pipe()
     private let output = Pipe()
-    private var buffer = Data()
-    private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
+    private var reader: JSONLineReader<PluginMessage>?
 
     var isRunning: Bool { process.isRunning }
 
-    init(executable: URL, folder: URL, onMessage: @escaping (PluginMessage) -> Void, onExit: @escaping (Int32) -> Void) {
+    init(executable: URL, folder: URL) {
         let (launch, arguments) = Self.launcher(for: executable)
         process.executableURL = launch
         process.arguments = arguments
@@ -19,31 +18,22 @@ final class PluginProcess {
         process.standardInput = input
         process.standardOutput = output
         process.standardError = FileHandle.nullDevice
-        process.terminationHandler = { onExit($0.terminationStatus) }
-        output.fileHandleForReading.readabilityHandler = { [weak self] handle in
-            guard let self else { return }
-            let chunk = handle.availableData
-            guard !chunk.isEmpty else { return }
-            buffer.append(chunk)
-            while let newline = buffer.firstIndex(of: UInt8(ascii: "\n")) {
-                let line = buffer[..<newline]
-                buffer.removeSubrange(...newline)
-                if let message = try? decoder.decode(PluginMessage.self, from: line) { onMessage(message) }
-            }
-        }
     }
 
-    func start() throws {
+    func start(onMessage: @escaping (PluginMessage) -> Void, onExit: @escaping () -> Void) throws {
+        reader = JSONLineReader(output.fileHandleForReading, onMessage: onMessage)
+        process.terminationHandler = { _ in onExit() }
         try process.run()
     }
 
     func send(_ event: PluginEvent) {
         guard process.isRunning, let data = try? encoder.encode(event) else { return }
-        input.fileHandleForWriting.write(data + Data("\n".utf8))
+        // A plugin that closed its stdin is on its way out; the exit handler deals with it.
+        try? input.fileHandleForWriting.write(contentsOf: data + Data("\n".utf8))
     }
 
     func terminate() {
-        output.fileHandleForReading.readabilityHandler = nil
+        JSONLineReader<PluginMessage>.stop(output.fileHandleForReading)
         if process.isRunning { process.terminate() }
     }
 

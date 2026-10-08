@@ -2,7 +2,7 @@ import AppKit
 
 /// The notch's size on a screen. With an auto-hiding menu bar macOS reports no notch at
 /// all while the bar is away, and a screen change every time it slides, so the last
-/// values that came from the real notch are kept, remembered across launches, and only
+/// values that came from the real notch are remembered across launches and only
 /// replaced by values that also come from it.
 struct NotchGeometry: Equatable {
     let screen: NSScreen
@@ -11,27 +11,22 @@ struct NotchGeometry: Equatable {
     /// True when these values came from the notch itself, now or on an earlier launch.
     let isMeasured: Bool
 
+    private static let fallbackWidth: CGFloat = 180
+
     init(screen: NSScreen) {
         self.screen = screen
         let key = "notch.\(screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0)"
-        let measuredHeight = screen.safeAreaInsets.top
-        var measuredWidth: CGFloat?
-        if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea { measuredWidth = right.minX - left.maxX }
-        if measuredHeight > 0, let measuredWidth {
-            UserDefaults.standard.set([measuredWidth, measuredHeight], forKey: key)
-        }
-        if let remembered = UserDefaults.standard.array(forKey: key) as? [CGFloat], remembered.count == 2 {
-            notchWidth = remembered[0]
-            notchHeight = remembered[1]
-            isMeasured = true
+        let height = screen.safeAreaInsets.top
+        let width = screen.auxiliaryTopLeftArea.flatMap { left in screen.auxiliaryTopRightArea.map { $0.minX - left.maxX } }
+        if height > 0, let width {
+            UserDefaults.standard.set([width, height], forKey: key)
+            (notchWidth, notchHeight, isMeasured) = (width, height, true)
+        } else if let remembered = UserDefaults.standard.array(forKey: key) as? [CGFloat], remembered.count == 2 {
+            (notchWidth, notchHeight, isMeasured) = (remembered[0], remembered[1], true)
         } else {
-            notchWidth = measuredWidth ?? 180
-            notchHeight = measuredHeight > 0 ? measuredHeight : screen.frame.maxY - screen.visibleFrame.maxY
-            isMeasured = false
+            (notchWidth, notchHeight, isMeasured) = (width ?? Self.fallbackWidth, height > 0 ? height : screen.frame.maxY - screen.visibleFrame.maxY, false)
         }
     }
-
-    var hasNotch: Bool { screen.safeAreaInsets.top > 0 }
 
     static func == (lhs: NotchGeometry, rhs: NotchGeometry) -> Bool {
         lhs.screen == rhs.screen && lhs.notchWidth == rhs.notchWidth && lhs.notchHeight == rhs.notchHeight && lhs.screen.frame == rhs.screen.frame

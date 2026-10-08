@@ -1,13 +1,8 @@
 import AppKit
 
 enum Sounds {
-    static func unlock() {
-        NSSound(named: "Glass")?.play()
-    }
-
-    static func lock() {
-        NSSound(named: "Tink")?.play()
-    }
+    static func unlock() { play("Glass") }
+    static func lock() { play("Tink") }
 
     static func play(_ name: String) {
         NSSound(named: name)?.play()

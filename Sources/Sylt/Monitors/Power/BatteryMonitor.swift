@@ -35,6 +35,7 @@ final class BatteryMonitor: ObservableObject {
     private var hasBaseline = false
 
     func start() {
+        guard source == nil else { return }
         refresh()
         let context = Unmanaged.passUnretained(self).toOpaque()
         source = IOPSNotificationCreateRunLoopSource({ context in

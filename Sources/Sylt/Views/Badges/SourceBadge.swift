@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// The icon of the app a track plays from, for the corner of its artwork.
 struct SourceBadge: View {
     let bundleIdentifier: String?
     var size: CGFloat = 18

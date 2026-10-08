@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// A drawn padlock: one body, one shackle. Opening lifts the shackle and
-/// swings it out, so the lock animates in place rather than swapping icons.
+/// A drawn padlock, so opening animates the shackle in place instead of swapping icons.
 struct LockGlyph: View {
     let open: Bool
 

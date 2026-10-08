@@ -63,7 +63,7 @@ final class NowPlayingMonitor: ObservableObject {
         position = PlaybackPosition(elapsed: seconds, rate: isPlaying ? 1 : 0, timestamp: .now)
         seekedAt = CACurrentMediaTime()
         if let player = scripted.player {
-            Task { _ = await AppleScript.string(player.script(for: .seek(seconds))); scripted.poll() }
+            Task { await AppleScript.string(player.script(for: .seek(seconds))); scripted.poll() }
         } else {
             MediaRemoteCommands.seek(to: seconds)
             adapter.send("refresh")
@@ -72,7 +72,7 @@ final class NowPlayingMonitor: ObservableObject {
 
     private func perform(_ command: ScriptedPlayer.Command, remote: MediaRemoteCommands.Command) {
         if let player = scripted.player {
-            Task { _ = await AppleScript.string(player.script(for: command)); scripted.poll() }
+            Task { await AppleScript.string(player.script(for: command)); scripted.poll() }
         } else {
             MediaRemoteCommands.send(remote)
             adapter.send("refresh")
@@ -125,7 +125,6 @@ final class NowPlayingMonitor: ObservableObject {
     private func apply(_ snapshot: PlayerSnapshot?, from player: ScriptedPlayer) {
         refreshSources()
         guard let snapshot else {
-            // A pinned player that stopped or quit hands control back to macOS.
             if pinnedSource == player { return select(source: nil) }
             return clear()
         }
@@ -173,7 +172,7 @@ final class NowPlayingMonitor: ObservableObject {
     private func resolveArtwork(for target: NowPlayingTrack) {
         artworkResolver.resolve(target) { [weak self] image in
             guard let self, var current = track, current.isSameSong(target) else { return }
-            current.artwork = image ?? AppIcons.icon(for: current.bundleIdentifier)
+            current.artwork = image
             current.hasResolvedArtwork = true
             track = current
         }

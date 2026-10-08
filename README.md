@@ -75,12 +75,12 @@ Each is asked for the first time its plugin needs it, and each plugin can be swi
 
 - The island is a transparent panel over the notch, drawn with SwiftUI. It is moved into its own WindowServer space pinned at the lock-screen level through the private SkyLight framework, which is what keeps it above full-screen apps and the login window.
 - The panel only takes the mouse while the cursor is over the island, so the rest of the strip stays click-through.
-- Built-in sources are Swift `Monitor`s with a `HUDKind` for their overlay. Everything else is a plugin: a program in any language that prints JSON, rendered by the island with the same badges, overlays and sections. Thirteen ship in the app: weather, downloads, timer, clipboard, file shelf, agents, AeroSpace workspaces, Slack, a clock, todos from Reminders, a Ghostty quick terminal, Tailscale and Mullvad VPN.
+- Built-in sources are Swift `Monitor`s with a `HUDKind` for their overlay. Everything else is a plugin: a program in any language that prints JSON, rendered by the island with the same badges, overlays and sections. Fifteen ship in the app: weather, downloads, timer, clipboard, file shelf, agents, AeroSpace workspaces, Slack, a clock, todos from Reminders, a Ghostty quick terminal, Tailscale, Mullvad VPN, network traffic and system load.
 - MediaRemote withholds metadata from third-party apps on recent macOS, so now-playing data comes from a small adapter hosted in Apple's own `perl`, with AppleScript for Spotify and Music and a session-store lookup for Firefox.
 
 ## Writing a plugin
 
-A plugin is a folder with a `plugin.json` and a program. Drop it in `~/Library/Application Support/Sylt/Plugins` and it starts; Settings has a button for the folder. The thirteen shipped plugins in `Plugins/` are the reference.
+A plugin is a folder with a `plugin.json` and a program. Drop it in `~/Library/Application Support/Sylt/Plugins` and it starts; Settings has a button for the folder. The fifteen shipped plugins in `Plugins/` are the reference.
 
 ```json
 {
@@ -111,9 +111,9 @@ What a plugin can print:
 
 | Line | Effect |
 | --- | --- |
-| `{"wing": {"side": "left" or "right", "items": [...]}}` | Replaces the plugin's badge in that wing. An item mixes `symbol`, `image` (`app:bundle.id`, `icon:/path`, `file:/path`), `text`, `tint`, `dot`, `ring` (0 to 1) and `status` (`working` or `waiting`). Empty items clear it. |
+| `{"wing": {"side": "left" or "right", "items": [...]}}` | Replaces the plugin's badge in that wing. An item mixes `symbol`, `image` (`app:bundle.id`, `icon:/path`, `file:/path`), `text`, `tint`, `dot`, `ring` (0 to 1), `graph` (a list of values from 0 to 1, drawn as a small bar graph) and `status` (`working` or `waiting`). Empty items clear it. |
 | `{"hud": {...}}` | Shows an overlay now: `symbol`/`image`, `tint`, `text` or `level` (0 to 1), `side` (`both`, `left`, `right`), `duration`, `sound`, and a `trailingSymbol` with `trailingTint` that pops in after the text. |
-| `{"section": {...}}` | Replaces the plugin's expanded section: `title`, `symbol`, `rows`, `files` (paths, draggable), `buttons`, `actions`. A row has `id`, `symbol`/`image`, `title`, `detail`, `trailing`, `trailingTint`, `status`, `progress`, `buttons`, `highlighted`, `large`. A wing can set `spacing` between its items. |
+| `{"section": {...}}` | Replaces the plugin's expanded section: `title`, `symbol`, `rows`, `files` (paths, draggable), `buttons`, `actions`. A row has `id`, `symbol`/`image`, `title`, `detail`, `trailing`, `trailingTint`, `status`, `progress`, `buttons`, `highlighted`, `large`, and `graph` with `tint` for a wider graph on the right. A wing can set `spacing` between its items. |
 | `{"clearSection": true}` | Removes the section. |
 | `{"sound": "Hero"}` | Plays a system sound. |
 | `{"activate": {"process": "herdr", "window": "title"}}` | Brings an app forward, by process name, `pid` or `bundle`, and raises the window whose title contains `window`. |

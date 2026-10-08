@@ -8,7 +8,7 @@ struct CalendarBadge: View {
             HStack(spacing: 3) {
                 Image(systemName: "calendar").font(.system(size: 11, weight: .semibold))
                 Text(Self.countdown(to: event.start, now: context.date))
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.badge)
                     .monospacedDigit()
                     .fixedSize()
             }

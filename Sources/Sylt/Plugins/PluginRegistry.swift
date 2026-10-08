@@ -105,12 +105,15 @@ final class PluginRegistry: ObservableObject {
 
     private static func scan(_ root: URL?, bundled: Bool) -> [(PluginManifest, URL, Bool)] {
         guard let root, let folders = try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else { return [] }
-        return folders.compactMap { folder in
-            guard let data = try? Data(contentsOf: folder.appendingPathComponent("plugin.json")),
-                  let manifest = try? JSONDecoder().decode(PluginManifest.self, from: data),
-                  manifest.protocolVersion == PluginProtocol.version
-            else { return nil }
-            return (manifest, folder, bundled)
+        return folders.compactMap { folder -> (PluginManifest, URL, Bool)? in
+            guard let data = try? Data(contentsOf: folder.appendingPathComponent("plugin.json")) else { return nil }
+            do {
+                let manifest = try JSONDecoder().decode(PluginManifest.self, from: data)
+                return manifest.protocolVersion == PluginProtocol.version ? (manifest, folder, bundled) : nil
+            } catch {
+                FileHandle.standardError.write(Data("plugin \(folder.lastPathComponent): bad plugin.json: \(error)\n".utf8))
+                return nil
+            }
         }
         .sorted { $0.0.name < $1.0.name }
     }

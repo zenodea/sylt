@@ -5,27 +5,25 @@ import SwiftUI
 @MainActor
 final class IslandState: ObservableObject {
     @Published var mode: IslandMode = .closed
-    @Published var cursor: CGPoint = .zero
-    @Published var swipePull: CGVector = .zero
-    /// Where the held pointer will come out, on the island's rim, in canvas coordinates.
-    @Published private(set) var exitPoint: CGPoint = .zero
-    /// How hard the pointer is being pushed, 0...1; at 1 it pops out.
-    @Published private(set) var pullStrength: CGFloat = 0
-    /// The lean the push gives the island, -1...1 per axis.
-    @Published private(set) var cursorPull: CGVector = .zero
-    /// A one-shot effect where the pointer just popped out, with the push direction.
-    @Published private(set) var burst: (point: CGPoint, direction: CGVector, id: UUID)?
-    /// The liquid surface reacting where the pointer just went in or came out.
-    @Published private(set) var liquid: LiquidEvent?
-    /// Mouse travel that frees the pointer, and how quickly the lean saturates.
-    static let baseReleaseDistance: CGFloat = 520
-    /// How far the mouse has to travel, net of decay, before the island lets the pointer go.
-    var releaseDistance: CGFloat { Self.baseReleaseDistance * CGFloat(preferences.releaseForce) }
-    static let pullSoftness: CGFloat = 320
     @Published private(set) var isHovering = false
-    @Published private(set) var layout = IslandLayout()
-    /// Which way the last page turn went, for the slide.
-    private(set) var pageDirection = 1
+    @Published var layout = IslandLayout()
+
+    /// The push on the held pointer: the content's lean, the island's lean (-1...1 per
+    /// axis), how close the pointer is to popping out (0...1) and where on the rim it would.
+    @Published var cursor: CGPoint = .zero
+    @Published var cursorPull: CGVector = .zero
+    @Published var pullStrength: CGFloat = 0
+    @Published var exitPoint: CGPoint = .zero
+    /// Where the pointer went in, in canvas coordinates; pushes are measured from here.
+    var heldOrigin: CGPoint?
+
+    @Published var burst: BurstEvent?
+    @Published var liquid: LiquidEvent?
+    @Published var sparks: SparkEvent?
+
+    /// The swipe under way, -1...1 per axis, and which way the last page turn went.
+    @Published var swipePull: CGVector = .zero
+    var pageDirection = 1
     /// Where scrolling lists are on the canvas, so a scroll over one stays the list's.
     var listFrames: [CGRect] = []
 
@@ -46,42 +44,21 @@ final class IslandState: ObservableObject {
     let lock = LockMonitor()
     let fullscreen = FullscreenMonitor()
 
-    private var hudTimer: Timer?
-    private var collapseTimer: Timer?
-    private var cancellables = Set<AnyCancellable>()
+    var hudTimer: Timer?
+    var collapseTimer: Timer?
+    var cancellables = Set<AnyCancellable>()
+
+    /// How long a HUD the pointer just left stays, and how long the open panel waits before closing.
+    private static let hudLinger: TimeInterval = 0.8
+    private static let collapseDelay: TimeInterval = 0.3
+    /// How far the island's edge reaches into a swipe, per unit of pull.
+    private static let swipeLeanWidth: CGFloat = 14
+    private static let swipeLeanHeight: CGFloat = 10
+    private static let swipeLeanShift: CGFloat = 7
 
     init(preferences: Preferences, pluginStore: PluginStore? = nil) {
         self.preferences = preferences
         plugins = PluginRegistry(store: pluginStore ?? PluginStore())
-    }
-
-    var notchHeight: CGFloat { layout.notchHeight }
-    var notchWidth: CGFloat { layout.notchWidth }
-    var canvasSize: CGSize { layout.canvasSize }
-
-    /// The island's frame, leaning into a swipe: its edge reaches a little that way while
-    /// the content inside stays where it is, so it moves like a body, not like jelly.
-    var islandFrame: IslandFrame {
-        var frame = layout.frame(for: mode, hovering: isHovering)
-        guard mode != .expanded, preferences.leansWithSwipes else { return frame }
-        let strength = CGFloat(preferences.swipeLeanStrength)
-        frame.size.width += abs(swipePull.dx) * 14 * strength
-        frame.size.height += max(0, swipePull.dy) * 10 * strength
-        frame.centerOffset += swipePull.dx * 7 * strength
-        return frame
-    }
-    var hitFrame: CGRect { layout.hitFrame(for: mode, hovering: isHovering) }
-
-    /// The island takes the cursor in everywhere except the expanded panel, which has controls to click.
-    var absorbsCursor: Bool { preferences.absorbsPointer && isHovering && mode != .expanded && !lock.isLocked }
-
-    /// Where the island settles when nothing is showing.
-    private var restingMode: IslandMode { lock.isLocked ? .locked : .closed }
-
-    func apply(_ geometry: NotchGeometry) {
-        layout.notchWidth = geometry.notchWidth
-        layout.notchHeight = geometry.notchHeight
-        layout.screenWidth = geometry.screen.frame.width
     }
 
     func start() {
@@ -94,6 +71,89 @@ final class IslandState: ObservableObject {
         preferences.$enabledPlugins
             .sink { [weak self] in self?.applyPlugins($0) }
             .store(in: &cancellables)
+    }
+
+    var notchHeight: CGFloat { layout.notchHeight }
+    var notchWidth: CGFloat { layout.notchWidth }
+    var canvasSize: CGSize { layout.canvasSize }
+    var hitFrame: CGRect { layout.hitFrame(for: mode, hovering: isHovering) }
+
+    /// The island's frame, leaning into a swipe: its edge reaches a little that way while
+    /// the content inside stays where it is, so it moves like a body, not like jelly.
+    var islandFrame: IslandFrame {
+        var frame = layout.frame(for: mode, hovering: isHovering)
+        guard mode != .expanded, preferences.leansWithSwipes else { return frame }
+        let strength = CGFloat(preferences.swipeLeanStrength)
+        frame.size.width += abs(swipePull.dx) * Self.swipeLeanWidth * strength
+        frame.size.height += max(0, swipePull.dy) * Self.swipeLeanHeight * strength
+        frame.centerOffset += swipePull.dx * Self.swipeLeanShift * strength
+        return frame
+    }
+
+    /// The island takes the cursor in everywhere except the expanded panel, which has controls to click.
+    var absorbsCursor: Bool { preferences.absorbsPointer && isHovering && mode != .expanded && !lock.isLocked }
+
+    /// Where the island settles when nothing is showing.
+    var restingMode: IslandMode { lock.isLocked ? .locked : .closed }
+
+    func hoverChanged(_ inside: Bool) {
+        guard inside != isHovering else { return }
+        withAnimation(IslandAnimation.peek) { isHovering = inside }
+        collapseTimer?.invalidate()
+        if inside {
+            guard mode != .expanded else { return }
+            hudTimer?.invalidate()
+            Haptics.peek()
+        } else if case .hud = mode {
+            scheduleHUDDismissal(after: Self.hudLinger)
+        } else if mode == .expanded {
+            collapseTimer = .after(Self.collapseDelay) { [weak self] in self?.collapse() }
+        } else {
+            cursor = .zero
+        }
+    }
+
+    /// Drives hover from the cursor in canvas coordinates (top-left origin).
+    func cursorMoved(to point: CGPoint) {
+        hoverChanged(hitFrame.contains(point))
+    }
+
+    func pressed() {
+        guard mode != .expanded else { return }
+        Haptics.press()
+    }
+
+    func released() {
+        guard mode != .expanded else { return }
+        expand()
+        Haptics.expand()
+    }
+
+    /// Files dragged onto the island land on the shelf; the island opens to show them.
+    func dragEntered() {
+        guard mode != .expanded, !lock.isLocked else { return }
+        expand()
+    }
+
+    func dropped(_ urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        plugins.dropped(urls)
+        Haptics.expand()
+    }
+
+    /// Opens the panel; whatever HUD was showing gives way.
+    func expand() {
+        hudTimer?.invalidate()
+        transition(to: .expanded)
+    }
+
+    func collapse() {
+        transition(to: .closed)
+        Haptics.collapse()
+    }
+
+    func transition(to next: IslandMode) {
+        withAnimation(IslandAnimation.transition(to: next)) { mode = next }
     }
 
     private func applyPlugins(_ enabled: Set<Plugin>) {
@@ -119,365 +179,4 @@ final class IslandState: ObservableObject {
         case .thermals: thermal
         }
     }
-
-    /// Files dragged onto the island land on the shelf; the island opens to show them.
-    func dragEntered() {
-        guard mode != .expanded, !lock.isLocked else { return }
-        hudTimer?.invalidate()
-        transition(to: .expanded)
-    }
-
-    func dropped(_ urls: [URL]) {
-        guard !urls.isEmpty else { return }
-        plugins.dropped(urls)
-        Haptics.expand()
-    }
-
-    /// Plugin wings and sections feed the layout; a plugin's HUD goes through the usual gate.
-    private func bindPlugins() {
-        plugins.huds
-            .sink { [weak self] plugin, hud in
-                if let sound = hud.sound { Sounds.play(sound) }
-                self?.showHUD(.external(ExternalHUD(pluginID: plugin.id, hud: hud)))
-            }
-            .store(in: &cancellables)
-        plugins.$plugins
-            .map { plugins in
-                Publishers.MergeMany(plugins.map { plugin in
-                    plugin.$left.combineLatest(plugin.$right, plugin.$section).map { _ in () }
-                })
-                .prepend(())
-            }
-            .switchToLatest()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] in self?.refreshPluginLayout() }
-            .store(in: &cancellables)
-        preferences.$wingLayout
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.refreshPluginLayout() }
-            .store(in: &cancellables)
-        preferences.$expandedLayout
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.refreshExpandedPages() }
-            .store(in: &cancellables)
-        preferences.$lockShowsStatus
-            .sink { [weak self] in self?.layout.lockShowsStatus = $0 }
-            .store(in: &cancellables)
-    }
-
-    private func refreshPluginLayout() {
-        let running = plugins.plugins.filter(\.isRunning)
-        layout.pluginWidths = Dictionary(uniqueKeysWithValues: running.map { ($0.id, PluginItem.width(of: $0.wingItems, spacing: $0.wingSpacing)) })
-        layout.wings = preferences.wingLayout.resolve(plugins: plugins.plugins.map(\.wingPlugin))
-        layout.pluginSectionHeights = Dictionary(uniqueKeysWithValues: running.compactMap { plugin in plugin.section.map { (plugin.id, $0.height) } })
-        refreshExpandedPages()
-    }
-
-    /// Pages follow the sections available now and the user's grouping.
-    private func refreshExpandedPages() {
-        layout.expandedPages = preferences.expandedLayout.resolve(available: layout.availableSections)
-        layout.expandedPage = min(layout.expandedPage, max(0, layout.expandedPages.count - 1))
-    }
-
-    /// Turn the expanded view's page; `delta` is +1 for the next page, -1 for the previous.
-    func turnPage(_ delta: Int) {
-        let count = layout.expandedPages.count
-        guard count > 1 else { return }
-        let next = (layout.expandedPage + delta + count) % count
-        pageDirection = delta
-        withAnimation(IslandAnimation.expand) { layout.expandedPage = next }
-        Haptics.press()
-    }
-
-    func hoverChanged(_ inside: Bool) {
-        guard inside != isHovering else { return }
-        withAnimation(IslandAnimation.peek) { isHovering = inside }
-        collapseTimer?.invalidate()
-        if inside {
-            switch mode {
-            case .closed, .locked:
-                Haptics.peek()
-            case .hud:
-                hudTimer?.invalidate()
-                Haptics.peek()
-            case .expanded:
-                break
-            }
-        } else if case .hud = mode {
-            scheduleHUDDismissal(after: 0.8)
-        } else if mode == .expanded {
-            collapseTimer = .after(0.3) { [weak self] in
-                    self?.transition(to: .closed)
-                    Haptics.collapse()
-        }
-        } else {
-            cursor = .zero
-        }
-    }
-
-    /// Drives hover from the cursor in canvas coordinates (top-left origin).
-    func cursorMoved(to point: CGPoint) {
-        guard hitFrame.contains(point) else { return hoverChanged(false) }
-        hoverChanged(true)
-    }
-
-    /// While the island holds the pointer, mouse travel is a push: the island
-    /// leans that way and its rim lights up where the pointer would come out.
-    func cursorPushed(_ travel: CGVector) {
-        let direction = CGVector(dx: travel.dx, dy: max(0, travel.dy))
-        let strength = min(1, hypot(direction.dx, direction.dy) / releaseDistance)
-        withAnimation(IslandAnimation.cursor) {
-            cursorPull = CGVector(dx: tanh(direction.dx / Self.pullSoftness), dy: tanh(direction.dy / Self.pullSoftness))
-            cursor = CGPoint(x: cursorPull.dx * 0.6, y: cursorPull.dy * 0.6)
-            pullStrength = strength
-            exitPoint = rimPoint(toward: direction, outside: 0)
-        }
-    }
-
-    /// The island just took the pointer at this canvas point: the surface ripples there.
-    /// The island just took the pointer at this canvas point.
-    func cursorHeld(at point: CGPoint) {
-        heldOrigin = point
-        switch preferences.releaseEffect {
-        case .ripple: splash(LiquidEvent(point: point))
-        case .sparks: spark(at: point, direction: .zero, inward: true)
-        case .blackHole: spark(at: point, direction: .zero, inward: true)
-        default: break
-        }
-    }
-
-    /// A one-shot shower of sparks at a point; inward ones are drawn to it.
-    @Published private(set) var sparks: SparkEvent?
-
-    private func spark(at point: CGPoint, direction: CGVector, inward: Bool) {
-        let event = SparkEvent(point: point, direction: direction, inward: inward)
-        sparks = event
-        Timer.after(0.9) { [weak self] in if self?.sparks?.id == event.id { self?.sparks = nil } }
-    }
-
-    private func splash(_ event: LiquidEvent) {
-        liquid = event
-        Timer.after(0.7) { [weak self] in if self?.liquid?.id == event.id { self?.liquid = nil } }
-    }
-
-    /// The mouse stopped: the island settles back with a soft spring.
-    func cursorSettled() {
-        withAnimation(IslandAnimation.swipeRebound) {
-            cursorPull = .zero
-            cursor = .zero
-            pullStrength = 0
-        }
-    }
-
-    /// Where the pointer went in, in canvas coordinates: pushes are measured from here,
-    /// so it comes out wherever that push leads, not always at the middle of a side.
-    private var heldOrigin: CGPoint?
-
-    /// Where a push in this direction meets the island's rim, optionally a little past
-    /// it, in canvas coordinates, starting from where the pointer went in. Pushing up
-    /// goes nowhere: the screen ends there.
-    func rimPoint(toward travel: CGVector, outside: CGFloat) -> CGPoint {
-        let island = layout.hitFrame(for: mode, hovering: true).insetBy(dx: 1, dy: 1)
-        let origin = CGPoint(
-            x: min(max(heldOrigin?.x ?? island.midX, island.minX), island.maxX),
-            y: min(max(heldOrigin?.y ?? island.midY, island.minY), island.maxY)
-        )
-        let direction = CGVector(dx: travel.dx, dy: max(0, travel.dy))
-        let length = hypot(direction.dx, direction.dy)
-        guard length > 0.001 else { return origin }
-        var scale = CGFloat.greatestFiniteMagnitude
-        if direction.dx != 0 { scale = min(scale, ((direction.dx > 0 ? island.maxX : island.minX) - origin.x) / direction.dx) }
-        if direction.dy > 0 { scale = min(scale, (island.maxY - origin.y) / direction.dy) }
-        if scale == .greatestFiniteMagnitude { scale = 0 }
-        let unit = CGVector(dx: direction.dx / length, dy: direction.dy / length)
-        return CGPoint(x: origin.x + direction.dx * scale + unit.dx * outside, y: origin.y + direction.dy * scale + unit.dy * outside)
-    }
-
-    func cursorReleased(toward direction: CGVector) {
-        if hypot(direction.dx, max(0, direction.dy)) > 0.001 {
-            flash(toward: direction)
-            if preferences.hapticsOnRelease { Haptics.peek() }
-        }
-        withAnimation(IslandAnimation.swipeRebound) {
-            cursorPull = .zero
-            cursor = .zero
-            pullStrength = 0
-        }
-        hoverChanged(false)
-    }
-
-    /// The chosen release effect at the rim in this direction: what the pointer leaving
-    /// does, also played by a swipe that changes track.
-    func flash(toward direction: CGVector) {
-        let length = hypot(direction.dx, max(0, direction.dy))
-        guard length > 0.001, mode != .expanded else { return }
-        let id = UUID()
-        let point = rimPoint(toward: direction, outside: 0)
-        let unit = CGVector(dx: direction.dx / length, dy: max(0, direction.dy) / length)
-        burst = (point, unit, id)
-        if preferences.releaseEffect == .ripple { splash(LiquidEvent(point: point)) }
-        if preferences.releaseEffect == .sparks || preferences.releaseEffect == .blackHole { spark(at: point, direction: unit, inward: false) }
-        Timer.after(1.1) { [weak self] in if self?.burst?.id == id { self?.burst = nil } }
-    }
-
-    func pressed() {
-        guard mode != .expanded else { return }
-        Haptics.press()
-    }
-
-    func released() {
-        guard mode != .expanded else { return }
-        hudTimer?.invalidate()
-        transition(to: .expanded)
-        Haptics.expand()
-    }
-
-    private func bindAlerts() {
-        show(volume.changes) { .volume }
-        show(brightness.changes) { .brightness }
-        show(battery.alerts) { .battery($0) }
-        show(nowPlaying.trackChanges.merge(with: nowPlaying.playbackResumed)) { .nowPlaying }
-        show(notifications.notifications) { .notification($0) }
-        show(volume.muteChanges) { .mute($0) }
-        show(bluetooth.events) { .bluetooth($0) }
-        show(bluetooth.lowBattery) { .peripheralBattery($0) }
-        show(network.changes) { .network($0) }
-        show(calendar.reminders) { .calendar($0) }
-        show(keyboard.capsLock) { .capsLock($0) }
-        show(keyboard.inputSource) { .inputSource($0) }
-        show(focus.changes) { .focus($0) }
-        show(privacy.changes) { .privacy($0) }
-        show(thermal.changes) { .thermal($0) }
-        lock.$isLocked
-            .dropFirst()
-            .sink { [weak self] in $0 ? self?.locked() : self?.unlocked() }
-            .store(in: &cancellables)
-    }
-
-    private func show<P: Publisher>(_ publisher: P, as kind: @escaping (P.Output) -> HUDKind) where P.Failure == Never {
-        publisher
-            .sink { [weak self] in self?.showHUD(kind($0)) }
-            .store(in: &cancellables)
-    }
-
-    private func locked() {
-        hudTimer?.invalidate()
-        collapseTimer?.invalidate()
-        if preferences.playsLockSound { Sounds.lock() }
-        transition(to: .locked)
-    }
-
-    private func unlocked() {
-        if preferences.playsUnlockSound { Sounds.unlock() }
-        if preferences.enabledHUDs.contains(.unlock) { showHUD(.unlocked) } else { transition(to: .closed) }
-    }
-
-    /// Normalised -1...1 pull in each axis; the island stretches that way and stays anchored to the notch.
-    func swipeMoved(_ vector: CGVector) {
-        withAnimation(IslandAnimation.swipeFollow) {
-            swipePull = CGVector(dx: min(max(vector.dx / 60, -1), 1), dy: min(max(vector.dy / 60, -1), 1))
-        }
-    }
-
-    func swipeEnded() {
-        withAnimation(IslandAnimation.swipeRebound) { swipePull = .zero }
-    }
-
-    func swiped(_ direction: SwipeDirection) {
-        switch direction {
-        case .down where mode != .expanded:
-            hudTimer?.invalidate()
-            transition(to: .expanded)
-            Haptics.expand()
-        case .up where mode == .expanded:
-            transition(to: .closed)
-            Haptics.collapse()
-        case .left where mode == .expanded && layout.expandedPages.count > 1:
-            turnPage(1)
-        case .right where mode == .expanded && layout.expandedPages.count > 1:
-            turnPage(-1)
-        case .left where nowPlaying.track != nil:
-            nowPlaying.next()
-            flash(toward: CGVector(dx: -1, dy: 0))
-            Haptics.press()
-        case .right where nowPlaying.track != nil:
-            nowPlaying.previous()
-            flash(toward: CGVector(dx: 1, dy: 0))
-            Haptics.press()
-        default:
-            break
-        }
-    }
-
-    private func bindLayout() {
-        fullscreen.$isFullscreen
-            .sink { [weak self] in self?.layout.isFullscreen = $0 }
-            .store(in: &cancellables)
-
-        nowPlaying.$track
-            .sink { [weak self] track in
-                guard let self else { return }
-                layout.showsArtwork = track != nil
-                layout.showsAudioBars = track != nil
-                layout.showsMediaCard = track != nil
-                refreshExpandedPages()
-            }
-            .store(in: &cancellables)
-
-        calendar.$next
-            .combineLatest(calendar.$imminent)
-            .sink { [weak self] next, imminent in
-                self?.layout.showsNextEvent = next != nil
-                self?.layout.showsCalendar = imminent
-                self?.refreshExpandedPages()
-            }
-            .store(in: &cancellables)
-
-        privacy.$use
-            .combineLatest(focus.$mode, bluetooth.$connected)
-            .sink { [weak self] use, focus, connected in
-                guard let self else { return }
-                layout.privacyDots = (use.microphone ? 1 : 0) + (use.camera ? 1 : 0)
-                layout.showsFocus = focus != nil
-                layout.showsHeadphones = connected.contains { $0.isAudio && $0.battery != nil }
-            }
-            .store(in: &cancellables)
-    }
-
-    private func transition(to next: IslandMode) {
-        withAnimation(IslandAnimation.transition(to: next)) { mode = next }
-    }
-
-    private func showHUD(_ kind: HUDKind) {
-        guard mode != .expanded, preferences.enabledHUDs.contains(kind.category) else { return }
-        transition(to: .hud(kind))
-        scheduleHUDDismissal(after: kind.duration * preferences.hudDurationScale)
-    }
-
-    private func scheduleHUDDismissal(after duration: TimeInterval) {
-        hudTimer?.invalidate()
-        hudTimer = .after(duration) { [weak self] in
-                guard let self, case .hud = self.mode, !self.isHovering else { return }
-                self.transition(to: self.restingMode)
-        }
-    }
-
-}
-
-/// One disturbance of the island's liquid surface: where the pointer went in or came out.
-struct LiquidEvent: Equatable {
-    let point: CGPoint
-    let start = Date()
-    let id = UUID()
-}
-
-/// Sparks at a point: thrown out along a push, or drawn in when the pointer arrives.
-struct SparkEvent: Equatable {
-    let point: CGPoint
-    let direction: CGVector
-    let inward: Bool
-    let start = Date()
-    let id = UUID()
 }

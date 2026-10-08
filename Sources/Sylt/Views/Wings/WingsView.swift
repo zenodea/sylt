@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// The island's two wings. Each keeps its closed content unless the current
-/// HUD claims that side, so a one-sided HUD leaves the other wing untouched.
-/// A track change keeps both wings and adds the title row underneath.
+/// Each wing keeps its closed content unless the HUD claims that side, so a one-sided
+/// HUD leaves the other wing untouched; a two-row HUD keeps both and adds a row underneath.
 struct WingsView: View {
     let mode: IslandMode
     let layout: IslandLayout
@@ -15,7 +14,7 @@ struct WingsView: View {
                 Spacer().frame(width: layout.notchWidth)
                 wing(.trailing, width: widths.trailing)
             }
-            .frame(height: wingsHeight)
+            .frame(height: layout.notchHeight + IslandLayout.notchOverlap)
             if mode == .hud(.nowPlaying) {
                 TrackRow().transition(IslandAnimation.content)
             }
@@ -25,10 +24,6 @@ struct WingsView: View {
         }
         .font(.system(size: 13, weight: .medium, design: .rounded))
         .foregroundStyle(.white)
-    }
-
-    private var wingsHeight: CGFloat {
-        layout.notchHeight + IslandLayout.notchOverlap
     }
 
     /// Content hugs the notch; the slack sits at the island's outer end.

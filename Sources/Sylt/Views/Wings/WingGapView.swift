@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The room between two wing items, with a hairline in the middle when asked for.
 struct WingGapView: View {
     let gap: WingGap
 

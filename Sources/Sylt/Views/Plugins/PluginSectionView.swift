@@ -1,7 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// A plugin's expanded section: a header naming the plugin, with its actions, then rows, a strip of files, and buttons.
 struct PluginSectionView: View {
     @ObservedObject var plugin: ExternalPlugin
 
@@ -22,7 +21,7 @@ struct PluginSectionView: View {
                 .foregroundStyle(.white.opacity(0.5))
                 .frame(height: PluginSection.headerHeight - 4)
                 if let rows = section.rows, !rows.isEmpty {
-                    // More rows than fit scroll inside the space the first few take.
+                    // Rows past the first few scroll inside the space those take.
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 3) {
                             ForEach(rows) { row in
@@ -34,7 +33,7 @@ struct PluginSectionView: View {
                     }
                     .frame(minHeight: rows.prefix(PluginSection.maxRows).reduce(0) { $0 + $1.height } - 3, maxHeight: .infinity)
                     .background(GeometryReader { proxy in
-                        Color.clear.preference(key: ListFramesKey.self, value: [proxy.frame(in: .named("canvas"))])
+                        Color.clear.preference(key: ListFramesKey.self, value: [proxy.frame(in: .named(ListFramesKey.space))])
                     })
                 }
                 if let paths = section.files, !paths.isEmpty {
@@ -129,8 +128,9 @@ private struct PluginRowView: View {
     }
 }
 
-/// Frames of scrolling lists in canvas coordinates.
+/// Frames of scrolling lists in the island canvas's coordinate space.
 struct ListFramesKey: PreferenceKey {
+    static let space = "canvas"
     static let defaultValue: [CGRect] = []
     static func reduce(value: inout [CGRect], nextValue: () -> [CGRect]) { value += nextValue() }
 }

@@ -5,7 +5,7 @@ struct Pill: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .font(.badge)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(tint, in: Capsule())

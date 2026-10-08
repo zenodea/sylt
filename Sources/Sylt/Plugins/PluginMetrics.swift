@@ -12,8 +12,11 @@ extension PluginItem {
         if let text, !text.isEmpty { parts.append(TextWidth.of(text, size: 11, monospacedDigits: true) + 1) }
         if dot != nil || (status != nil && symbol == nil && image == nil) { parts.append(7) }
         if ring != nil { parts.append(12) }
+        if graph != nil { parts.append(Self.graphWidth) }
         return parts.reduce(0, +) + CGFloat(max(0, parts.count - 1)) * Self.gap
     }
+
+    static let graphWidth: CGFloat = 26
 
     static func width(of items: [PluginItem], spacing: CGFloat = 8) -> CGFloat {
         let widths = items.map(\.width).filter { $0 > 0 }

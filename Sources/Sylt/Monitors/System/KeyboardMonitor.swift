@@ -2,7 +2,6 @@ import AppKit
 import Carbon
 import Combine
 
-/// Caps Lock toggles and keyboard layout switches.
 @MainActor
 final class KeyboardMonitor: ObservableObject {
     let capsLock = PassthroughSubject<Bool, Never>()

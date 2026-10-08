@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Text that doesn't fit starts at its end and slides right to reveal the
-/// beginning, pausing briefly at the start of each pass.
+/// Text that doesn't fit starts at its end and slides right to reveal the beginning,
+/// pausing briefly at the start of each pass.
 struct MarqueeText: View {
     let text: String
     var font: Font = .system(size: 11, weight: .medium, design: .rounded)
@@ -22,12 +22,11 @@ struct MarqueeText: View {
                     .lineLimit(1)
                     .fixedSize()
                     .background(GeometryReader { proxy in
-                        Color.clear.onAppear { textWidth = proxy.size.width }
+                        Color.clear.onChange(of: proxy.size.width, initial: true) { textWidth = proxy.size.width }
                     })
                     .offset(x: offset)
             }
-            .onAppear { containerWidth = container.size.width }
-            .onChange(of: container.size.width) { _, width in containerWidth = width }
+            .onChange(of: container.size.width, initial: true) { containerWidth = container.size.width }
         }
         .clipped()
     }

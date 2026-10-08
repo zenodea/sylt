@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// The island at the lock screen: a padlock and the time, both hugging the
-/// notch. On unlock the same view widens, the padlock springs open and the
-/// time gives way to a greeting.
+/// The island at the lock screen: a padlock and the time, both hugging the notch. On
+/// unlock the same view widens, the padlock springs open and the time gives way to a greeting.
 struct LockedView: View {
     let layout: IslandLayout
     let unlocked: Bool
@@ -31,22 +30,19 @@ struct LockedView: View {
             trailing
                 .font(.system(size: unlocked ? 11 : 12, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.85))
-                .frame(width: trailingWing - gap, alignment: .leading)
+                .frame(width: (unlocked ? Self.greetingWing : Self.timeWing) - gap, alignment: .leading)
                 .padding(.leading, gap)
             if layout.lockShowsStatus, !unlocked {
                 ClosedWing(side: .trailing, layout: layout).padding(.horizontal, IslandLayout.wingPadding)
             }
         }
         .frame(height: layout.notchHeight + IslandLayout.notchOverlap)
-        .onAppear {
+        .task {
             guard !unlocked else { return }
             closing = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { withAnimation(IslandAnimation.unlock) { closing = false } }
+            try? await Task.sleep(for: .seconds(0.2))
+            withAnimation(IslandAnimation.unlock) { closing = false }
         }
-    }
-
-    private var trailingWing: CGFloat {
-        unlocked ? Self.greetingWing : Self.timeWing
     }
 
     @ViewBuilder

@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// The Bluetooth rune. Connecting draws it in and sends two rings outward;
-/// disconnecting lets it drop and go grey.
 struct BluetoothGlyph: View {
     let connected: Bool
     @State private var drawn: CGFloat = 0
@@ -37,7 +35,6 @@ struct BluetoothGlyph: View {
     }
 }
 
-/// The rune on its own, for places that only need to say "Bluetooth".
 struct RuneMark: View {
     var body: some View {
         Rune()

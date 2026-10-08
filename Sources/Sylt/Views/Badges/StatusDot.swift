@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Green and breathing while an agent works; amber and still while it waits.
 struct StatusDot: View {
     let working: Bool
     var size: CGFloat = 6

@@ -54,6 +54,8 @@ struct PluginItem: Decodable, Hashable {
     var dot: String?
     var ring: Double?
     var status: String?
+    /// A small graph of values from 0 to 1, oldest first.
+    var graph: [Double]?
 
     var isWorking: Bool { status == "working" }
 }
@@ -73,6 +75,8 @@ struct PluginRow: Decodable, Hashable, Identifiable {
     var progress: Double?
     var buttons: [Button]?
     var highlighted: Bool?
+    var graph: [Double]?
+    var tint: String?
     /// A bigger title, for a headline number like a temperature.
     var large: Bool?
 

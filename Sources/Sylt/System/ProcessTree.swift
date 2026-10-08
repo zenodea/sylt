@@ -2,13 +2,24 @@ import AppKit
 import Darwin
 
 enum ProcessTree {
-    struct Entry {
+    private struct Entry {
         let pid: pid_t
         let parent: pid_t
         let name: String
     }
 
-    static func all() -> [Entry] {
+    /// The GUI application whose process tree contains a process with this name.
+    static func hostApplication(ofProcessNamed name: String) -> NSRunningApplication? {
+        let entries = all()
+        let parents = parentMap(entries)
+        return entries.lazy.filter { $0.name == name }.compactMap { hostApplication(above: $0.pid, parents: parents) }.first
+    }
+
+    static func hostApplication(ofProcess pid: pid_t) -> NSRunningApplication? {
+        hostApplication(above: pid, parents: parentMap(all()))
+    }
+
+    private static func all() -> [Entry] {
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
         var size = 0
         guard sysctl(&mib, 4, nil, &size, nil, 0) == 0, size > 0 else { return [] }
@@ -24,16 +35,8 @@ enum ProcessTree {
         }
     }
 
-    /// The GUI application whose process tree contains a process with this name.
-    static func hostApplication(ofProcessNamed name: String) -> NSRunningApplication? {
-        let entries = all()
-        let parents = Dictionary(entries.map { ($0.pid, $0.parent) }, uniquingKeysWith: { first, _ in first })
-        return entries.lazy.filter { $0.name == name }.compactMap { hostApplication(above: $0.pid, parents: parents) }.first
-    }
-
-    static func hostApplication(ofProcess pid: pid_t) -> NSRunningApplication? {
-        let parents = Dictionary(all().map { ($0.pid, $0.parent) }, uniquingKeysWith: { first, _ in first })
-        return hostApplication(above: pid, parents: parents)
+    private static func parentMap(_ entries: [Entry]) -> [pid_t: pid_t] {
+        Dictionary(entries.map { ($0.pid, $0.parent) }, uniquingKeysWith: { first, _ in first })
     }
 
     private static func hostApplication(above pid: pid_t, parents: [pid_t: pid_t]) -> NSRunningApplication? {

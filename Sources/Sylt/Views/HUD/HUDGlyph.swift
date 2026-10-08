@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A symbol that bounces in when a HUD opens.
 struct HUDGlyph: View {
     let symbol: String
     var tint: Color = .white
@@ -16,14 +15,13 @@ struct HUDGlyph: View {
     }
 }
 
-/// Short right-side HUD text.
 struct HUDLabel: View {
     let text: String
     var dimmed = false
 
     var body: some View {
         Text(text)
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .font(.badge)
             .foregroundStyle(dimmed ? Color.white.opacity(0.6) : .white)
             .lineLimit(1)
             .truncationMode(.tail)

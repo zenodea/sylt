@@ -59,8 +59,6 @@ struct ExpandedLayout: Codable, Equatable {
         return result.filter { !$0.isEmpty }
     }
 
-    /// Put a section on a page, before `target` when given. A page index past the end
-    /// starts a new page. Every page is first made explicit so nothing else moves.
     /// Move a whole page earlier or later; `delta` is -1 or +1.
     mutating func movePage(_ index: Int, by delta: Int, all: [ExpandedSection]) {
         var result = resolve(available: all)
@@ -70,6 +68,8 @@ struct ExpandedLayout: Codable, Equatable {
         pages = result.map { $0.map(\.id) }
     }
 
+    /// Put a section on a page, before `target` when given. A page index past the end
+    /// starts a new page. Every page is first made explicit so nothing else moves.
     mutating func move(_ section: ExpandedSection, toPage index: Int, before target: ExpandedSection? = nil, all: [ExpandedSection]) {
         var result = resolve(available: all)
         for page in result.indices { result[page].removeAll { $0 == section } }

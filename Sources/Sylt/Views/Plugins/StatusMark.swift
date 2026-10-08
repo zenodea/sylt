@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// A plugin item's status: green and breathing while working, blue and still
-/// when done, amber and still while waiting.
 struct StatusMark: View {
     let status: String
     var size: CGFloat = 6

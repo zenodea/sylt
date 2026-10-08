@@ -9,18 +9,21 @@ final class FirefoxAccess: ObservableObject {
 
     @Published private(set) var isDenied = false
 
-    nonisolated func report(_ error: Error) {
+    nonisolated static func report(_ error: Error) {
         let code = (error as NSError).code
-        let denied = code == NSFileReadNoPermissionError || code == Int(EPERM)
-        Task { @MainActor in if self.isDenied != denied { self.isDenied = denied } }
+        update(denied: code == NSFileReadNoPermissionError || code == Int(EPERM))
     }
 
-    nonisolated func reportSuccess() {
-        Task { @MainActor in if self.isDenied { self.isDenied = false } }
+    nonisolated static func reportSuccess() {
+        update(denied: false)
     }
 
     static func openPrivacySettings() {
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!
         NSWorkspace.shared.open(url)
+    }
+
+    private nonisolated static func update(denied: Bool) {
+        Task { @MainActor in if shared.isDenied != denied { shared.isDenied = denied } }
     }
 }

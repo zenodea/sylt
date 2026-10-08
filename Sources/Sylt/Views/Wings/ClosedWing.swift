@@ -11,21 +11,14 @@ struct ClosedWing: View {
     @EnvironmentObject private var bluetooth: BluetoothMonitor
     @EnvironmentObject private var plugins: PluginRegistry
 
+    /// The ZStack keeps the wing a real, framed view even when it has nothing to show.
     var body: some View {
-        // A ZStack keeps the wing a real, framed view even when it has nothing to show.
         ZStack {
-            switch side {
-            case .leading: leading
-            case .trailing: trailing
-            }
+            row(side == .leading ? layout.wings.left : layout.wings.right)
         }
         .animation(IslandAnimation.value, value: layout)
     }
 
-    private var leading: some View { row(layout.wings.left) }
-    private var trailing: some View { row(layout.wings.right) }
-
-    /// The visible items with the chosen gap, and perhaps a thin line, between neighbours.
     private func row(_ items: [WingItem]) -> some View {
         let visible = layout.visibleItems(items)
         return HStack(spacing: 0) {
@@ -51,8 +44,10 @@ struct ClosedWing: View {
             if layout.showsHeadphones, let device = bluetooth.headphones { HeadphonesBadge(device: device) }
         case .music:
             if let track = nowPlaying.track {
-                ArtworkView(image: track.artwork, size: layout.artworkSize)
-                AudioBars(isPlaying: nowPlaying.isPlaying, colors: track.barColors)
+                HStack(spacing: IslandLayout.partGap) {
+                    ArtworkView(image: track.artwork, size: layout.artworkSize)
+                    AudioBars(isPlaying: nowPlaying.isPlaying, colors: track.barColors)
+                }
             }
         case .plugin(let id):
             if let plugin = plugins.plugins.first(where: { $0.id == id }) { PluginWing(plugin: plugin) }

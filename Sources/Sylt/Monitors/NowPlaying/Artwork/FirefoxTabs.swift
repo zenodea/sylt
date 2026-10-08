@@ -11,27 +11,23 @@ enum FirefoxTabs {
         "org.mozilla.firefox", "org.mozilla.firefoxdeveloperedition", "org.mozilla.nightly", "app.zen-browser.zen",
     ]
 
+    private static let applicationFolders = ["Firefox", "zen", "Floorp", "LibreWolf"]
+
     static func openTabs() -> [BrowserTab] {
-        let debug = ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil
-        func log(_ text: String) { if debug { FileHandle.standardError.write(Data("firefox store: \(text)\n".utf8)) } }
-        guard let store = latestSessionStore() else { log("no store found; roots=\(profileRoots().map { FileManager.default.fileExists(atPath: $0.path) })"); return [] }
+        guard let store = latestSessionStore() else { log("no session store"); return [] }
         let compressed: Data
-        do { compressed = try Data(contentsOf: store); FirefoxAccess.shared.reportSuccess() } catch {
-            FirefoxAccess.shared.report(error)
-            var chain: [String] = []
-            var url = store
-            while url.pathComponents.count > 3 {
-                let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
-                chain.append("\(url.lastPathComponent.prefix(4))… r=\(FileManager.default.isReadableFile(atPath: url.path)) perm=\(attrs?[.posixPermissions] ?? "?") owner=\(attrs?[.ownerAccountName] ?? "?")")
-                url = url.deletingLastPathComponent()
-            }
-            log("unreadable \((error as NSError).code): " + chain.joined(separator: " | "))
+        do {
+            compressed = try Data(contentsOf: store)
+            FirefoxAccess.reportSuccess()
+        } catch {
+            FirefoxAccess.report(error)
+            log("unreadable (\((error as NSError).code)): \(store.path)")
             return []
         }
-        guard let json = MozLz4.decompress(compressed) else { log("decompress failed, \(compressed.count) bytes, magic=\(compressed.prefix(8).map { String(format: "%02x", $0) }.joined())"); return [] }
-        guard let session = try? JSONSerialization.jsonObject(with: json) as? [String: Any] else { log("json failed"); return [] }
-        guard let windows = session["windows"] as? [[String: Any]] else { log("no windows key: \(session.keys.sorted())"); return [] }
-        log("windows=\(windows.count)")
+        guard let json = MozLz4.decompress(compressed) else { log("decompress failed, \(compressed.count) bytes"); return [] }
+        guard let session = try? JSONSerialization.jsonObject(with: json) as? [String: Any],
+              let windows = session["windows"] as? [[String: Any]]
+        else { log("no windows in session"); return [] }
 
         return windows.flatMap { window -> [BrowserTab] in
             let tabs = window["tabs"] as? [[String: Any]] ?? []
@@ -44,8 +40,6 @@ enum FirefoxTabs {
             }
         }
     }
-
-    private static let applicationFolders = ["Firefox", "zen", "Floorp", "LibreWolf"]
 
     private static func profileRoots() -> [URL] {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
@@ -69,7 +63,7 @@ enum FirefoxTabs {
             }
             let profiles = root.appendingPathComponent("Profiles")
             do { directories += try FileManager.default.contentsOfDirectory(at: profiles, includingPropertiesForKeys: nil) } catch {
-                if FileManager.default.fileExists(atPath: root.path) { FirefoxAccess.shared.report(error) }
+                if FileManager.default.fileExists(atPath: root.path) { FirefoxAccess.report(error) }
             }
             return directories
         }
@@ -85,16 +79,18 @@ enum FirefoxTabs {
     }
 
     private static func latestSessionStore() -> URL? {
-        let stores = (lockedProfileDirectories() + profileDirectories())
+        (lockedProfileDirectories() + profileDirectories())
             .map { $0.appendingPathComponent("sessionstore-backups/recovery.jsonlz4") }
             .filter { FileManager.default.fileExists(atPath: $0.path) }
-        if ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil {
-            FileHandle.standardError.write(Data("firefox locked=\(lockedProfileDirectories().count) ini=\(profileDirectories().count) stores=\(stores.count)\n".utf8))
-        }
-        return stores.max { modificationDate($0) < modificationDate($1) }
+            .max { modificationDate($0) < modificationDate($1) }
     }
 
     private static func modificationDate(_ url: URL) -> Date {
         (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+    }
+
+    private static func log(_ text: String) {
+        guard ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil else { return }
+        FileHandle.standardError.write(Data("firefox store: \(text)\n".utf8))
     }
 }

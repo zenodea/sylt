@@ -2,7 +2,6 @@ import Combine
 import Foundation
 import Network
 
-/// Which link carries the default route, reported when it changes.
 @MainActor
 final class NetworkMonitor: ObservableObject {
     enum Link: Hashable, CaseIterable {
@@ -30,6 +29,7 @@ final class NetworkMonitor: ObservableObject {
         monitor?.cancel()
         monitor = nil
         settle?.invalidate()
+        settle = nil
         current = nil
     }
 
@@ -38,9 +38,9 @@ final class NetworkMonitor: ObservableObject {
         guard current != nil else { current = link; return }
         settle?.invalidate()
         settle = .after(1.2) { [weak self] in
-                guard let self, link != self.current else { return }
-                self.current = link
-                self.changes.send(link)
+            guard let self, link != current else { return }
+            current = link
+            changes.send(link)
         }
     }
 

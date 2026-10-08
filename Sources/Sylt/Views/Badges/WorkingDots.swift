@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Three dots rippling in turn: the agent is thinking.
 struct WorkingDots: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1 / 30)) { context in
