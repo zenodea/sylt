@@ -19,8 +19,9 @@ final class SettingsWindow {
         window.isReleasedWhenClosed = false
         let controller = NSHostingController(rootView: SettingsView(preferences: preferences, mediaKeys: mediaKeys, plugins: plugins))
         window.contentViewController = controller
-        window.setContentSize(controller.view.fittingSize)
+        window.setContentSize(NSSize(width: 920, height: 680))
         window.center()
+        window.setFrameAutosaveName("Settings")
     }
 
     func show() {

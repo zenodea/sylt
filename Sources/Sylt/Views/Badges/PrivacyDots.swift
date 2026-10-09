@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct PrivacyDots: View {
+    /// One dot and the spacing before the next.
+    static let dotWidth: CGFloat = 10
+
     let use: PrivacyMonitor.Use
 
     var body: some View {

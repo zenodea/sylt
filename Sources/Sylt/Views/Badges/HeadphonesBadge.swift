@@ -3,6 +3,8 @@ import SwiftUI
 struct HeadphonesBadge: View {
     let device: BluetoothMonitor.Device
 
+    static let width: CGFloat = 14 + 3 + TextWidth.of("100", size: 11, monospacedDigits: true)
+
     var body: some View {
         HStack(spacing: 3) {
             Image(systemName: device.name.localizedCaseInsensitiveContains("airpods") ? "airpodspro" : "headphones")

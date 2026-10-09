@@ -90,9 +90,9 @@ struct LayoutPane: View {
             Label(column.title, systemImage: column.symbol)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
-            BoardColumn(key: key, board: wingBoard, items: items, placeholder: column == .hidden ? "Nothing hidden" : "Empty wing") { index, item in
+            BoardColumn(key: key, space: Self.wingSpace, board: wingBoard, items: items, placeholder: column == .hidden ? "Nothing hidden" : "Empty wing") { index, item in
                 if index > 0, column != .hidden { gapHandle(between: items[index - 1], and: item) }
-                DropSlot(open: wingBoard.gap(in: key) == index)
+                DropSlot(open: wingBoard.gap(in: key) == index, key: key, space: Self.wingSpace)
                 tile(item, in: column)
                     .boardTile(item.id, on: wingBoard, space: Self.wingSpace, columns: wingIDs) { drop in
                         guard let target = WingColumn(rawValue: drop.column) else { return }
@@ -219,8 +219,8 @@ struct LayoutPane: View {
             .buttonStyle(.borderless)
             .font(.caption.weight(.semibold))
             .foregroundStyle(.secondary)
-            BoardColumn(key: key, board: pageBoard, items: sections, placeholder: isNew ? "Drop here" : "Empty page") { index, section in
-                DropSlot(open: pageBoard.gap(in: key) == index)
+            BoardColumn(key: key, space: Self.pageSpace, board: pageBoard, items: sections, placeholder: isNew ? "Drop here" : "Empty page") { index, section in
+                DropSlot(open: pageBoard.gap(in: key) == index, key: key, space: Self.pageSpace)
                 sectionTile(section)
                     .boardTile(section.id, on: pageBoard, space: Self.pageSpace, columns: pageIDs) { drop in
                         var layout = preferences.expandedLayout
@@ -277,7 +277,7 @@ struct LayoutPane: View {
 
     /// Plugins are named by their manifests.
     private func describe(plugin id: String, symbol: String) -> TileDescription {
-        guard let plugin = plugins.plugins.first(where: { $0.id == id }) else { return TileDescription(title: id, symbol: symbol) }
+        guard let plugin = plugins.plugin(id) else { return TileDescription(title: id, symbol: symbol) }
         return TileDescription(title: plugin.manifest.name, symbol: plugin.manifest.symbol ?? symbol, isExternal: !plugin.isBundled)
     }
 }

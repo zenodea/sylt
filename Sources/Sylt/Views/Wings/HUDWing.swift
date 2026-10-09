@@ -85,11 +85,11 @@ struct HUDWing: View {
                 .foregroundStyle(link == .offline ? Color.white.opacity(0.6) : .white)
         case .peripheralBattery(let device): bluetooth(.connected(device))
         case .calendar(let event): calendar(event)
-        case .capsLock(let on): rightOnly("capslock.fill", on ? "Caps Lock on" : "Caps Lock off", dimmed: !on)
+        case .capsLock(let on): rightOnly("capslock.fill", kind.text ?? "", dimmed: !on)
         case .inputSource(let name): rightOnly("keyboard.fill", name)
-        case .focus(let mode): HUDLabel(text: mode ?? "Focus off", dimmed: mode == nil)
-        case .privacy(let use): HUDLabel(text: use.message, dimmed: !use.any)
-        case .thermal(let state): HUDLabel(text: state == .nominal ? "Cooled down" : "\(state.title) · performance reduced")
+        case .focus(let mode): HUDLabel(text: kind.text ?? "", dimmed: mode == nil)
+        case .privacy(let use): HUDLabel(text: kind.text ?? "", dimmed: !use.any)
+        case .thermal: HUDLabel(text: kind.text ?? "")
         case .external(let external):
             switch external.hud.side {
             case "right": externalContent(external, leadingGlyph: true).padding(.trailing, IslandLayout.wingEdge)
@@ -153,8 +153,7 @@ struct HUDWing: View {
             Text(event.device.name)
                 .font(.badge)
                 .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: 110, alignment: .leading)
+                .fixedSize()
                 .opacity(event.device.battery == nil ? 0.6 : 1)
             if let battery = event.device.battery {
                 DeviceBattery(percent: battery)

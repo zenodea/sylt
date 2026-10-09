@@ -48,14 +48,25 @@ enum HUDKind: Hashable {
         case .peripheralBattery(let device): Self.glyph(trailing: Self.device(device))
         case .network: Self.glyph(trailing: Self.text(NetworkMonitor.Link.allCases.map(\.title)))
         case .calendar(let event): Self.glyph(trailing: min(Self.text(event.title), 150) + 6 + Self.text("in 30m"))
-        case .focus(let mode): Self.glyph(trailing: Self.text(mode ?? "Focus off"))
-        case .privacy(let use): Self.glyph(trailing: Self.text(use.message))
-        case .thermal(let state): Self.glyph(trailing: Self.text(state == .nominal ? "Cooled down" : "\(state.title) · performance reduced"))
-        case .capsLock: .compact(leading: nil, trailing: Self.wing(Self.glyphWidth + Self.glyphGap + Self.text(["Caps Lock on", "Caps Lock off"])))
+        case .focus, .privacy, .thermal: Self.glyph(trailing: Self.text(text ?? ""))
+        case .capsLock: .compact(leading: nil, trailing: Self.wing(Self.glyphWidth + Self.glyphGap + Self.text(Self.capsLockTexts)))
         case .inputSource(let name): .compact(leading: nil, trailing: Self.wing(Self.glyphWidth + Self.glyphGap + min(Self.text(name), 140)))
         case .external(let hud): hud.style
         }
     }
+
+    /// The words a text overlay shows: what sizes its wing is what gets drawn.
+    var text: String? {
+        switch self {
+        case .focus(let mode): mode ?? "Focus off"
+        case .privacy(let use): use.message
+        case .thermal(let state): state == .nominal ? "Cooled down" : "\(state.title) · performance reduced"
+        case .capsLock(let on): Self.capsLockTexts[on ? 0 : 1]
+        default: nil
+        }
+    }
+
+    private static let capsLockTexts = ["Caps Lock on", "Caps Lock off"]
 
     /// Mute and volume are one wing that morphs; everything else replaces its wing.
     var wingIdentity: HUDKind {
@@ -84,7 +95,7 @@ enum HUDKind: Hashable {
     private static func text(_ texts: [String]) -> CGFloat { TextWidth.widest(texts, size: 11) }
 
     private static func device(_ device: BluetoothMonitor.Device) -> CGFloat {
-        min(text(device.name), 110) + (device.battery == nil ? 0 : 8 + DeviceBattery.width)
+        text(device.name) + (device.battery == nil ? 0 : 8 + DeviceBattery.width)
     }
 
     var category: HUDCategory {

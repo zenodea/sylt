@@ -4,7 +4,7 @@ import json, os, subprocess, sys, threading, time
 
 SAMPLES = 24
 lock = threading.Lock()
-settings = {"interface": "", "rateAbove": 50.0}
+settings = {"interface": "", "showRate": False, "rateAbove": 50.0}
 state = {"last": None, "down": [0.0] * SAMPLES, "up": [0.0] * SAMPLES, "iface": None}
 
 def emit(message):
@@ -60,7 +60,7 @@ def sample():
 def publish(down, up):
     threshold = settings["rateAbove"] * 1000
     items = [{"graph": normalise(state["down"]), "tint": "cyan"}, {"graph": normalise(state["up"]), "tint": "orange"}]
-    if max(down, up) >= threshold:
+    if settings["showRate"] and max(down, up) >= threshold:
         items.append({"text": rate(max(down, up))})
     emit({"wing": {"side": "right", "items": items, "spacing": 4}})
     emit({"section": {"title": "Network traffic" + (" · " + state["iface"] if state["iface"] else ""), "symbol": "arrow.up.arrow.down", "rows": [
@@ -73,6 +73,7 @@ def handle(event):
     if kind in ("start", "settings"):
         values = event.get("settings") or {}
         settings["interface"] = str(values.get("interface", "") or "")
+        settings["showRate"] = bool(values.get("showRate", False))
         try: settings["rateAbove"] = float(values.get("rateAbove", 50) or 0)
         except (TypeError, ValueError): pass
         state["last"] = None

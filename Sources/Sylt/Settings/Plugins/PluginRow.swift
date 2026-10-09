@@ -44,7 +44,7 @@ struct ExternalPluginRow: View {
                 if expanded { options }
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 6)
     }
 
     private var options: some View {

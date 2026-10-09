@@ -28,6 +28,7 @@ struct PluginBadge: View {
                     }
                     if let text = item.text, !text.isEmpty {
                         Text(text)
+                            .contentTransition(.numericText())
                             .font(.badge)
                             .foregroundStyle(Color(tint: item.tint ?? "white").opacity(item.tint == nil ? 0.85 : 1))
                             .monospacedDigit()

@@ -2,6 +2,8 @@ import SwiftUI
 
 /// What a wing shows when no HUD claims it: the items the layout puts there, in order.
 struct ClosedWing: View {
+    static let focusWidth: CGFloat = 14
+
     let side: HUDWing.Side
     let layout: IslandLayout
     @EnvironmentObject private var nowPlaying: NowPlayingMonitor
@@ -50,7 +52,7 @@ struct ClosedWing: View {
                 }
             }
         case .plugin(let id):
-            if let plugin = plugins.plugins.first(where: { $0.id == id }) { PluginWing(plugin: plugin) }
+            if let plugin = plugins.plugin(id) { PluginWing(plugin: plugin) }
         }
     }
 }

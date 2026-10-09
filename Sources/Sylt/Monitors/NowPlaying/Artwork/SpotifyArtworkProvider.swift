@@ -2,7 +2,7 @@ import AppKit
 
 @MainActor
 final class SpotifyArtworkProvider: ArtworkProvider {
-    private var cache: [URL: NSImage] = [:]
+    private var cache = ArtworkCache()
 
     func supports(bundleIdentifier: String) -> Bool {
         bundleIdentifier == "com.spotify.client"

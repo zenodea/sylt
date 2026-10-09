@@ -77,10 +77,10 @@ struct IslandLayout: Equatable {
     /// The widths an item takes right now, zero when it has nothing to show.
     func widths(of item: WingItem) -> [CGFloat] {
         switch item {
-        case .calendar: [showsCalendar ? 52 : 0]
-        case .privacy: [CGFloat(privacyDots) * 10]
-        case .focus: [showsFocus ? 14 : 0]
-        case .headphones: [showsHeadphones ? 40 : 0]
+        case .calendar: [showsCalendar ? CalendarBadge.width : 0]
+        case .privacy: [CGFloat(privacyDots) * PrivacyDots.dotWidth]
+        case .focus: [showsFocus ? ClosedWing.focusWidth : 0]
+        case .headphones: [showsHeadphones ? HeadphonesBadge.width : 0]
         case .music: [showsArtwork ? artworkSize : 0, showsAudioBars ? AudioBars.width : 0]
         case .plugin(let id): [pluginWidths[id] ?? 0]
         }
@@ -199,6 +199,37 @@ struct IslandLayout: Equatable {
             size: CGSize(width: notchWidth + Self.sideOverlap * 2 + leading + trailing, height: notchHeight + Self.notchOverlap + extraHeight),
             centerOffset: (trailing - leading) / 2
         )
+    }
+
+    /// The closed wing item under a canvas x, if any: the wings are laid out from the
+    /// notch outward exactly as `leftWing`/`rightWing` measure them.
+    func item(at x: CGFloat) -> WingItem? {
+        let centre = canvasSize.width / 2
+        let notchLeft = centre - notchWidth / 2 - Self.sideOverlap
+        let notchRight = centre + notchWidth / 2 + Self.sideOverlap
+        let side = x < centre ? wings.left : wings.right
+        let visible = visibleItems(side)
+        guard !visible.isEmpty else { return nil }
+        var cursor = x < centre ? notchLeft - leftWing + Self.wingPadding : notchRight + Self.wingPadding
+        for (index, item) in visible.enumerated() {
+            if index > 0 { cursor += wings.gap(between: visible[index - 1], and: item).width }
+            let end = cursor + Self.contentWidth(widths(of: item))
+            if x >= cursor - Self.partGap && x <= end + Self.partGap { return item }
+            cursor = end
+        }
+        return nil
+    }
+
+    /// The expanded page that shows what a wing item stands for.
+    func page(for item: WingItem) -> Int? {
+        let section: ExpandedSection
+        switch item {
+        case .music: section = .media
+        case .calendar: section = .event
+        case .plugin(let id): section = .plugin(id)
+        default: return nil
+        }
+        return expandedPages.firstIndex { $0.contains(section) }
     }
 
     private static func contentWidth(_ items: [CGFloat]) -> CGFloat {

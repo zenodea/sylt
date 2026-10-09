@@ -6,6 +6,8 @@ import Foundation
 @MainActor
 final class PluginRegistry: ObservableObject {
     @Published private(set) var plugins: [ExternalPlugin] = []
+
+    func plugin(_ id: String) -> ExternalPlugin? { plugins.first { $0.id == id } }
     let huds = PassthroughSubject<(ExternalPlugin, PluginHUD), Never>()
 
     let store: PluginStore

@@ -51,7 +51,7 @@ final class WingLayoutTests: XCTestCase {
         island.showsCalendar = true
         island.pluginWidths = ["agents": 40]
         island.wings = layout.resolve(plugins: plugins)
-        XCTAssertEqual(island.leftWing, 52 + 17 + 40 + IslandLayout.wingPadding * 2)
+        XCTAssertEqual(island.leftWing, CalendarBadge.width + 17 + 40 + IslandLayout.wingPadding * 2)
     }
 
     func testGapBelongsToTheItemInFrontOfIt() {

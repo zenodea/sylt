@@ -19,7 +19,7 @@ struct BuiltInPane: View {
                     }
                 }
                 .toggleStyle(.switch)
-                .padding(.vertical, 4)
+                .padding(.vertical, 7)
             }
         }
         if preferences.isEnabled(.nowPlaying), firefoxAccess.isDenied {

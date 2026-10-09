@@ -117,8 +117,13 @@ final class IslandState: ObservableObject {
     }
 
     /// Drives hover from the cursor in canvas coordinates (top-left origin).
+    /// The closed wing item last seen under the pointer: opening goes to its page.
+    private var hoveredItem: WingItem?
+
     func cursorMoved(to point: CGPoint) {
-        hoverChanged(hitFrame.contains(point))
+        let inside = hitFrame.contains(point)
+        hoverChanged(inside)
+        if inside, mode != .expanded { hoveredItem = layout.item(at: point.x) ?? hoveredItem } else if !inside { hoveredItem = nil }
     }
 
     func pressed() {
@@ -147,6 +152,7 @@ final class IslandState: ObservableObject {
     /// Opens the panel; whatever HUD was showing gives way.
     func expand() {
         hudTimer?.invalidate()
+        if let item = hoveredItem, let page = layout.page(for: item) { layout.expandedPage = page }
         transition(to: .expanded)
     }
 

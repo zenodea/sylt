@@ -37,7 +37,7 @@ final class NowPlayingMonitor: ObservableObject {
     func stop() {
         artworkResolver.cancel()
         scripted.stop()
-        adapter.stop()
+        adapter.shutDown()
         track = nil
         isPlaying = false
         position = .idle

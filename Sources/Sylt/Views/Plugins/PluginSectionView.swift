@@ -112,6 +112,7 @@ private struct PluginRowView: View {
                 }
                 if let trailing = row.trailing {
                     Text(trailing)
+                        .contentTransition(.numericText())
                         .font(.system(size: 11))
                         .foregroundStyle(Color(tint: row.trailingTint ?? "dim"))
                         .monospacedDigit()

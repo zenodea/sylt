@@ -34,18 +34,24 @@ struct BoardTile<Trailing: View>: View {
     }
 }
 
-/// The room that opens where a dragged tile would land.
+/// The room that opens where a dragged tile would land. Open, it reports its frame so
+/// the lifted tile can settle into it.
 struct DropSlot: View {
     let open: Bool
+    var key: String = ""
+    var space: String = ""
 
     var body: some View {
-        Color.clear.frame(height: open ? DragBoard.tileHeight + 4 : 0)
+        Color.clear
+            .frame(height: open ? DragBoard.tileHeight + 4 : 0)
+            .boardFrame(open ? "slot:\(key)" : "slot:", space: space)
     }
 }
 
 /// One column of a board: its rows, the slot after the last one, and a word when it is empty.
 struct BoardColumn<Item: Hashable, Row: View>: View {
     let key: String
+    let space: String
     @ObservedObject var board: DragBoard
     let items: [Item]
     let placeholder: String
@@ -57,7 +63,7 @@ struct BoardColumn<Item: Hashable, Row: View>: View {
             ForEach(Array(items.enumerated()), id: \.element) { index, item in
                 row(index, item)
             }
-            DropSlot(open: gap == items.count)
+            DropSlot(open: gap == items.count, key: key, space: space)
             if items.isEmpty, gap == nil {
                 Text(placeholder)
                     .font(.caption)

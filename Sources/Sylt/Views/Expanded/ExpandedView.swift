@@ -54,7 +54,7 @@ struct ExpandedView: View {
     private func spareHeight(for sections: [ExpandedSection]) -> [String: CGFloat] {
         var wants: [(id: String, need: CGFloat)] = []
         for section in sections {
-            guard case .plugin(let id) = section, let need = plugins.plugins.first(where: { $0.id == id })?.section?.hiddenRowsHeight, need > 0 else { continue }
+            guard case .plugin(let id) = section, let need = plugins.plugin(id)?.section?.hiddenRowsHeight, need > 0 else { continue }
             wants.append((section.id, need))
         }
         guard !wants.isEmpty else { return [:] }
@@ -82,7 +82,7 @@ struct ExpandedView: View {
         case .event:
             if let event = calendar.next { EventRow(event: event) }
         case .plugin(let id):
-            if let plugin = plugins.plugins.first(where: { $0.id == id }) { PluginSectionView(plugin: plugin, extraHeight: extra) }
+            if let plugin = plugins.plugin(id) { PluginSectionView(plugin: plugin, extraHeight: extra) }
         }
     }
 }

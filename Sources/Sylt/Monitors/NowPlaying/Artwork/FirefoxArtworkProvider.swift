@@ -4,7 +4,7 @@ import AppKit
 /// and use the page's video thumbnail. The session file lags a few seconds.
 @MainActor
 final class FirefoxArtworkProvider: ArtworkProvider {
-    private var cache: [URL: NSImage] = [:]
+    private var cache = ArtworkCache()
 
     func supports(bundleIdentifier: String) -> Bool {
         FirefoxTabs.bundleIdentifiers.contains(bundleIdentifier)

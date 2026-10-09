@@ -3,6 +3,9 @@ import SwiftUI
 struct CalendarBadge: View {
     let event: CalendarMonitor.Event
 
+    /// Room for the symbol and the widest countdown, so the wing never resizes as it counts.
+    static let width: CGFloat = 12 + 3 + TextWidth.of("99m", size: 11, monospacedDigits: true)
+
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             HStack(spacing: 3) {

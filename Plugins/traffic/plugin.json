@@ -9,6 +9,7 @@
   "enabledByDefault": false,
   "settings": [
     { "key": "interface", "title": "Interface (blank for the busiest)", "type": "text", "default": "" },
-    { "key": "rateAbove", "title": "Show the rate above, in kB/s", "type": "number", "default": 50 }
+    { "key": "showRate", "title": "Show the rate as text", "type": "bool", "default": false },
+    { "key": "rateAbove", "title": "Only above, in kB/s", "type": "number", "default": 50 }
   ]
 }

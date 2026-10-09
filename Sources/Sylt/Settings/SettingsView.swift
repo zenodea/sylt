@@ -55,13 +55,13 @@ struct SettingsView: View {
                     SettingsIcon(symbol: pane.symbol, tint: pane.tint)
                     Text(pane.title)
                 }
-                .padding(.vertical, 3)
+                .padding(.vertical, 5)
                 .padding(.leading, 2)
                 .tag(pane)
             }
             .listStyle(.sidebar)
             .safeAreaPadding(.top, 6)
-            .navigationSplitViewColumnWidth(min: 190, ideal: 190, max: 190)
+            .navigationSplitViewColumnWidth(min: 200, ideal: 200, max: 200)
             .toolbar(removing: .sidebarToggle)
         } detail: {
             VStack(alignment: .leading, spacing: 0) {
@@ -75,7 +75,7 @@ struct SettingsView: View {
             }
             .navigationTitle(pane.title)
         }
-        .frame(minWidth: 760, idealWidth: 760, minHeight: 520, idealHeight: 540)
+        .frame(minWidth: 820, idealWidth: 920, minHeight: 560, idealHeight: 680)
     }
 
     /// The layout pane is not a Form: its rows reload on every height change, which flashes the tiles.

@@ -21,6 +21,9 @@ final class DragBoard: ObservableObject {
     @Published private(set) var dragging: String?
     @Published private(set) var translation: CGSize = .zero
     @Published private(set) var drop: Drop?
+    /// Let go: the lifted tile is springing into its slot before the lists take over.
+    @Published private(set) var settling = false
+    private static let settleTime: TimeInterval = 0.26
     /// Where the lifted tile was picked up; the floating copy moves from there by the pointer's travel alone.
     private(set) var liftFrame: CGRect = .zero
     private var frames: [String: CGRect] = [:]
@@ -43,11 +46,33 @@ final class DragBoard: ObservableObject {
         drop = Drop(column: target, index: index)
     }
 
-    func end(columns: [String: [String]]) -> Result? {
-        defer { withTransaction(.unanimated) { dragging = nil; translation = .zero; drop = nil } }
-        guard let dragging, let drop else { return nil }
+    /// Letting go: the floating tile springs into the open slot, and only once it is
+    /// there do the lists change under it, so the swap is invisible.
+    func end(columns: [String: [String]], then dropped: @escaping (Result) -> Void) {
+        guard let dragging, let drop, !settling else { return clear() }
         let others = (columns[drop.column] ?? []).filter { $0 != dragging }
-        return Result(item: dragging, column: drop.column, before: drop.index < others.count ? others[drop.index] : nil)
+        let result = Result(item: dragging, column: drop.column, before: drop.index < others.count ? others[drop.index] : nil)
+        guard let slot = frames["slot:\(drop.column)"], slot.height > 0 else {
+            clear()
+            return dropped(result)
+        }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
+            settling = true
+            translation = CGSize(width: slot.minX - liftFrame.minX, height: slot.minY + 2 - liftFrame.minY)
+        }
+        Timer.after(Self.settleTime) { [weak self] in
+            self?.clear()
+            dropped(result)
+        }
+    }
+
+    private func clear() {
+        withTransaction(.unanimated) {
+            dragging = nil
+            translation = .zero
+            drop = nil
+            settling = false
+        }
     }
 
     /// The slot in `column` that opens for the dragged tile, if any.
@@ -80,15 +105,15 @@ extension View {
             .gesture(
                 DragGesture(minimumDistance: 3, coordinateSpace: .named(space))
                     .onChanged { board.update(id, location: $0.location, translation: $0.translation, columns: columns) }
-                    .onEnded { _ in if let result = board.end(columns: columns) { dropped(result) } }
+                    .onEnded { _ in board.end(columns: columns, then: dropped) }
             )
     }
 
     /// The copy of the dragged tile that follows the pointer.
     func lifted(by board: DragBoard) -> some View {
         frame(width: board.liftFrame.width)
-            .scaleEffect(1.03)
-            .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+            .scaleEffect(board.settling ? 1 : 1.03)
+            .shadow(color: .black.opacity(board.settling ? 0 : 0.25), radius: 8, y: 4)
             .offset(x: board.liftFrame.minX + board.translation.width, y: board.liftFrame.minY + board.translation.height)
             .allowsHitTesting(false)
     }
