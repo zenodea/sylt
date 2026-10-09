@@ -5,6 +5,7 @@
   "description": "The time, in whichever wing you put it.",
   "symbol": "clock.fill",
   "run": "clock.py",
+  "opens": "com.apple.clock",
   "side": "right",
   "settings": [
     { "key": "seconds", "title": "Show seconds", "type": "bool", "default": false },

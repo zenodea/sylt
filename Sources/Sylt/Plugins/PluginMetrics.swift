@@ -31,18 +31,25 @@ extension PluginSection {
     static let filesHeight: CGFloat = 56
     static let buttonsHeight: CGFloat = 30
     static let maxRows = 4
+    static let rowSpacing: CGFloat = 3
 
     var height: CGFloat {
-        var height: CGFloat = Self.headerHeight
-        height += (rows ?? []).prefix(Self.maxRows).reduce(0) { $0 + $1.height }
+        var height: CGFloat = Self.headerHeight + visibleRowsHeight
         if !(files ?? []).isEmpty { height += Self.filesHeight }
         if !(buttons ?? []).isEmpty { height += Self.buttonsHeight }
         return height
     }
 
+    /// Exactly the first rows and the spacing between them: the list frame must match its
+    /// content to the point, or a list that fits still scrolls and bounces.
+    var visibleRowsHeight: CGFloat {
+        let shown = (rows ?? []).prefix(Self.maxRows)
+        return shown.reduce(0) { $0 + $1.height } + CGFloat(max(0, shown.count - 1)) * Self.rowSpacing
+    }
+
     /// How much taller the list would be with every row showing instead of scrolling.
     var hiddenRowsHeight: CGFloat {
-        (rows ?? []).dropFirst(Self.maxRows).reduce(0) { $0 + $1.height }
+        (rows ?? []).dropFirst(Self.maxRows).reduce(0) { $0 + $1.height + Self.rowSpacing }
     }
 }
 

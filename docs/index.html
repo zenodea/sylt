@@ -10,6 +10,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=block">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=block" rel="stylesheet">
+<script>
+  // The theme is set before anything paints: the one chosen here before, else the system's. Nothing
+  // transitions until the page has drawn once, so it never fades in from the other theme.
+  (() => { let t = null; try { t = localStorage.getItem('theme'); } catch (e) {} const r = document.documentElement; r.dataset.theme = t || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'); r.classList.add('still'); })();
+</script>
 <style>
   :root {
     --bg: #0b0d12; --bg-2: #11141b; --panel: #161a23; --line: rgba(255,255,255,.08);
@@ -20,14 +25,17 @@
     --wall-dark: radial-gradient(120% 90% at 30% 10%, #1d2a4a, #0d1120 60%, #090b12);
     --wall-light: radial-gradient(120% 90% at 30% 10%, #dbe4ff, #c7d2fe 60%, #e2e8f0);
     --ink: 255,255,255; --cap: rgba(243,244,247,.78);
+    color-scheme: dark;
   }
   :root[data-theme="light"] {
+    color-scheme: light;
     --bg: #f6f7fb; --bg-2: #ffffff; --panel: #ffffff; --line: rgba(15,23,42,.1);
     --fg: #0f172a; --muted: rgba(15,23,42,.66); --dim: rgba(15,23,42,.45);
     --chip: rgba(15,23,42,.06); --panel-hover: #eef1f7; --code-bg: #0f172a; --code-fg: #e2e8f0;
     --ink: 15,23,42; --cap: rgba(15,23,42,.72);
   }
   /* Switching theme crossfades the tokens for a third of a second; the island mocks are not themed and keep their own transitions. */
+  html.still *, html.still *::before { transition: none !important; }
   html.theming *:not(.isl, .isl *) { transition: background-color .35s, color .35s, border-color .35s, box-shadow .35s, fill .35s, stroke .35s; }
   html.theming .demo .tile { transition: opacity .3s, transform .3s, height .3s, margin .3s, border-color .35s, background-color .35s, color .35s; }
   html.theming .demo .slider i { transition: width .6s cubic-bezier(.3,1,.4,1), background-color .35s; }
@@ -64,7 +72,6 @@
   .hero { padding: 112px 0 40px; text-align: center; position: relative; overflow: hidden; }
   .hero::before { content: ""; position: absolute; inset: -40% -20% auto; height: 520px; background: radial-gradient(ellipse at top, rgba(96,165,250,.18), transparent 60%); pointer-events: none; }
   .hero h1 { font-size: clamp(38px, 6vw, 64px); line-height: 1.02; letter-spacing: -.035em; margin: 26px 0 16px; font-weight: 800; }
-  .hero h1 span { background: linear-gradient(90deg, var(--fg), #60a5fa 60%, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .hero p { font-size: 18px; color: var(--muted); max-width: 760px; margin: 0 auto 28px; }
   .cta { display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
   .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 999px; font-weight: 600; font-size: 15px; text-decoration: none; border: 1px solid var(--line); background: var(--panel); transition: transform .15s ease, background .15s ease; }
@@ -74,15 +81,14 @@
   code.inline { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: var(--chip); padding: 2px 7px; border-radius: 6px; }
 
   /* a piece of screen with the notch at the top; it fades out below, as if it carried on past the page */
-  .scene { position: relative; overflow: hidden; background: var(--wall-dark); -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+  .scene { --fade: 30%; position: relative; overflow: hidden; background: var(--wall-dark); background-clip: padding-box; -webkit-mask-image: linear-gradient(#000 calc(100% - var(--fade)), transparent); mask-image: linear-gradient(#000 calc(100% - var(--fade)), transparent); }
   /* the light wallpaper sits over the dark one and fades in, since a gradient cannot transition */
   .scene::before { content: ""; position: absolute; inset: 0; background: var(--wall-light); opacity: 0; transition: opacity .35s; pointer-events: none; }
   :root[data-theme="light"] .scene::before { opacity: 1; }
   .scene .stars { position: absolute; inset: 0; transition: opacity .35s; background-image: radial-gradient(1px 1px at 12% 60%, #fff8 50%, transparent 51%), radial-gradient(1px 1px at 70% 30%, #fff6 50%, transparent 51%), radial-gradient(1.5px 1.5px at 88% 72%, #fff5 50%, transparent 51%), radial-gradient(1px 1px at 40% 85%, #fff4 50%, transparent 51%); }
   :root[data-theme="light"] .scene .stars { opacity: 0; }
-  .stage { position: absolute; inset: 0; transform-origin: 50% 0; transform: scale(var(--z, 1)); }
-  .screen { margin: 0 auto; width: min(760px, 100%); aspect-ratio: 760/370; border-radius: 22px 22px 0 0; border: 1px solid var(--line); border-bottom: none; }
-  .caption { text-align: center; color: var(--muted); font-size: 14px; margin-top: 4px; min-height: 20px; }
+  .stage { position: absolute; inset: 0; transform-origin: 50% 0; transform: scale(calc(var(--z, 1) * var(--fit, 1))); transition: transform .45s cubic-bezier(.4, 0, .2, 1) .12s; }
+  .screen { --fade: 27%; margin: 0 auto; width: min(760px, 100%); aspect-ratio: 760/370; border-radius: 22px 22px 0 0; border: 1px solid var(--line); border-bottom: none; }
   @media (max-width: 600px) { .screen { --z: .78; } }
 
   /* island: black, square against the screen edge, bottom corners rounding as it grows */
@@ -159,7 +165,6 @@
   .isl .gauge { position: relative; width: 20px; height: 10px; border: 1px solid rgba(255,255,255,.45); border-radius: 3px; margin-right: 2.5px; flex: none; }
   .isl .gauge::after { content: ""; position: absolute; right: -4px; top: 2px; width: 1.5px; height: 4px; background: rgba(255,255,255,.45); border-radius: 1px; }
   .isl .gauge i { position: absolute; left: 1px; top: 1px; bottom: 1px; width: calc((100% - 2px) * var(--p)); background: #30d158; border-radius: 1.5px; animation: gfill .6s .2s cubic-bezier(.3,1.1,.4,1) both; }
-  .isl .gauge.low i { background: #ff453a; } .isl .gauge.mid i { background: #ffd60a; }
   @keyframes gfill { from { width: 1.5px; } }
   .isl .bt { display: inline-flex; align-items: center; gap: 8px; }
   .isl .bt .name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
@@ -173,6 +178,9 @@
   .isl .wifi .a { opacity: .35; animation: lit .25s ease-out forwards; }
   .isl .wifi .a:nth-child(2) { animation-delay: .18s; } .isl .wifi .a:nth-child(3) { animation-delay: .36s; }
   @keyframes lit { to { opacity: 1; } }
+  .isl .weak .a:last-child { opacity: .35; }
+  .isl .spark { display: inline-flex; align-items: flex-end; justify-content: space-between; width: 26px; height: 14px; flex: none; }
+  .isl .spark i { width: 1px; background: currentColor; }
   .isl .bounce { animation: bounce .5s ease-out; }
   @keyframes bounce { 0% { transform: scale(1); } 35% { transform: scale(1.22); } 70% { transform: scale(.96); } 100% { transform: scale(1); } }
   .isl .pop { animation: pop .5s .25s cubic-bezier(.3,1.6,.4,1) both; }
@@ -191,12 +199,14 @@
   .isl .app { width: 20px; height: 20px; border-radius: 5px; background: linear-gradient(#5af07a, #1fc846); display: grid; place-items: center; flex: none; }
   .isl .app svg { width: 13px; height: 13px; fill: #fff; }
 
-  /* expanded panel */
   /* expanded panel: one page of sections under the notch, the page dots along the bottom */
   .isl .exp { position: absolute; inset: 0; font-size: 12px; font-weight: 500; }
   /* the page fills the island between the notch and the dots row; a section with a list grows to take the spare height */
   .isl .pg { position: absolute; left: 14px; right: 14px; top: 38px; bottom: 26px; display: flex; flex-direction: column; gap: 10px; will-change: transform, opacity; }
   .isl .pg .sec:has(.rows) { flex: 1 1 auto; }
+  /* pages side by side, a thin line between them */
+  .isl .exp.two .pg { right: calc(50% + 14px); } .isl .exp.two .pg ~ .pg { left: calc(50% + 14px); right: 14px; }
+  .isl .exp .split { position: absolute; left: 50%; top: 42px; bottom: 30px; width: 1px; background: rgba(255,255,255,.1); }
   .isl .pg > * { animation: stg .45s cubic-bezier(.2,.9,.3,1) both; animation-delay: calc(.12s + var(--i, 0) * .06s); }
   .isl .pgs { position: absolute; left: 0; right: 0; bottom: 12px; height: 14px; display: flex; justify-content: center; align-items: center; gap: 5px; }
   .isl .pgs i { width: 5px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.3); transition: width .3s cubic-bezier(.2,.9,.3,1), background .3s; }
@@ -240,8 +250,14 @@
   .isl .rw .ttl { overflow: hidden; text-overflow: ellipsis; }
   .isl .rw .dtl { font-size: 10px; font-weight: 400; color: rgba(255,255,255,.5); }
   .isl .rw .tr { margin-left: auto; font-size: 11px; color: rgba(255,255,255,.6); font-variant-numeric: tabular-nums; }
+  .isl .rw.dt { height: 29px; }
+  .isl .rw .tr.green { color: #30d158; } .isl .purple { color: #bf5af2; }
+  /* a graph row: the bars, then the value at a fixed width so a changing number never shifts them */
+  .isl .rw .spark { margin-left: auto; width: 72px; } .isl .rw .spark i { width: 1.8px; border-radius: 1px; }
+  .isl .rw .spark + .tr { margin-left: 0; min-width: 48px; text-align: right; }
+  .isl .rw .tr ~ .wd { margin-left: 0; }
   .isl .rw .st { width: 6px; height: 6px; border-radius: 50%; flex: none; }
-  .isl .rw .st.w { background: #30d158; animation: breathe 1.6s ease-in-out infinite; } .isl .rw .st.d { background: #0a84ff; } .isl .rw .st.a { background: #ff9f0a; }
+  .isl .rw .st.d { background: #0a84ff; } .isl .rw .st.a { background: #ff9f0a; }
   .isl .rw .wd { display: inline-flex; gap: 3px; align-items: flex-end; height: 10px; margin-left: auto; }
   .isl .rw .wd i { width: 4px; height: 4px; border-radius: 50%; background: #30d158; animation: lift 1.2s linear infinite; }
   .isl .rw .wd i:nth-child(2) { animation-delay: -.17s; } .isl .rw .wd i:nth-child(3) { animation-delay: -.34s; }
@@ -250,40 +266,40 @@
   .isl .rw .pill { margin-left: auto; }
   .isl .btns { height: 26px; display: flex; align-items: center; gap: 8px; }
   .isl .btns .pill { background: rgba(255,255,255,.1); }
-  .isl .btns > svg { width: 13px; height: 13px; fill: rgba(255,255,255,.6); margin-right: 2px; }
   .isl .files { height: 52px; display: flex; align-items: center; gap: 10px; }
   .isl .file { width: 52px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 9px; font-weight: 400; }
   .isl .file i { width: 22px; height: 28px; border-radius: 3px; background: linear-gradient(#fff, #d9dee7); position: relative; }
   .isl .file i::after { content: ""; position: absolute; right: 0; top: 0; width: 7px; height: 7px; background: linear-gradient(225deg, transparent 50%, #b8c0cc 50%); border-radius: 0 3px 0 0; }
   .isl .file i.img { background: linear-gradient(135deg, #60a5fa, #a78bfa); } .isl .file i.img::after { display: none; }
 
-  /* two-layer sections: a piece of screen beside clickable blocks */
-  .layer { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; margin: 8px 0 10px; }
-  .layer .mini { height: 240px; border-radius: 18px 18px 0 0; border: 1px solid var(--line); border-bottom: none; }
-  .layer.flip .mini { order: 2; }
-  #expanded .mini { height: 300px; --z: .85; }
-  @media (max-width: 760px) { .layer { grid-template-columns: 1fr; } .layer.flip .mini { order: 0; } }
-  @media (max-width: 520px) { .layer .mini { --z: .8; } }
-  .blocks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  /* subsections: a smaller heading and a one-line lead inside a section */
-  .group { margin: 0 0 56px; } .group:last-child { margin-bottom: 0; }
-  .group h3 { font-size: 22px; letter-spacing: -.02em; margin: 0 0 6px; }
-  .group .glead { color: var(--muted); margin: 0 0 14px; font-size: 15px; max-width: 920px; }
-  .perms { margin: 0; padding-left: 18px; color: var(--muted); font-size: 15px; } .perms li { margin: 4px 0; }
-  .block { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: inherit; font-size: 13px; font-weight: 600; text-align: left; cursor: pointer; transition: background .15s, border-color .15s, transform .15s; }
+  /* a showcase: a piece of screen over an endless row of blocks */
+  .mini { width: min(760px, 100%); height: 170px; margin: 0 auto; border-radius: 18px 18px 0 0; border: 1px solid var(--line); border-bottom: none; --fade: 44px; }
+  #ex { height: 300px; --z: .85; } #pl { height: 240px; }
+  @media (max-width: 520px) { .mini { height: 150px; } #ex { height: 250px; } #pl { height: 210px; } }
+  .reel { position: relative; margin: 12px -20px 0; padding: 6px 0 10px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; cursor: grab; user-select: none; -webkit-user-select: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); }
+  .reel::-webkit-scrollbar, .strip::-webkit-scrollbar { display: none; }
+  .reel.dragging { cursor: grabbing; }
+  .reel .track { display: flex; gap: 10px; width: max-content; }
+  .perms { margin: 0; padding-left: 18px; color: var(--muted); font-size: 15px; } .perms li { margin: 4px 0; } .perms b { color: var(--fg); font-weight: 600; }
+  /* toward the row's edges a block fades and shrinks; --o and --s are set as it scrolls */
+  .block { flex: none; width: 152px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: inherit; font-size: 13px; font-weight: 600; text-align: left; cursor: pointer; opacity: var(--o, 1); transform: scale(var(--s, 1)); transition: background .15s, border-color .15s; }
   .block .ico { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: var(--chip); }
   .block .ico svg { width: 15px; height: 15px; fill: currentColor; }
-  .block:hover { background: var(--panel-hover); transform: translateY(-1px); }
+  .block:hover { background: var(--panel-hover); }
   .block[aria-selected="true"] { background: var(--fg); color: var(--bg); border-color: transparent; }
   .block[aria-selected="true"] .ico { background: rgba(127,127,127,.2); }
-  @media (max-width: 560px) { .blocks { grid-template-columns: repeat(2, 1fr); } }
 
   /* sections */
   section { padding: 72px 0; border-top: 1px solid var(--line); }
   h2 { font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -.03em; margin: 0 0 10px; }
   .lead { color: var(--muted); max-width: 920px; margin: 0 0 36px; font-size: 16px; }
-  .steps { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-  .step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; overflow: hidden; }
+  /* the demos: an endless row of cards that comes to rest with a card in the middle; script places them */
+  .strip { --card: min(300px, 78vw); position: relative; margin: 0 -20px; overflow-x: auto; overflow-anchor: none; overscroll-behavior-x: contain; scrollbar-width: none; cursor: grab; user-select: none; -webkit-user-select: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
+  .strip .lane { display: block; height: 1px; }
+  .strip.dragging { cursor: grabbing; }
+  .step { position: absolute; top: 4px; width: var(--card); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; overflow: hidden; }
   .step b { display: block; margin-bottom: 6px; }
   .step p { margin: 0; color: var(--muted); font-size: 14px; }
   /* code: a dark card in both themes with a file tab, tokens in the page's accent hues */
@@ -295,30 +311,17 @@
   pre .k { color: #7dd3fc; } pre .s { color: #c4b5fd; } pre .kw { color: #fb923c; } pre .n { color: #4ade80; }
 
   /* small demos in the step cards: the same island at two thirds size */
-  .step .demo { height: 124px; margin: -20px -20px 16px; border-radius: 18px 18px 0 0; --z: .6; -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), transparent); mask-image: linear-gradient(#000 calc(100% - 22px), transparent); }
-  .step .demo .stage { transform-origin: 50% 0; }
-  #dLock { --z: .56; } #dWings { --z: .54; }
+  .step .demo { height: 170px; margin: -20px -20px 16px; border-radius: 18px 18px 0 0; --z: .6; --fade: 22px; }
   .demo .cursor { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px rgba(0,0,0,.55), 0 1px 3px rgba(0,0,0,.4); z-index: 3; pointer-events: none; }
-  .demo .tag { position: absolute; right: 10px; bottom: 8px; font-size: 11px; font-weight: 600; color: var(--cap); font-family: Inter, system-ui, sans-serif; }
-  .demo .win { position: absolute; left: 50%; border-radius: 6px 6px 0 0; border: 1px solid rgba(var(--ink), .16); background: rgba(var(--ink), .06); transform: translateX(-50%); }
-  .demo .w1 { width: 150px; height: 70px; animation: rise 4s ease-in-out infinite; }
-  .demo .w2 { width: 170px; height: 70px; animation: rise 4s 1.3s ease-in-out infinite; }
-  .demo .w3 { width: 190px; height: 70px; background: rgba(96,165,250,.14); animation: rise 4s 2.6s ease-in-out infinite; }
-  @keyframes rise { 0%, 100% { top: 70px; } 50% { top: 44px; } }
-  .demo .click { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 1.5px solid rgba(var(--ink), .7); opacity: 0; }
   .demo .slider { position: absolute; left: 24px; right: 24px; bottom: 16px; height: 4px; border-radius: 2px; background: rgba(var(--ink), .18); }
   .demo .slider i { position: absolute; left: 0; top: 0; bottom: 0; width: calc(100% * var(--k)); border-radius: 2px; background: rgba(var(--ink), .9); transition: width .6s cubic-bezier(.3,1,.4,1); }
   .demo .slider b { position: absolute; top: -5px; left: calc(100% * var(--k)); width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); transition: left .6s cubic-bezier(.3,1,.4,1); }
   .demo .pad { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); width: 64px; height: 38px; border-radius: 8px; border: 1px solid rgba(var(--ink), .22); background: rgba(var(--ink), .06); }
   .demo .finger { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: rgba(var(--ink), .8); opacity: 0; transform: scale(.6); transition: opacity .25s, transform .25s; }
   .demo .finger.down { opacity: 1; transform: scale(1); }
-  .steps.three { grid-template-columns: repeat(3, 1fr); }
-  @media (max-width: 860px) { .steps.three { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 560px) { .steps.three { grid-template-columns: 1fr; } }
   .demo .pane { position: absolute; left: 16px; right: 16px; top: 34px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-family: Inter, system-ui, sans-serif; }
   .demo .pane.one { display: block; width: 170px; left: 50%; transform: translateX(-50%); }
-  #customise .demo { height: 150px; }
-  #dPages { --z: .46; } .demo .pane.pages { top: 68px; }
+  #dPages { --z: .4; }
   .demo .pane h6 { margin: 0 0 4px; font-size: 9px; font-weight: 600; color: var(--cap); }
   .demo .tile { height: 19px; margin-bottom: 4px; padding: 0 5px 0 4px; display: flex; align-items: center; gap: 5px; border-radius: 5px; border: 1px solid rgba(var(--ink), .14); background: rgba(var(--ink), .07); font-size: 9px; font-weight: 500; color: var(--cap); overflow: hidden; transition: opacity .3s, transform .3s, height .3s, margin .3s, border-color .2s, background .2s; }
   .demo .tile i.ic { width: 11px; height: 11px; border-radius: 3px; background: #0a84ff; flex: none; }
@@ -351,7 +354,7 @@
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <radialGradient id="g-glow"><stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#fff" stop-opacity=".5"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
   <symbol id="i-cal" viewBox="0 0 16 16"><path d="M3.5 1.5A2.5 2.5 0 0 0 1 4v9a2.5 2.5 0 0 0 2.5 2.5h9A2.5 2.5 0 0 0 15 13V4a2.5 2.5 0 0 0-2.5-2.5zM2.6 6h10.8v7a.9.9 0 0 1-.9.9h-9a.9.9 0 0 1-.9-.9z"/><path d="M4 7.5h1.6v1.4H4zm3.2 0h1.6v1.4H7.2zm3.2 0H12v1.4h-1.6zM4 10h1.6v1.4H4zm3.2 0h1.6v1.4H7.2zm3.2 0H12v1.4h-1.6z"/></symbol>
-  <symbol id="i-spk" viewBox="0 0 20 14"><path d="M1 4.6h2.6L7.3 1.3v11.4L3.6 9.4H1z"/><path class="v" d="M9.8 4.6a3.3 3.3 0 0 1 0 4.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="v" d="M12.3 2.5a6.4 6.4 0 0 1 0 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="v" d="M14.8.6a9.4 9.4 0 0 1 0 12.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="sl" d="M2 .5L17 13.5" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><path class="sl" d="M2 .5L17 13.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-spk" viewBox="0 0 20 14"><path d="M1 4.6h2.6L7.3 1.3v11.4L3.6 9.4H1z"/><path d="M9.8 4.6a3.3 3.3 0 0 1 0 4.8M12.3 2.5a6.4 6.4 0 0 1 0 9M14.8.6a9.4 9.4 0 0 1 0 12.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
   <symbol id="i-sun" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.4"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path class="v" d="M8 1v1.8M8 13.2V15"/><path class="v" d="M1 8h1.8M13.2 8H15"/><path class="v" d="M3.05 3.05l1.27 1.27M11.68 11.68l1.27 1.27"/><path class="v" d="M12.95 3.05l-1.27 1.27M4.32 11.68l-1.27 1.27"/></g></symbol>
   <symbol id="i-wifi" viewBox="0 0 16 16"><circle cx="8" cy="13" r="1.7"/><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path class="a" d="M5.2 10.4a4 4 0 0 1 5.6 0"/><path class="a" d="M2.9 7.9a7.3 7.3 0 0 1 10.2 0"/><path class="a" d="M.7 5.3a10.5 10.5 0 0 1 14.6 0"/></g></symbol>
   <symbol id="i-batt" viewBox="0 0 16 12"><rect x=".8" y="1.8" width="12.4" height="8.4" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="14" y="4.2" width="1.6" height="3.6" rx=".7"/><rect x="2.4" y="3.4" width="9.2" height="5.2" rx="1.2" style="transform-origin:2.4px 0;transform:scaleX(var(--l,1))"/></symbol>
@@ -389,6 +392,24 @@
   <symbol id="i-snow" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 1.5v13M2.4 4.8l11.2 6.4M2.4 11.2l11.2-6.4M8 1.5L6.3 3.2M8 1.5l1.7 1.7M8 14.5l-1.7-1.7M8 14.5l1.7-1.7M2.4 4.8l2.3-.4M2.4 4.8l.4 2.3M13.6 11.2l-2.3.4M13.6 11.2l-.4-2.3M2.4 11.2l.4-2.3M2.4 11.2l2.3.4M13.6 4.8l-.4 2.3M13.6 4.8l-2.3-.4"/></g></symbol>
   <symbol id="i-puzzle2" viewBox="0 0 16 16"><rect x="1" y="2" width="6" height="12" rx="1.5"/><rect x="9" y="2" width="6" height="12" rx="1.5" opacity=".45"/></symbol>
   <symbol id="i-grid" viewBox="0 0 16 16"><path d="M1 1h4v4H1zM6 1h4v4H6zM11 1h4v4h-4zM1 6h4v4H1zM6 6h4v4H6zM11 6h4v4h-4zM1 11h4v4H1zM6 11h4v4H6zM11 11h4v4h-4z"/></symbol>
+  <symbol id="i-ts" viewBox="0 0 16 16"><path d="M8 3L3 12.5h10z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="0 2.5"/><circle cx="8" cy="3" r="2.3"/><circle cx="3" cy="12.5" r="2.3"/><circle cx="13" cy="12.5" r="2.3"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 16 16"><path d="M8 .7l6.2 2.4v4.6c0 3.6-2.5 6.4-6.2 7.6-3.7-1.2-6.2-4-6.2-7.6V3.1z"/><path d="M6.5 7.3V6.2a1.5 1.5 0 0 1 3 0v1.1" fill="none" stroke="#000" stroke-width="1.2"/><rect x="5.4" y="7.3" width="5.2" height="3.8" rx=".8" fill="#000"/></symbol>
+  <symbol id="i-ud" viewBox="0 0 16 16"><path d="M5 14V2.5M1.8 5.7L5 2.5l3.2 3.2M11 2v11.5m-3.2-3.2l3.2 3.2 3.2-3.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bars" viewBox="0 0 16 16"><path d="M1.5 8h3v6.5h-3zm5-4h3v10.5h-3zm5-2.5h3v13h-3z"/></symbol>
+  <symbol id="i-right" viewBox="0 0 10 10"><path d="M2 5h6M5.5 2.5 8 5 5.5 7.5"/></symbol>
+  <symbol id="i-left" viewBox="0 0 10 10"><path d="M8 5H2M4.5 2.5 2 5l2.5 2.5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 16 16"><path d="M1.8 12.6a6.6 6.6 0 1 1 12.4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 10.4l3-4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="10.4" r="1.6"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 16 16"><path d="M6 1v2.5M10 1v2.5M6 12.5V15M10 12.5V15M1 6h2.5M1 10h2.5M12.5 6H15M12.5 10H15" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><rect x="3.3" y="3.3" width="9.4" height="9.4" rx="1.8"/><rect x="6" y="6" width="4" height="4" rx=".7" fill="#000"/></symbol>
+  <symbol id="i-mem" viewBox="0 0 16 16"><rect x="1" y="3.5" width="14" height="7.5" rx="1.3"/><path d="M3 11v2.4M5.5 11v2.4M8 11v2.4M10.5 11v2.4M13 11v2.4" stroke="currentColor" stroke-width="1.2"/><path d="M3.3 5.7h2.2v3H3.3zm3.6 0h2.2v3H6.9zm3.6 0h2.2v3h-2.2z" fill="#000"/></symbol>
+  <symbol id="i-game" viewBox="0 0 16 16"><path d="M4.6 3.8h6.8a3.6 3.6 0 0 1 3.5 2.8l.8 3.9a1.9 1.9 0 0 1-3.3 1.6L11 10.4H5l-1.4 1.7a1.9 1.9 0 0 1-3.3-1.6l.8-3.9a3.6 3.6 0 0 1 3.5-2.8z"/><path d="M4.8 5.9v2.6M3.5 7.2h2.6" stroke="#000" stroke-width="1.2" stroke-linecap="round"/><circle cx="10.6" cy="6.5" r=".8" fill="#000"/><circle cx="12" cy="8.1" r=".8" fill="#000"/></symbol>
+  <symbol id="i-adown" viewBox="0 0 16 16"><path d="M8 2v11.5M3.5 9 8 13.5 12.5 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-aup" viewBox="0 0 16 16"><path d="M8 14V2.5M3.5 7 8 2.5 12.5 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-desk" viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="9.5" rx="1.6"/><path d="M6.4 11.5h3.2l.5 2.4H5.9z"/><path d="M4.5 14.3h7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 16 16"><rect x="4" y="1" width="8" height="14" rx="2.2"/><rect x="6.5" y="2.1" width="3" height="1" rx=".5" fill="#000"/></symbol>
+  <symbol id="i-hash" viewBox="0 0 16 16"><path d="M6.2 1.5 4.6 14.5M11.4 1.5 9.8 14.5M2 5.4h12.4M1.6 10.6H14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-split" viewBox="0 0 16 16"><rect x="1" y="2" width="6" height="12" rx="1.5"/><rect x="9" y="2" width="6" height="12" rx="1.5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M4 2.2v11.6a.8.8 0 0 0 1.2.7l9.3-5.8a.8.8 0 0 0 0-1.4L5.2 1.5A.8.8 0 0 0 4 2.2z"/></symbol>
   <symbol id="i-bt" viewBox="0 0 16 16"><path d="M4 4.5L12 11.5 8 15V1l4 3.5L4 11.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 <nav>
@@ -400,7 +421,6 @@
       <a href="#customise">Customise</a>
       <a href="#create">Create one</a>
       <a href="#install">Install</a>
-      <a href="https://github.com/zenodea/sylt">GitHub</a>
       <button id="theme" aria-label="Toggle light and dark" title="Light / dark">
         <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
         <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -412,7 +432,6 @@
 <header class="hero">
   <div class="wrap">
     <div class="screen scene" id="heroScene" aria-hidden="true"><div class="stars"></div></div>
-    <div class="caption" id="caption">Closed</div>
     <h1>Sylt</h1>
     <p>A dynamic island for the MacBook notch. Status in two wings, short overlays for changes, and an expanded view with controls. It stays above every window, including the lock screen.</p>
     <div class="cta">
@@ -425,98 +444,42 @@
 <section id="features">
   <div class="wrap">
     <h2>Features</h2>
-    <p class="lead">Closed, the island hugs the notch and shows only live state in two wings. What comes from the system is part of the app: each change shows as a short overlay out of the notch, and a one-sided overlay never touches the other wing. Every kind can be switched off in Settings, and a slider sets how long they stay. Select anything to see it on the island.</p>
-    <div class="group" id="wings">
-      <h3>Two wings</h3>
-      <p class="glead">Each wing is sized to its own content, and an empty side adds nothing.</p>
-      <div class="layer flip"><div class="mini scene" id="wg"></div><div class="blocks" id="wgBlocks"></div></div>
-    </div>
-    <div class="group" id="builtin">
-      <h3>Sound and light</h3>
-      <p class="glead">Volume, brightness and mute use the right wing only, and a track change keeps both wings and adds a title row.</p>
-      <div class="layer"><div class="mini scene" id="g1"></div><div class="blocks" id="g1Blocks"></div></div>
-    </div>
-    <div class="group">
-      <h3>Power and connections</h3>
-      <p class="glead">Battery levels and the charger, Bluetooth devices with their charge, the network link, and the Mac running hot.</p>
-      <div class="layer flip"><div class="mini scene" id="g2"></div><div class="blocks" id="g2Blocks"></div></div>
-    </div>
-    <div class="group">
-      <h3>Calendar and focus</h3>
-      <p class="glead">The next meeting, a Focus mode, the microphone and camera, and the keyboard.</p>
-      <div class="layer"><div class="mini scene" id="g3"></div><div class="blocks" id="g3Blocks"></div></div>
-    </div>
-    <div class="group">
-      <h3>Lock screen and notifications</h3>
-      <p class="glead">The island stays on the lock screen, springs open on unlock, and can mirror Notification Center banners.</p>
-      <div class="layer flip"><div class="mini scene" id="g4"></div><div class="blocks" id="g4Blocks"></div></div>
-    </div>
-    <div class="group" id="expanded">
-      <h3>Expanded</h3>
-      <p class="glead">Click or swipe down and the island opens on what is relevant, two sections to a page. Swipe sideways to turn the page; the Layout pane decides which sections share one.</p>
-      <div class="layer"><div class="mini scene" id="ex"></div><div class="blocks" id="exBlocks"></div></div>
-    </div>
-    <div class="group" id="how">
-      <h3>How it works</h3>
-      <div class="steps">
-        <div class="step">
-          <div class="demo scene" id="dWings"></div>
-          <b>Two independent wings</b><p>An overlay uses one side or both. The other side keeps its content and its width.</p>
-        </div>
-        <div class="step">
-          <div class="demo scene" id="dAbove"><div class="win w1"></div><div class="win w2"></div><div class="win w3"></div></div>
-          <b>Above every window</b><p>The panel lives in its own WindowServer space at the lock-screen level, so it stays over full-screen apps and the login window.</p>
-        </div>
-        <div class="step">
-          <div class="demo scene" id="dClick"><div class="click"></div><div class="cursor"></div></div>
-          <b>Click-through</b><p>The panel accepts the mouse only while the cursor is over the island. Everywhere else, clicks reach the window underneath.</p>
-        </div>
-        <div class="step">
-          <div class="demo scene" id="dLock"></div>
-          <b>On the lock screen</b><p>The island stays visible while the Mac is locked, showing a padlock and the time. On unlock the padlock opens and a greeting replaces the time.</p>
-        </div>
-      </div>
-      <p class="glead" style="margin:24px 0 0;max-width:none">Built-in sources are Swift monitors with a kind of overlay each; everything else is a plugin. Now-playing data is the odd one out: MediaRemote withholds metadata from third-party apps on recent macOS, so it comes from a small adapter hosted in Apple's own <code class="inline">perl</code>, with AppleScript for Spotify and Music and a session-store lookup for Firefox.</p>
-    </div>
+    <p class="lead">Closed, the island hugs the notch and shows only live state in two wings. Changes show as short overlays out of the notch; each kind can be switched off in Settings, and a slider sets how long they stay. Select anything to see it on the island.</p>
+    <div class="mini scene" id="wg"></div>
+    <div class="reel" id="wgBlocks"></div>
+  </div>
+</section>
+
+<section id="expanded">
+  <div class="wrap">
+    <h2>Expanded</h2>
+    <p class="lead">Click or swipe down and the island opens on what is relevant, two sections to a page; swipe sideways to turn it. A setting opens two pages side by side, or three on a wide display, when the screen has room. A section's title opens the app it stands for, such as Activity Monitor for system load; the event opens Calendar and the artwork the player.</p>
+    <div class="mini scene" id="ex"></div>
+    <div class="reel" id="exBlocks"></div>
   </div>
 </section>
 
 <section id="plugins">
   <div class="wrap">
     <h2>Plugins</h2>
-    <p class="lead">Everything else is a program that prints JSON, in any language, drawn with the same badges, overlays and sections: a timer ending, a download landing, an agent finishing. Eleven are included. Each can be switched off, and its overlays separately.</p>
-    <div class="group">
-      <h3>Work</h3>
-      <p class="glead">Coding agents, window-manager workspaces, a terminal and Slack.</p>
-      <div class="layer flip"><div class="mini scene" id="p1"></div><div class="blocks" id="p1Blocks"></div></div>
-    </div>
-    <div class="group">
-      <h3>Day to day</h3>
-      <p class="glead">Reminders, the time, a countdown and the weather.</p>
-      <div class="layer"><div class="mini scene" id="p2"></div><div class="blocks" id="p2Blocks"></div></div>
-    </div>
-    <div class="group">
-      <h3>Files</h3>
-      <p class="glead">Downloads as they land, a shelf for files you drop on the island, and what you copied.</p>
-      <div class="layer flip"><div class="mini scene" id="p3"></div><div class="blocks" id="p3Blocks"></div></div>
-    </div>
+    <p class="lead">Everything else is a program that prints JSON, in any language, drawn with the same badges, overlays and sections. Fifteen are included; each can be switched off, and its overlays separately.</p>
+    <div class="mini scene" id="pl"></div>
+    <div class="reel" id="plBlocks"></div>
   </div>
 </section>
 
 <section id="customise">
   <div class="wrap">
     <h2>Make it yours</h2>
-    <p class="lead">Settings has an Effects pane for the pointer and a Layout pane for the wings and the expanded view. All of it is a choice.</p>
-    <div class="group">
-    <h3>The pointer</h3>
-    <div class="steps">
+    <p class="lead">Settings has an Effects pane for the pointer, a Layout pane for the wings and the expanded view, and a Menu bar pane: when macOS hides the menu bar, which of Apple's own items show, and a divider that hides every item to its left, placed with a slider.</p>
+    <div class="strip">
       <div class="step">
         <div class="demo scene" id="dHold"><div class="cursor"></div></div>
-        <b>Takes the pointer in</b><p>Move into the island and the pointer disappears. Moving the mouse leans the island instead, and the rim lights up where it would come out. Turn it off and the island is just a panel.</p>
+        <b>Takes the pointer in</b><p>Move into the island and the pointer disappears. Moving the mouse leans the island instead, and the rim lights up where it would come out.</p>
       </div>
       <div class="step">
-        <div class="demo scene" id="dOut"><div class="cursor"></div><div class="tag"></div></div>
-        <b>Lets it out your way</b><p>A firm push frees the pointer through the rim on that side, and it keeps moving in the same motion. Choose what marks the spot: a ripple around the rim, with its strength on a slider, a ring of light, a reflection across dark glass, or nothing. A haptic tap on release is a switch.</p>
+        <div class="demo scene" id="dOut"><div class="cursor"></div></div>
+        <b>Lets it out your way</b><p>A firm push frees the pointer through the rim on that side, and it keeps moving in the same motion. Choose what marks the spot: a ripple around the rim, a ring of light, a reflection across dark glass, or nothing. A haptic tap on release is a switch.</p>
       </div>
       <div class="step">
         <div class="demo scene" id="dForce"><div class="slider" style="--k:.85"><i></i><b></b></div></div>
@@ -526,34 +489,28 @@
         <div class="demo scene" id="dPad"><div class="pad"><i class="finger"></i></div></div>
         <b>Knows when you let go</b><p>On the trackpad the island keeps its lean while a finger is down and settles when it lifts. The pointer is kept off the top edge of the screen while held, so the menu bar stays put.</p>
       </div>
-    </div>
-    </div>
-    <div class="group">
-    <h3>The layout</h3>
-    <div class="steps three">
       <div class="step">
         <div class="demo scene" id="dArrange"><div class="pane">
-          <div><h6>Left wing</h6><div class="tile"><i class="ic"></i>Next event<span class="sp"><svg viewBox="0 0 10 10"><path d="M2 5h6M5.5 2.5 8 5 5.5 7.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div><div class="tile wx gone"><i class="ic ext"></i>Weather<span class="sp"><svg viewBox="0 0 10 10"><path d="M2 5h6M5.5 2.5 8 5 5.5 7.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div></div>
-          <div><h6>Right wing</h6><div class="tile hp"><i class="ic"></i>Headphones<span class="sp"><svg viewBox="0 0 10 10"><path d="M8 5H2M4.5 2.5 2 5l2.5 2.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div><div class="tile wx"><i class="ic ext"></i>Weather<span class="sp"><svg viewBox="0 0 10 10"><path d="M8 5H2M4.5 2.5 2 5l2.5 2.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div></div>
+          <div><h6>Left wing</h6><div class="tile"><i class="ic"></i>Next event<span class="sp"><svg><use href="#i-right"/></svg><svg><use href="#i-eye"/></svg></span></div><div class="tile wx gone"><i class="ic ext"></i>Weather<span class="sp"><svg><use href="#i-right"/></svg><svg><use href="#i-eye"/></svg></span></div></div>
+          <div><h6>Right wing</h6><div class="tile hp"><i class="ic"></i>Headphones<span class="sp"><svg><use href="#i-left"/></svg><svg><use href="#i-eye"/></svg></span></div><div class="tile wx"><i class="ic ext"></i>Weather<span class="sp"><svg><use href="#i-left"/></svg><svg><use href="#i-eye"/></svg></span></div></div>
         </div></div>
-        <b>Arrange the wings</b><p>Settings has a Layout pane with the island drawn live. Each item sits in the list for its wing: an arrow sends it to the other side, an eye hides it, and dragging a tile onto another reorders them. The island follows every change.</p>
+        <b>Arrange the wings</b><p>The Layout pane draws the island live. Each item sits in the list for its wing: an arrow sends it to the other side, an eye hides it, and dragging a tile onto another reorders them.</p>
       </div>
       <div class="step">
         <div class="demo scene" id="dGap"><div class="pane one">
-          <div class="tile"><i class="ic"></i>Headphones<span class="sp"><svg viewBox="0 0 10 10"><path d="M8 5H2M4.5 2.5 2 5l2.5 2.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div>
+          <div class="tile"><i class="ic"></i>Headphones<span class="sp"><svg><use href="#i-left"/></svg><svg><use href="#i-eye"/></svg></span></div>
           <div class="handle"><b>8 pt</b><span class="sl" style="--k:.2"><i></i><u></u></span><label><i class="box"></i>Line</label></div>
-          <div class="tile"><i class="ic ext"></i>Weather<span class="sp"><svg viewBox="0 0 10 10"><path d="M8 5H2M4.5 2.5 2 5l2.5 2.5"/></svg><svg viewBox="0 0 10 10"><path d="M1 5s1.5-2.6 4-2.6S9 5 9 5s-1.5 2.6-4 2.6S1 5 1 5z"/><circle cx="5" cy="5" r="1.1"/></svg></span></div>
+          <div class="tile"><i class="ic ext"></i>Weather<span class="sp"><svg><use href="#i-left"/></svg><svg><use href="#i-eye"/></svg></span></div>
         </div></div>
-        <b>Space them out</b><p>Between any two items a thin handle opens a slider for the gap, 2 to 32 points, and a switch for a hairline in it. The island shows the result as you drag.</p>
+        <b>Space them out</b><p>Between any two items a thin handle opens a slider for the gap, 2 to 32 points, and a switch for a hairline in it.</p>
       </div>
       <div class="step">
         <div class="demo scene" id="dPages"><div class="pane pages">
           <div><h6>Page 1</h6><div class="tile"><i class="ic"></i>Next event</div><div class="tile wx"><i class="ic ext"></i>Weather</div><div class="tile tm gone"><i class="ic ext"></i>Timer</div></div>
           <div><h6>Page 2</h6><div class="tile tm"><i class="ic ext"></i>Timer</div><div class="tile wx gone"><i class="ic ext"></i>Weather</div><div class="tile"><i class="ic ext"></i>Clipboard</div></div>
         </div></div>
-        <b>Put sections on pages</b><p>The expanded view holds two sections to a page. The Layout pane lists the pages; drag a section to another page or to a new one, and arrows move a whole page earlier or later. The island opens on the result.</p>
+        <b>Put sections on pages</b><p>The Layout pane lists the expanded view's pages; drag a section to another page or to a new one, and arrows move a whole page earlier or later.</p>
       </div>
-    </div>
     </div>
   </div>
 </section>
@@ -561,7 +518,7 @@
 <section id="create">
   <div class="wrap">
     <h2>Create one</h2>
-    <p class="lead">A plugin is a folder with a manifest and a program. Put it in the plugins folder (Settings, Plugins, Open plugins folder) and it starts. The eleven shipped plugins are the reference.</p>
+    <p class="lead">A plugin is a folder with a manifest and a program. Put it in the plugins folder (Settings, Plugins, Open plugins folder) and it starts. The fifteen shipped plugins are the reference.</p>
     <div class="code"><div class="tab">plugin.json</div>
 <pre>{ <span class="k">"protocol"</span>: <span class="n">1</span>, <span class="k">"id"</span>: <span class="s">"coffee"</span>, <span class="k">"name"</span>: <span class="s">"Coffee"</span>, <span class="k">"symbol"</span>: <span class="s">"cup.and.saucer.fill"</span>, <span class="k">"run"</span>: <span class="s">"coffee.sh"</span>,
   <span class="k">"settings"</span>: [{ <span class="k">"key"</span>: <span class="s">"goal"</span>, <span class="k">"title"</span>: <span class="s">"Daily goal"</span>, <span class="k">"type"</span>: <span class="s">"number"</span>, <span class="k">"default"</span>: <span class="n">3</span> }] }</pre>
@@ -576,8 +533,8 @@
   <span class="kw">case</span> <span class="s">"$event"</span> <span class="kw">in</span> *<span class="s">'"click"'</span>*) <span class="kw">echo</span> <span class="s">'{"wing": {"side": "right", "items": [{"symbol": "cup.and.saucer.fill", "text": "3"}]}}'</span>;; <span class="kw">esac</span>
 <span class="kw">done</span></pre>
     </div>
-    <p class="lead" style="margin-top:18px">A plugin prints <code class="inline">wing</code> for its badge, <code class="inline">hud</code> for an overlay, <code class="inline">section</code> for its expanded section, <code class="inline">sound</code>, <code class="inline">activate</code> to bring an app forward and <code class="inline">open</code> for a file or URL. The app writes <code class="inline">start</code>, <code class="inline">settings</code>, <code class="inline">click</code>, <code class="inline">button</code>, <code class="inline">action</code>, <code class="inline">drop</code>, <code class="inline">clipboard</code>, <code class="inline">remove</code> and <code class="inline">stop</code> to its stdin.</p>
-    <p class="lead">The manifest can set an <code class="inline">interval</code> to run once per interval instead of staying running, <code class="inline">accepts</code> for file drops or clipboard changes, a default <code class="inline">side</code>, and settings of type bool, text, number or choice, which Settings turns into a form. Plugins run as you, with your permissions; scripts without an executable bit run through the interpreter their extension implies. The full protocol is in the <a href="https://github.com/zenodea/sylt#writing-a-plugin">README</a>.</p>
+    <p class="lead" style="margin-top:18px">A plugin prints <code class="inline">wing</code> for its badge, <code class="inline">hud</code> for an overlay, <code class="inline">section</code> for its expanded section, <code class="inline">sound</code>, <code class="inline">activate</code> to bring an app forward and <code class="inline">open</code> for a file or URL. Clicks, drops, copies and settings arrive on its stdin.</p>
+    <p class="lead">The manifest can set an <code class="inline">interval</code> to run once per interval instead of staying running, <code class="inline">accepts</code> for file drops or clipboard changes, a default <code class="inline">side</code>, <code class="inline">opens</code> for the app its title brings forward, and settings, which Settings turns into a form. Plugins run as you, with your permissions. The full protocol is in the <a href="https://github.com/zenodea/sylt#writing-a-plugin">README</a>.</p>
   </div>
 </section>
 
@@ -589,17 +546,15 @@
 <pre><span class="c"># clone, build a release bundle and launch it</span>
 <span class="kw">git</span> clone https://github.com/zenodea/sylt.git
 <span class="kw">cd</span> sylt
-<span class="kw">make</span> open
-
-<span class="c"># run the tests</span>
-<span class="kw">make</span> test</pre>
+<span class="kw">make</span> open</pre>
     </div>
-    <p class="lead" style="margin-top:18px">Right-click the island for Settings, including <code class="inline">Open at login</code>. Each permission is asked for the first time its plugin needs it, and each plugin can be switched off:</p>
+    <p class="lead" style="margin-top:18px">Right-click the island for Settings. Each permission is asked for the first time something needs it:</p>
     <ul class="perms">
-      <li>Accessibility: to take over the volume and brightness keys, mirror notifications, and raise an agent's terminal window.</li>
-      <li>Calendar: for the next event.</li>
-      <li>Bluetooth: for device connections and battery.</li>
-      <li>Automation (Spotify, Music): for artwork and transport.</li>
+      <li><b>Accessibility</b> for the volume and brightness keys, mirrored notifications, and raising an agent's terminal.</li>
+      <li><b>Calendar</b> for the next event.</li>
+      <li><b>Bluetooth</b> for device connections and battery.</li>
+      <li><b>Automation (Spotify, Music)</b> for artwork and transport.</li>
+      <li><b>Full Disk Access</b> for video artwork from Firefox.</li>
     </ul>
   </div>
 </section>
@@ -684,9 +639,10 @@
         const tpl = document.createElement('template'); tpl.innerHTML = html;
         const a = node.querySelectorAll('*'), b = tpl.content.querySelectorAll('*');
         a.forEach((el, i) => {
-          if (el.className !== b[i].className) {
+          const cls = b[i].getAttribute('class');
+          if (el.getAttribute('class') !== cls) {
             if (el.classList.contains('art')) flip(el);
-            el.className = b[i].className;
+            el.setAttribute('class', cls || '');
           }
           if (el.style.cssText !== b[i].style.cssText) el.style.cssText = b[i].style.cssText;
         });
@@ -770,6 +726,7 @@
       const from = { wl: num(getComputedStyle(wing.l).width), wr: num(getComputedStyle(wing.r).width), h: num(getComputedStyle(bg).height), w: num(getComputedStyle(bg).width) };
       const w = wl + NOTCH + wr;
       Object.assign(size, { wl, wr, h });
+      fit(first);
       mode = v.mode;
       const at = k => from.wl + (wl - from.wl) * k;
       const move = first ? (el, key, frame) => Object.assign(el.style, frame(1)) : (el, key, frame) => tween(el, key, name, frame);
@@ -785,6 +742,27 @@
     }
 
     const width = () => size.wl + NOTCH + size.wr;
+    // A narrow scene zooms out instead of clipping: the island, centred on the notch, keeps a little air
+    // at the scene's sides and, with room for its spring to overshoot, ends above the fade at the bottom.
+    // A scene that fits is left at its own scale.
+    function fit(instant) {
+      const sw = scene.clientWidth, sh = scene.offsetHeight;
+      if (!sw) return;
+      const look = getComputedStyle(scene), fade = look.getPropertyValue('--fade').trim(), base = parseFloat(look.getPropertyValue('--z')) || 1;
+      const clear = sh - scene.clientTop - (fade.endsWith('%') ? sh * parseFloat(fade) / 100 : parseFloat(fade) || 0);
+      const half = Math.max(size.wl, size.wr) + NOTCH / 2 + 12;
+      const f = Math.floor(Math.min(1, sw / 2 / (half * base), clear / (size.h * 1.04 * base)) * 1000) / 1000 + '';
+      const was = stage.style.getPropertyValue('--fit');
+      if (was === f) return;
+      // Zooming out has to keep ahead of the island growing; zooming back in can take its time.
+      stage.style.transition = instant ? 'none' : f < (+was || 1) ? 'transform .2s ease-out' : '';
+      stage.style.setProperty('--fit', f);
+      if (instant) { stage.offsetWidth; stage.style.transition = ''; }
+    }
+    new ResizeObserver(() => fit(true)).observe(scene);
+    // The scale the stage shows now, mid-zoom included, and the one it is settling at.
+    const scale = () => stage.getBoundingClientRect().width / stage.offsetWidth;
+    const zoom = () => (parseFloat(getComputedStyle(scene).getPropertyValue('--z')) || 1) * (parseFloat(stage.style.getPropertyValue('--fit')) || 1);
     // The notch and a 4px margin around it, cut out of a box whose left edge sits `wl` left of the notch.
     const cut = (wl, offset) => { const a = wl - 4 + offset, b = wl + NOTCH + 4 + offset; return `polygon(0 0, ${a}px 0, ${a}px 36px, ${b}px 36px, ${b}px 0, 100% 0, 100% 100%, 0 100%)`; };
     fx.style.clipPath = cut(0, 0);
@@ -893,7 +871,7 @@
       if (actual.some((a, i) => Math.abs(a - wanted[i]) > .5)) problems.push('size ' + actual.map(Math.round) + ' wanted ' + wanted.map(Math.round));
       return problems;
     }
-    return { set, check, lean: setLean, settle: () => setLean(0, 0, 'rebound'), press, rim, glow, ring, glass, ripple, width, size, stage, get mode() { return mode; } };
+    return { set, check, lean: setLean, settle: () => setLean(0, 0, 'rebound'), press, rim, glow, ring, glass, ripple, width, size, stage, scale, zoom, get mode() { return mode; } };
   }
 
   // ---- Audio bars move on a sum of sines, like the app's.
@@ -921,46 +899,63 @@
   const headphones = `<span class="hp">${ic('i-pods')}72</span>`;
   const weather = `<span class="pi">${ic('i-cloudsun')}12°</span>`;
   const timerWing = `<span class="pi"><svg class="ring" viewBox="0 0 12 12" style="--f:.83"><circle class="tr" cx="6" cy="6" r="5"/><circle class="ar" cx="6" cy="6" r="5"/></svg>24:59</span>`;
-  const speaker = (level, muted) => { const on = Math.ceil(level * 3 - .001); return `<span class="g"><svg class="spk ic${muted ? ' muted' : ''}" viewBox="0 0 20 14"><path d="M1 4.6h2.6L7.3 1.3v11.4L3.6 9.4H1z"/><path class="v${on >= 1 ? ' on' : ''}" d="M9.8 4.6a3.3 3.3 0 0 1 0 4.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="v${on >= 2 ? ' on' : ''}" d="M12.3 2.5a6.4 6.4 0 0 1 0 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="v${on >= 3 ? ' on' : ''}" d="M14.8.6a9.4 9.4 0 0 1 0 12.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="sl" d="M2 .5L17 13.5" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><path class="sl" d="M2 .5L17 13.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>`; };
+  const speaker = (level, muted) => { const on = Math.ceil(level * 3 - .001); return `<span class="g"><svg class="spk ic${muted ? ' muted' : ''}" viewBox="0 0 20 14"><path d="M1 4.6h2.6L7.3 1.3v11.4L3.6 9.4H1z"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path class="v${on >= 1 ? ' on' : ''}" d="M9.8 4.6a3.3 3.3 0 0 1 0 4.8"/><path class="v${on >= 2 ? ' on' : ''}" d="M12.3 2.5a6.4 6.4 0 0 1 0 9"/><path class="v${on >= 3 ? ' on' : ''}" d="M14.8.6a9.4 9.4 0 0 1 0 12.8"/></g><path class="sl" d="M2 .5L17 13.5" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><path class="sl" d="M2 .5L17 13.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>`; };
   const volume = (level, muted) => `${speaker(level, muted)}<span class="bar"><i style="--v:${muted ? 0 : level}"></i></span>`;
   const sun = level => { const on = Math.ceil(level * 4 - .001); return `<span class="g"><svg class="sun ic" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.4"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path class="v${on >= 1 ? ' on' : ''}" d="M8 1v1.8M8 13.2V15"/><path class="v${on >= 2 ? ' on' : ''}" d="M1 8h1.8M13.2 8H15"/><path class="v${on >= 3 ? ' on' : ''}" d="M3.05 3.05l1.27 1.27M11.68 11.68l1.27 1.27"/><path class="v${on >= 4 ? ' on' : ''}" d="M12.95 3.05l-1.27 1.27M4.32 11.68l-1.27 1.27"/></g></svg></span>`; };
   const brightness = level => `${sun(level)}<span class="bar"><i style="--v:${level}"></i></span>`;
   const glyph = (name, cls = '') => `<span class="g hg bounce ${cls}" style="font-size:14px">${ic(name)}</span>`;
-  const wifi = `<span class="g hg bounce wifi" style="font-size:14px"><svg class="ic" viewBox="0 0 16 16"><circle cx="8" cy="13" r="1.7"/><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path class="a" d="M5.2 10.4a4 4 0 0 1 5.6 0"/><path class="a" d="M2.9 7.9a7.3 7.3 0 0 1 10.2 0"/><path class="a" d="M.7 5.3a10.5 10.5 0 0 1 14.6 0"/></g></svg></span>`;
-  const battery = `<span class="batt">18%<svg class="ic" style="--l:.18"><use href="#i-batt"/></svg></span>`;
+  const arcs = `<svg class="ic" viewBox="0 0 16 16">${document.getElementById('i-wifi').innerHTML}</svg>`;
+  const wifi = `<span class="g hg bounce wifi" style="font-size:14px">${arcs}</span>`;
+  const batt = p => `<span class="batt">${p}%<svg class="ic" style="--l:${p / 100}"><use href="#i-batt"/></svg></span>`, battery = batt(18);
+  const menuBar = `<span class="g w85 weak">${arcs}</span><span class="g w85">${ic('i-bt')}</span>${speaker(.65)}${batt(84)}`;
   const rune = `<span class="rune"><i></i><i></i><svg viewBox="0 0 8 15"><path d="M0 3.75L8 11.25 4 15V0l4 3.75L0 11.25"/></svg></span>`;
   const bluetooth = `<span class="bt"><span class="t name">AirPods Pro</span><span class="t w85 num">72%</span><span class="gauge" style="--p:.72"><i></i></span></span>`;
   const label = (text, cls = '') => `<span class="t ${cls}">${text}</span>`;
   const lock = open => `<span class="lock${open ? ' open' : ''}"></span>`;
-  const time = `<span class="time">12:19</span>`, greeting = `<span class="greet">Welcome back, Alex</span>`;
-  const track = `Harbour Lights &nbsp;·&nbsp; Tidal Lines`;
-  const appTile = `<span class="app">${ic('i-msg')}</span>`, noteRow = `Alex &nbsp;·&nbsp; Running five minutes late`;
-  const mediaCard = `<div class="mc" style="--i:0"><div class="top"><span class="cover"><span class="src"><i>${ic('i-note')}</i></span></span><div class="meta"><div><div class="ti">Sundown</div><div class="ar">Tidal Lines</div></div><div class="prog"><span>1:22</span><span class="bar"><i style="--v:.38"></i></span><span>3:34</span></div><div class="ctl"><span>${ic('i-back')}</span><span class="big">${ic('i-pause')}</span><span>${ic('i-fwd')}</span></div></div></div><div class="out">${ic('i-spk')}<span class="sl"></span><span class="dev">AirPods Pro</span></div></div>`;
+  const time = `<span class="time">12:19</span>`, greeting = `<span class="greet">Welcome back</span>`;
+  const track = `Small, frequent releases &nbsp;·&nbsp; Ep. 41`;
+  const appTile = `<span class="app">${ic('i-msg')}</span>`, noteRow = `Design team &nbsp;·&nbsp; Running five minutes late`;
+  const mediaCard = `<div class="mc" style="--i:0"><div class="top"><span class="cover"><span class="src"><i style="background:linear-gradient(#d68cff,#9b3fe0)">${ic('i-mic')}</i></span></span><div class="meta"><div><div class="ti">Small, frequent releases</div><div class="ar">Engineering podcast · Ep. 41</div></div><div class="prog"><span>1:22</span><span class="bar"><i style="--v:.38"></i></span><span>3:34</span></div><div class="ctl"><span>${ic('i-back')}</span><span class="big">${ic('i-pause')}</span><span>${ic('i-fwd')}</span></div></div></div><div class="out">${ic('i-spk')}<span class="sl"></span><span class="dev">AirPods Pro</span></div></div>`;
   const eventRow = `<div class="ev" style="--i:1"><span class="tm"><b>14:30</b><small>15:00</small></span><span>Design review</span><span class="join">${ic('i-video')}Join</span></div>`;
-  const weatherSection = i => `<div class="sec" style="--i:${i}"><div class="rows"><div class="rw lg">${ic('i-cloudsun')}<span class="ttl">12°&nbsp; Clear<div class="dtl">H 18° · L 11° · wind 9 km/h</div></span></div></div></div>`;
+  // A plugin's section as the app draws it: a header with its symbol and title (badge items or actions on the
+  // right), then rows, files or buttons. The app sizes it from 22 for the header, 24 a row, 32 a row with a
+  // detail line, 3 between rows, 30 for buttons and 56 for files; a list grows into a page's spare height.
+  const sec = (i, symbol, title, body, side = '') => `<div class="sec" style="--i:${i}"><div class="hd">${ic(symbol)}${title}${side ? `<span class="sp">${side}</span>` : ''}</div>${body}</div>`;
+  const rw = (glyph, title, o = {}) => `<div class="rw${o.hi ? ' hi' : ''}${o.large ? ' lg' : o.detail ? ' dt' : ''}">${glyph}<span class="ttl">${title}${o.detail ? `<div class="dtl">${o.detail}</div>` : ''}</span>${o.graph || ''}${o.trailing ? `<span class="tr ${o.tint || ''}">${o.trailing}</span>` : ''}${o.status || ''}${o.button ? `<span class="pill">${o.button}</span>` : ''}</div>`;
+  const list = (...rows) => `<div class="rows">${rows.join('')}</div>`;
+  const pills = (...titles) => `<div class="btns">${titles.map(t => `<span class="pill">${t}</span>`).join('')}</div>`;
+  const working = '<span class="wd"><i></i><i></i><i></i></span>';
+  const spark = (seed, tint) => `<span class="spark ${tint}">${[...Array(24)].map((_, i) => `<i style="height:${(2 + 12 * Math.abs(Math.sin(i * .6 + seed) * Math.sin(i * .23 + seed * 2))).toFixed(1)}px;opacity:${(.35 + .65 * (i + 1) / 24).toFixed(2)}"></i>`).join('')}</span>`;
+  const weatherSection = i => sec(i, 'i-cloudsun', 'Weather', list(rw(ic('i-cloudsun'), '12°&nbsp; Clear', { large: true, detail: 'Zurich', trailing: 'H 18°&nbsp; L 11°' })));
   // The open island, as the app sizes it: 60 base, the sections and their gaps, 14 for the page dots. The
   // height is shared by every page, so a page turn never resizes; `h` is the tallest page when it is not this one.
-  const expanded = (sections, heights, page = 0, h) => {
-    h = h || 60 + heights.reduce((a, b) => a + b, 0) + (heights.length - 1) * 10 + 14;
-    const dots = [0, 1, 2].map(i => i === page ? '<i class="on"></i>' : '<i></i>').join('');
-    return { mode: 'expanded', w: 440, h, page, card: `<div class="exp"><div class="pg">${sections}</div><div class="pgs">${dots}</div></div>` };
-  };
+  const tall = heights => 60 + heights.reduce((a, b) => a + b, 0) + (heights.length - 1) * 10 + 14;
+  const pageDots = (count, page) => [...Array(count)].map((_, i) => i === page ? '<i class="on"></i>' : '<i></i>').join('');
+  const expanded = (sections, heights, page = 0, h) =>
+    ({ mode: 'expanded', w: 440, h: h || tall(heights), page, card: `<div class="exp"><div class="pg">${sections}</div><div class="pgs">${pageDots(3, page)}</div></div>` });
+  // Two pages side by side, as on a display with room for them; the dots count spreads of two.
+  const spread = (left, right, h) => ({ mode: 'expanded', w: 880, h, page: 0, card: `<div class="exp two"><div class="pg">${left}</div><i class="split"></i><div class="pg">${right}</div><div class="pgs">${pageDots(2, 0)}</div></div>` });
   const herdr = `<div class="sec" style="--i:2"><div class="hd">🐑 Herdr<span class="sp"><span class="tl"><i class="dot gn"></i>1</span><span class="tl"><i class="dot bl"></i>1</span><span class="tl"><i class="dot o"></i>1</span></span></div><div class="rows"><div class="rw hi">${agentIcon('claude', 'working')}<span class="ttl">Refactor the parser</span><span class="wd"><i></i><i></i><i></i></span></div><div class="rw">${agentIcon('claude', 'done')}<span class="ttl">Write the release notes</span><span class="tr">4m</span><span class="st d"></span></div><div class="rw">${agentIcon('pi', 'waiting')}<span class="ttl">π · bundle</span><span class="tr">15m</span><span class="st a"></span></div></div></div>`;
   const clipboard = `<div class="sec" style="--i:0"><div class="hd">${ic('i-clip')}Clipboard</div><div class="rows"><div class="rw">${ic('i-docs')}<span class="ttl">git rebase -i HEAD~3</span></div><div class="rw">${ic('i-docs')}<span class="ttl">https://example.com/notes</span></div><div class="rw">${ic('i-docs')}<span class="ttl">Meeting moved to 15:00</span></div></div></div>`;
   const shelf = `<div class="sec" style="--i:0"><div class="hd">${ic('i-tray')}Shelf<span class="sp">Clear</span></div><div class="files"><span class="file"><i></i>brief.pdf</span><span class="file"><i class="img"></i>logo.png</span><span class="file"><i></i>notes.md</span></div></div>`;
   const workspaces = `<span class="ws"><b>0</b><span>1</span><span>2</span></span>`;
-  const aerospace = `<div class="sec" style="--i:0"><div class="rows"><div class="rw hi" style="height:29px"><span class="ttl">Workspace 0<div class="dtl">Firefox, Sylt</div></span><span class="tr">current</span></div><div class="rw" style="height:29px"><span class="ttl">Workspace 1<div class="dtl">Ghostty</div></span></div></div></div>`;
+  const aerospace = sec(0, 'i-grid', 'AeroSpace', list(rw('', 'Workspace 0', { detail: 'Firefox, Sylt', trailing: 'current', hi: true }), rw('', 'Workspace 1', { detail: 'Ghostty' })));
   const slackWing = `<span class="pi">${ic('i-slack')}3</span>`;
-  const slackRow = `<div class="sec" style="--i:0"><div class="rows"><div class="rw" style="height:29px">${ic('i-slack')}<span class="ttl">Open Slack<div class="dtl">3 unread mentions</div></span></div></div></div>`;
-  const slackHUD = { mode: 'hud', l: agents, r: `<span class="g" style="font-size:14px">${ic('i-slack')}</span>${label('3 unread')}`, hudR: true };
+  const slackRow = sec(0, 'i-hash', 'Slack', list(rw(ic('i-slack'), 'Open Slack', { detail: '3 unread mentions' })));
+  const slackHUD = { mode: 'hud', l: '', r: `<span class="g" style="font-size:14px">${ic('i-slack')}</span>${label('3 unread')}`, hudR: true };
   const clockWing = `<span class="pi">14:59</span>`;
-  const clockRow = `<div class="sec" style="--i:0"><div class="rows"><div class="rw" style="height:29px">${ic('i-cal')}<span class="ttl">Thursday, 8 October<div class="dtl">Week 41</div></span></div></div></div>`;
+  const clockRow = sec(0, 'i-clock', 'Clock', list(rw(ic('i-cal'), 'Thursday, 8 October', { detail: 'Week 41' })));
   const todosWing = `<span class="pi">${ic('i-list')}3</span>`;
   const focusWing = `<span class="g indigo">${ic('i-moon')}</span>`;
   const dots = `<span class="dots"><i class="dot o"></i><i class="dot gn"></i></span>`;
-  const todosSection = `<div class="sec" style="--i:0"><div class="rows"><div class="rw">${ic('i-circle')}<span class="ttl">Buy milk</span></div><div class="rw" style="height:29px">${ic('i-circle')}<span class="ttl">Call the bank<div class="dtl">Today 17:00</div></span></div></div><div class="btns"><span class="pill">Open Reminders</span></div></div>`;
-  const ghosttySection = `<div class="sec" style="--i:0"><div class="rows"><div class="rw" style="height:29px">${ic('i-termo')}<span class="ttl">Quick terminal<div class="dtl">Through your keybind</div></span><span class="pill">New window</span></div></div></div>`;
-  const timerSection = `<div class="sec" style="--i:0"><div class="rows"><div class="rw">${ic('i-timer')}<span class="ttl">24:59</span><span class="pill">Cancel</span></div></div></div>`;
+  const todosSection = i => sec(i, 'i-list', 'Todos', list(rw(ic('i-circle'), 'Buy milk'), rw(ic('i-circle'), 'Call the bank', { detail: 'Today 17:00' }), rw(ic('i-circle'), 'Water the plants')) + pills('Open Reminders'));
+  const ghosttySection = sec(0, 'i-termo', 'Ghostty', list(rw(ic('i-termo'), 'Quick terminal', { detail: 'Through your keybind' })) + pills('New window'));
+  const timerSection = i => sec(i, 'i-timer', 'Timer', list(rw(ic('i-timer'), '24:59', { button: 'Cancel' })));
+  const systemSection = i => sec(i, 'i-gauge', 'System load', list(rw(ic('i-cpu'), 'CPU', { graph: spark(2, 'cyan'), trailing: '23%' }), rw(ic('i-mem'), 'Memory', { detail: '9.8 of 16 GB', graph: spark(5, 'purple'), trailing: '61%' }), rw(ic('i-game'), 'GPU', { graph: spark(8, 'green'), trailing: '7%' })));
+  const trafficSection = i => sec(i, 'i-ud', 'Network traffic · en0', list(rw(ic('i-adown'), 'Down', { graph: spark(1, 'cyan'), trailing: '1.2 MB/s' }), rw(ic('i-aup'), 'Up', { graph: spark(4, 'orange'), trailing: '86 kB/s' })));
+  const tailscaleSection = i => sec(i, 'i-ts', 'Tailscale · 2 online', list(rw(ic('i-desk'), 'mac-mini', { detail: 'macOS', trailing: 'online', tint: 'green', status: working }), rw(ic('i-phone'), 'phone', { detail: 'iOS', trailing: 'online', tint: 'green', status: working }), rw(ic('i-desk'), 'nas', { detail: 'linux', trailing: 'offline' })) + pills('Disconnect'));
+  const agentsSection = i => herdr.replace('--i:2', `--i:${i}`).replace('🐑 Herdr', ic('i-termo') + 'Agents');
+  const copiedSection = i => clipboard.replace('--i:0', `--i:${i}`).replace(/i-docs(.*?HEAD~3<\/span>)/, 'i-check$1<span class="tr">copied</span>');
 
   const heroClosed = (b, playing = true) => ({ mode: 'closed', l: `${calendar}${agents}`, r: `${weather}${music(b, playing)}` });
 
@@ -994,46 +989,140 @@
 
   // ---- Hero: a day on the island.
   const hero = island(document.getElementById('heroScene'));
-  const caption = document.getElementById('caption');
-  const say = text => caption.textContent = text;
   hero.set(heroClosed(false));
   const heroSteps = [
-    [1400, () => { say('Volume'); hero.set({ mode: 'hud', l: `${calendar}${agents}`, r: volume(.65), hudR: true }); }],
-    [1200, () => { say('Closed'); hero.set(heroClosed(false)); }],
-    [2200, () => { say('Playing'); hero.set({ mode: 'hud', l: `${calendar}${agents}`, r: `${weather}${music(true)}`, row: track }); }],
-    [1200, () => { say('Closed'); hero.set(heroClosed(true)); }],
-    [2400, () => { say('Bluetooth'); hero.set({ mode: 'hud', l: rune, r: bluetooth, hudL: true, hudR: true }); }],
-    [1200, () => { say('Closed'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}` }); }],
-    [3000, () => { say('Notification'); hero.set({ mode: 'hud', l: appTile, r: `${headphones}${weather}${music(true)}`, row: noteRow }); }],
-    [1200, () => { say('Closed'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}` }); }],
-    [2200, () => { say('Locked'); hero.set({ mode: 'locked', l: lock(false), r: time, hudL: true, hudR: true }); }],
-    [1400, () => { say('Unlocked'); hero.set({ mode: 'locked', l: lock(true), r: greeting, hudL: true, hudR: true }); }],
-    [1400, () => { say('Closed'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}` }); }],
-    [500, () => { say('Pointer'); hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}`, hover: true }, 'peek'); }],
+    [1400, () => { hero.set({ mode: 'hud', l: `${calendar}${agents}`, r: volume(.65), hudR: true }); }],
+    [1200, () => { hero.set(heroClosed(false)); }],
+    [2200, () => { hero.set({ mode: 'hud', l: `${calendar}${agents}`, r: `${weather}${music(true)}`, row: track }); }],
+    [1200, () => { hero.set(heroClosed(true)); }],
+    [2400, () => { hero.set({ mode: 'hud', l: rune, r: bluetooth, hudL: true, hudR: true }); }],
+    [1200, () => { hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}` }); }],
+    [3000, () => { hero.set({ mode: 'hud', l: appTile, r: `${headphones}${weather}${music(true)}`, row: noteRow }); }],
+    [1200, () => { hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}` }); }],
+    [2200, () => { hero.set({ mode: 'locked', l: lock(false), r: time, hudL: true, hudR: true }); }],
+    [1400, () => { hero.set({ mode: 'locked', l: lock(true), r: greeting, hudL: true, hudR: true }); }],
+    [1400, () => { hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}` }); }],
+    [500, () => { hero.set({ mode: 'closed', l: `${calendar}${agents}`, r: `${headphones}${weather}${music(true)}`, hover: true }, 'peek'); }],
     [160, () => { hero.press(true); }],
-    [3600, () => { say('Expanded'); hero.press(false); hero.set(expanded(mediaCard + eventRow, [138, 34])); }],
-    [2400, () => { say('Closed'); hero.set(heroClosed(false)); }],
+    [3600, () => { hero.press(false); hero.set(expanded(mediaCard + eventRow, [138, 34])); }],
+    [2400, () => { hero.set(heroClosed(false)); }],
   ];
   if (!reduced) loop(heroSteps, 2400);
 
-  // ---- A showcase: an island plus clickable blocks. The selection only moves when a block is clicked;
-  // clicking the selected block again shows its other state.
-  const showcases = {};
-  function showcase(id, items) {
-    const engine = island(document.getElementById(id)), blocksEl = document.getElementById(id + 'Blocks');
-    let index = 0, alt = false, shown = 0;
-    const blocks = items.map((item, i) => {
-      const b = document.createElement('button');
-      b.className = 'block'; b.innerHTML = `<span class="ico">${ic(item.icon)}</span>${item.name}`;
-      b.onclick = () => select(i, index === i && item.alt ? !alt : false);
-      b.onmousedown = e => e.preventDefault();
-      blocksEl.appendChild(b);
-      return b;
+  // ---- Sideways scrolling for a mouse. Trackpads and touch scroll a row natively; a vertical wheel turns it
+  // too, unless the page is in the middle of scrolling past or the row is at its end, and a drag pulls it.
+  let pageScrolled = 0;
+  addEventListener('scroll', () => { pageScrolled = performance.now(); }, { passive: true });
+  function sideways(el, { wheel, drag }) {
+    el.addEventListener('wheel', e => {
+      if (e.shiftKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY) || performance.now() - pageScrolled < 300) return;
+      if (e.wheelDeltaY ? e.wheelDeltaY === -3 * e.deltaY : e.deltaMode === 0) return;
+      const dx = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? el.clientWidth : 1), max = el.scrollWidth - el.clientWidth;
+      if (dx < 0 ? el.scrollLeft <= 0 : el.scrollLeft >= max - 1) return;
+      e.preventDefault(); wheel(dx);
+    }, { passive: false });
+    // A drag that moved is not a click on what it started over.
+    let from = null, moved = false;
+    el.addEventListener('mousedown', e => e.preventDefault());
+    el.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' && !e.button) { from = { x: e.clientX, last: e.clientX, t: e.timeStamp, v: 0 }; moved = false; drag.start?.(); } });
+    el.addEventListener('pointermove', e => {
+      if (!from || !moved && Math.abs(e.clientX - from.x) < 6) return;
+      if (!moved) { moved = true; el.setPointerCapture(e.pointerId); el.classList.add('dragging'); }
+      const dx = e.clientX - from.last;
+      from.v = dx / Math.max(1, e.timeStamp - from.t); from.last = e.clientX; from.t = e.timeStamp;
+      drag.move?.(dx);
     });
+    const end = e => {
+      if (!from) return;
+      const v = e.timeStamp - from.t < 80 ? from.v : 0, dx = from.last - from.x;
+      from = null; el.classList.remove('dragging');
+      if (moved) drag.end(v, dx);
+    };
+    el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+    el.addEventListener('click', e => { if (moved && e.detail) { e.stopPropagation(); moved = false; } }, true);
+  }
+
+  // A fling of a drag glides on and slows, as a trackpad's does, then calls `done`; the result stops it early.
+  function coast(el, v, done) {
+    let t = performance.now(), id = 0;
+    const step = now => { el.scrollLeft -= v * (now - t); v *= Math.pow(.995, now - t); t = now; if (Math.abs(v) > .02) id = requestAnimationFrame(step); else done?.(); };
+    if (reduced || Math.abs(v) < .05) done?.(); else id = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(id);
+  }
+
+  // ---- An endless row of blocks: the set is laid out several times over, and when the scroll nears either
+  // end it jumps by a whole set, which looks the same, so there is always more on both sides. Toward the
+  // edges blocks fade and shrink a little. It only ever moves when it is scrolled, swiped or dragged.
+  function reel(row, items, pick) {
+    const track = document.createElement('div'), buttons = [];
+    track.className = 'track'; row.appendChild(track);
+    let unit = 0, copies = 0, selected = 0, queued = 0, glide = () => {};
+    const block = (item, i, home) => {
+      const b = document.createElement('button');
+      b.className = 'block'; b.dataset.i = i; b.innerHTML = `<span class="ico">${ic(item.icon)}</span>${item.name}`;
+      b.setAttribute('aria-selected', i === selected);
+      if (!home) { b.tabIndex = -1; b.setAttribute('aria-hidden', 'true'); }
+      buttons.push(b); track.appendChild(b);
+    };
+    const middle = b => b.offsetLeft + b.offsetWidth / 2;
+    // Room for a long fling either way, eight widths of the row and never fewer than three sets; the block
+    // nearest the middle stays where it is.
+    function build() {
+      const width = row.clientWidth;
+      if (!width) return;
+      if (!unit) { items.forEach((item, i) => block(item, i, true)); unit = track.offsetWidth + parseFloat(getComputedStyle(track).columnGap); }
+      const need = Math.max(3, Math.ceil(8 * width / unit));
+      if (need === copies) return shade();
+      let keep = selected, off = 0;
+      if (copies) {
+        const mid = row.scrollLeft + width / 2, near = buttons.reduce((a, b) => Math.abs(middle(b) - mid) < Math.abs(middle(a) - mid) ? b : a);
+        keep = +near.dataset.i; off = middle(near) - mid;
+      }
+      track.textContent = ''; buttons.length = 0; copies = need;
+      for (let c = 0; c < need; c++) items.forEach((item, i) => block(item, i, c === need >> 1));
+      row.scrollLeft = middle(buttons[(need >> 1) * items.length + keep]) - off - width / 2;
+      shade();
+    }
+    // At rest the row moves back by whole sets to the middle, which looks the same. While it moves it only
+    // jumps right at an end, so a fling, which the browser carries on from wherever it is, is almost never touched.
+    function wrap(rest) {
+      const s = row.scrollLeft, edge = row.clientWidth / 2, max = row.scrollWidth - row.clientWidth;
+      const n = rest ? Math.round((max / 2 - s) / unit) : s < edge ? Math.ceil((edge - s) / unit) : s > max - edge ? -Math.ceil((s - max + edge) / unit) : 0;
+      if (n) row.scrollLeft = s + n * unit;
+    }
+    function shade() {
+      queued = 0;
+      if (reduced) return;
+      const half = row.clientWidth / 2, mid = row.scrollLeft + half;
+      buttons.forEach(b => {
+        const k = Math.min(1, Math.max(0, (Math.abs(middle(b) - mid) / half - .3) / .7)), e = k * k * (3 - 2 * k);
+        b.style.setProperty('--o', (1 - .7 * e).toFixed(3)); b.style.setProperty('--s', (1 - .1 * e).toFixed(3));
+      });
+    }
+    let resting = 0;
+    row.addEventListener('scroll', () => {
+      wrap(false); queued ||= requestAnimationFrame(shade);
+      if (!('onscrollend' in window)) { clearTimeout(resting); resting = setTimeout(() => wrap(true), 150); }
+    }, { passive: true });
+    row.addEventListener('scrollend', () => wrap(true));
+    row.addEventListener('click', e => { const b = e.target.closest('.block'); if (b) pick(+b.dataset.i); });
+    sideways(row, { wheel: dx => { row.scrollLeft += dx; }, drag: { start: () => glide(), move: dx => { row.scrollLeft -= dx; }, end: v => { glide = coast(row, v); } } });
+    build();
+    new ResizeObserver(build).observe(row);
+    return { mark(i) { selected = i; buttons.forEach(b => b.setAttribute('aria-selected', +b.dataset.i === i)); } };
+  }
+
+  // ---- A showcase: an island over an endless row of blocks. The selection only moves when a block is
+  // clicked; clicking the selected block again shows its other state.
+  const showcases = {};
+  function show(id, items) {
+    const engine = island(document.getElementById(id));
+    let index = 0, alt = false, shown = 0;
+    const row = reel(document.getElementById(id + 'Blocks'), items, i => select(i, index === i && items[i].alt ? !alt : false));
     function select(i, other) {
       index = i; alt = other;
       const item = items[i], v = alt && item.alt ? item.alt : item, token = ++shown;
-      blocks.forEach((b, j) => b.setAttribute('aria-selected', j === i));
+      row.mark(i);
       engine.set(v.intro || v.view);
       if (v.intro && !reduced) setTimeout(() => { if (shown === token) engine.set(v.view); }, 2000);
     }
@@ -1041,75 +1130,69 @@
     showcases[id] = { engine, items, select };
   }
 
-  const baseL = `${calendar}${agents}`, baseR = `${headphones}${music(false)}`;
   const hudBoth = (l, r) => ({ mode: 'hud', l, r, hudL: true, hudR: true });
-  const show = showcase;
+  const closed = (l, r) => ({ mode: 'closed', l, r });
+  const hudR = (r, row) => ({ mode: 'hud', l: '', r, hudR: !row, row });
+  const tailscale = on => `<span class="g ${on ? 'green' : 'dim'}">${ic('i-ts')}</span>`;
   show('wg', [
-    { icon: 'i-term', name: 'Agents and a meeting', view: { mode: 'closed', l: baseL, r: `${headphones}${weather}${music(false)}` } },
-    { icon: 'i-timer', name: 'Timer and reminders', view: { mode: 'closed', l: `${timerWing}${todosWing}`, r: `${weather}${music(false, false)}` } },
-    { icon: 'i-grid', name: 'Workspaces and Focus', view: { mode: 'closed', l: `${workspaces}${agents}`, r: `${focusWing}${weather}` } },
-    { icon: 'i-mic', name: 'On a call', view: { mode: 'closed', l: calendar, r: `${dots}${headphones}${clockWing}` } },
-    { icon: 'i-slack', name: 'Slack and the time', view: { mode: 'closed', l: agents, r: `${slackWing}${clockWing}${music(true)}` } },
-    { icon: 'i-circle', name: 'An empty side', view: { mode: 'closed', l: '', r: weather } },
-  ]);
-  show('g1', [
-    { icon: 'i-spk', name: 'Volume', view: { mode: 'hud', l: baseL, r: volume(.65), hudR: true } },
-    { icon: 'i-sun', name: 'Brightness', view: { mode: 'hud', l: baseL, r: brightness(.45), hudR: true } },
-    { icon: 'i-spk', name: 'Mute', view: { mode: 'hud', l: baseL, r: volume(.65, true), hudR: true },
-      alt: { view: { mode: 'hud', l: baseL, r: volume(.65), hudR: true } } },
-    { icon: 'i-note', name: 'Track change', view: { mode: 'hud', l: baseL, r: `${headphones}${music(true)}`, row: track } },
-  ]);
-  show('g2', [
+    { icon: 'i-term', name: 'Agents and a meeting', view: closed(`${calendar}${agents}`, '') },
+    { icon: 'i-timer', name: 'Timer and reminders', view: closed(timerWing, todosWing) },
+    { icon: 'i-grid', name: 'Workspaces and Focus', view: closed(workspaces, focusWing) },
+    { icon: 'i-mic', name: 'On a call', view: closed('', `${dots}${headphones}`) },
+    { icon: 'i-wifi', name: 'Menu bar items', view: closed('', menuBar) },
+    { icon: 'i-circle', name: 'An empty side', view: closed('', weather) },
+    { icon: 'i-spk', name: 'Volume', view: hudR(volume(.65)) },
+    { icon: 'i-sun', name: 'Brightness', view: hudR(brightness(.45)) },
+    { icon: 'i-spk', name: 'Mute', view: hudR(volume(.65, true)), alt: { view: hudR(volume(.65)) } },
+    { icon: 'i-play', name: 'Track change', view: hudR(music(true), track) },
     { icon: 'i-batt', name: 'Battery', view: hudBoth(battery, label('Low battery', 'red')) },
     { icon: 'i-bt', name: 'Bluetooth', view: hudBoth(rune, bluetooth) },
     { icon: 'i-wifi', name: 'Network', view: hudBoth(wifi, label('Wi-Fi')) },
     { icon: 'i-flame', name: 'Thermals', view: hudBoth(glyph('i-flame', 'orange'), label('Hot · performance reduced')),
       alt: { view: hudBoth(glyph('i-snow', 'cyan'), label('Cooled down')) } },
-  ]);
-  show('g3', [
     { icon: 'i-cal', name: 'Calendar', view: hudBoth(glyph('i-cal', 'orange'), `<span class="evt">${label('Design review')}${label('in 4m', 'orange num')}</span>`) },
     { icon: 'i-moon', name: 'Focus', view: hudBoth(glyph('i-moon', 'indigo'), label('Work')) },
     { icon: 'i-mic', name: 'Mic & camera', view: hudBoth(dots, label('Mic and camera on')) },
-    { icon: 'i-kbd', name: 'Keyboard', view: { mode: 'hud', l: baseL, r: `<span class="g">${ic('i-caps')}</span>${label('Caps Lock on')}`, hudR: true } },
-  ]);
-  show('g4', [
+    { icon: 'i-kbd', name: 'Keyboard', view: hudR(`<span class="g">${ic('i-caps')}</span>${label('Caps Lock on')}`) },
     { icon: 'i-lock', name: 'Lock screen', view: { mode: 'locked', l: lock(false), r: time, hudL: true, hudR: true },
       alt: { view: { mode: 'locked', l: lock(true), r: greeting, hudL: true, hudR: true } } },
-    { icon: 'i-msg', name: 'Notifications', view: { mode: 'hud', l: appTile, r: baseR, row: noteRow } },
+    { icon: 'i-msg', name: 'Notifications', view: { mode: 'hud', l: appTile, r: '', row: noteRow } },
   ]);
 
+  // Pages share the tallest one's height, so turning between them never resizes the island.
+  const turnPages = [mediaCard + eventRow, systemSection(0) + trafficSection(1), copiedSection(0) + shelf.replace('--i:0', '--i:1')];
+  const turnTo = page => expanded(turnPages[page], [], page, tall([108, 73]));
   show('ex', [
-    { icon: 'i-note', name: 'Media card', view: expanded(mediaCard, [138]) },
+    { icon: 'i-pause', name: 'Media card', view: expanded(mediaCard, [138]) },
     { icon: 'i-video', name: 'Next event', view: expanded(mediaCard + eventRow, [138, 34]) },
-    { icon: 'i-puzzle2', name: 'Second page', view: expanded(weatherSection(0) + clipboard.replace('--i:0', '--i:1'), [32, 22 + 72], 1, 256) },
-    { icon: 'i-term', name: 'Third page', view: expanded(herdr.replace('--i:2', '--i:0') + timerSection.replace('--i:0', '--i:1'), [22 + 72, 30], 2, 256) },
+    { icon: 'i-gauge', name: 'System load and traffic', view: expanded(systemSection(0) + trafficSection(1), [108, 73]) },
+    { icon: 'i-ts', name: 'Tailscale peers', view: expanded(tailscaleSection(0), [154]) },
+    { icon: 'i-list', name: 'Todos and a timer', view: expanded(todosSection(0) + timerSection(1), [138, 46]) },
+    { icon: 'i-clip', name: 'Clipboard and shelf', view: expanded(copiedSection(0) + shelf.replace('--i:0', '--i:1'), [100, 78]) },
+    { icon: 'i-term', name: 'Agents', view: expanded(agentsSection(0), [100]) },
+    { icon: 'i-split', name: 'Pages side by side', view: spread(mediaCard + eventRow, systemSection(2) + trafficSection(3), tall([108, 73])) },
+    { icon: 'i-puzzle2', name: 'Turning a page', intro: turnTo(0), view: turnTo(1), alt: { view: turnTo(2) } },
   ]);
 
-  show('p1', [
-    { icon: 'i-term', name: 'Agents', view: expanded(herdr, [22 + 72], 1),
-      alt: { view: { mode: 'hud', l: `<span class="g" style="font-size:14px">${ic('i-term')}</span>${label('Refactor the pars…')}<span class="pop green" style="display:inline-grid">${ic('i-check')}</span>`, r: `${weather}`, hudL: true } } },
-    { icon: 'i-grid', name: 'AeroSpace', view: { mode: 'closed', l: `${workspaces}${agents}`, r: weather },
-      alt: { view: expanded(aerospace, [64], 1) } },
-    { icon: 'i-termo', name: 'Ghostty', view: expanded(ghosttySection, [32], 1),
-      alt: { view: { mode: 'closed', l: agents, r: `<span class="pi">${ic('i-termo')}</span>${weather}` } } },
-    { icon: 'i-slack', name: 'Slack', intro: slackHUD, view: { mode: 'closed', l: agents, r: `${slackWing}${weather}${music(false)}` },
-      alt: { view: expanded(slackRow, [32], 1) } },
-  ]);
-  show('p2', [
-    { icon: 'i-list', name: 'Todos', view: { mode: 'closed', l: `${todosWing}${agents}`, r: weather },
-      alt: { view: expanded(todosSection, [24 + 32 + 30], 1) } },
-    { icon: 'i-clock', name: 'Clock', view: { mode: 'closed', l: agents, r: `${clockWing}${weather}${music(false)}` },
-      alt: { view: expanded(clockRow, [32], 1) } },
-    { icon: 'i-timer', name: 'Timer', view: { mode: 'closed', l: `${timerWing}${agents}`, r: weather },
+  show('pl', [
+    { icon: 'i-term', name: 'Agents', view: expanded(herdr.replace('--i:2', '--i:0'), [100]),
+      alt: { view: { mode: 'hud', l: `<span class="g" style="font-size:14px">${ic('i-term')}</span>${label('Refactor the pars…')}<span class="pop green" style="display:inline-grid">${ic('i-check')}</span>`, r: '', hudL: true } } },
+    { icon: 'i-grid', name: 'AeroSpace', view: closed(workspaces, ''), alt: { view: expanded(aerospace, [89], 1) } },
+    { icon: 'i-termo', name: 'Ghostty', view: expanded(ghosttySection, [84], 1), alt: { view: closed('', `<span class="pi">${ic('i-termo')}</span>`) } },
+    { icon: 'i-slack', name: 'Slack', intro: slackHUD, view: closed('', slackWing), alt: { view: expanded(slackRow, [54], 1) } },
+    { icon: 'i-list', name: 'Todos', view: closed(todosWing, ''), alt: { view: expanded(todosSection(0), [138], 1) } },
+    { icon: 'i-clock', name: 'Clock', view: closed('', clockWing), alt: { view: expanded(clockRow, [54], 1) } },
+    { icon: 'i-timer', name: 'Timer', view: closed(timerWing, ''),
       alt: { view: { mode: 'hud', l: glyph('i-timer', 'orange'), r: label('25 min timer done'), hudL: true, hudR: true } } },
-    { icon: 'i-cloudsun', name: 'Weather', view: { mode: 'closed', l: agents, r: `${weather}${music(false)}` },
-      alt: { view: expanded(weatherSection(0), [32], 1) } },
-  ]);
-  show('p3', [
+    { icon: 'i-cloudsun', name: 'Weather', view: closed('', weather), alt: { view: expanded(weatherSection(0), [54], 1) } },
     { icon: 'i-down', name: 'Downloads', view: { mode: 'hud', l: glyph('i-down', 'blue'), r: label('report-final.pdf'), hudL: true, hudR: true },
       alt: { view: { mode: 'hud', l: glyph('i-check', 'green'), r: label('report-final.pdf'), hudL: true, hudR: true } } },
-    { icon: 'i-tray', name: 'File shelf', view: expanded(shelf, [22 + 56], 1) },
-    { icon: 'i-clip', name: 'Clipboard', view: expanded(clipboard, [22 + 72], 1) },
+    { icon: 'i-tray', name: 'File shelf', view: expanded(shelf, [78], 1) },
+    { icon: 'i-clip', name: 'Clipboard', view: expanded(clipboard, [100], 1), alt: { view: expanded(copiedSection(0), [100], 1) } },
+    { icon: 'i-ts', name: 'Tailscale', view: closed('', tailscale(true)), alt: { view: closed('', tailscale(false)) } },
+    { icon: 'i-shield', name: 'Mullvad VPN', view: closed('', `<span class="pi" style="color:#30d158">${ic('i-shield')}Zurich</span>`) },
+    { icon: 'i-ud', name: 'Network traffic', view: closed('', `<span class="pi">${spark(1, 'cyan')}${spark(4, 'orange')}</span>`) },
+    { icon: 'i-bars', name: 'System load', view: closed('', `<span class="pi">${spark(2, 'cyan')}23%</span>`) },
   ]);
 
   // ---- The small demos.
@@ -1118,49 +1201,15 @@
     cursor.animate([{ left: cursor.style.left || px(x), top: cursor.style.top || px(y) }, { left: px(x), top: px(y) }], { duration: ms, easing: 'ease-in-out', fill: 'forwards' });
     cursor.style.left = px(x); cursor.style.top = px(y);
   }
-  const dL = agents, dR = headphones;
-  const dClosed = (hover) => ({ mode: 'closed', l: dL, r: dR, hover });
-  const z = .6;
+  const dClosed = hover => ({ mode: 'closed', l: '', r: headphones, hover });
 
-  const wings = demo('dWings');
-  wings.engine.set(dClosed());
-  if (!reduced) loop([
-    [1600, () => wings.engine.set({ mode: 'hud', l: dL, r: volume(.65), hudR: true })],
-    [1400, () => wings.engine.set(dClosed())],
-    [2200, () => wings.engine.set({ mode: 'hud', l: `<span class="g" style="font-size:14px">${ic('i-term')}</span>${label('Tests passed')}<span class="pop green" style="display:inline-grid">${ic('i-check')}</span>`, r: dR, hudL: true })],
-    [1400, () => wings.engine.set(dClosed())],
-  ], 1200);
-
-  demo('dAbove').engine.set(dClosed());
-
-  const click = demo('dClick');
-  click.engine.set(dClosed());
-  const clickScene = click.scene, clickMark = clickScene.querySelector('.click');
   const centre = scene => scene.clientWidth / 2;
-  if (!reduced) loop([
-    [900, () => { moveCursor(click.cursor, centre(clickScene) - 60, 24, 900); }],
-    [50, () => { click.engine.set(dClosed(true), 'peek'); }],
-    [1000, () => { moveCursor(click.cursor, centre(clickScene) + 10, 16, 1000); }],
-    [100, () => { click.engine.set(dClosed(false), 'peek'); }],
-    [900, () => { moveCursor(click.cursor, centre(clickScene) + 110, 70, 900); }],
-    [500, () => { clickMark.style.left = click.cursor.style.left; clickMark.style.top = click.cursor.style.top; clickMark.animate([{ opacity: 1, transform: 'scale(.4)' }, { opacity: 0, transform: 'scale(2)' }], { duration: 600, easing: 'ease-out' }); }],
-    [900, () => { moveCursor(click.cursor, 20, 90, 900); }],
-  ], 400);
-  moveCursor(click.cursor, 20, 90, 0);
-
-  const lockDemo = demo('dLock');
-  lockDemo.engine.set(dClosed());
-  if (!reduced) loop([
-    [2200, () => lockDemo.engine.set({ mode: 'locked', l: lock(false), r: time, hudL: true, hudR: true })],
-    [1600, () => lockDemo.engine.set({ mode: 'locked', l: lock(true), r: greeting, hudL: true, hudR: true })],
-    [2000, () => lockDemo.engine.set(dClosed())],
-  ], 1500);
 
   // The pointer goes in at the left side, pushes right, and the rim lights up where it would come out.
   const hold = demo('dHold');
   hold.engine.set(dClosed());
   if (!reduced) loop([
-    [1000, () => { hold.cursor.style.opacity = 1; moveCursor(hold.cursor, centre(hold.scene) - 70, 12, 1000); }],
+    [1000, () => { const k = hold.engine.scale(); hold.cursor.style.opacity = 1; moveCursor(hold.cursor, centre(hold.scene) - (hold.engine.size.wl + 80) * k, 20 * k, 1000); }],
     [50, () => { hold.cursor.style.opacity = 0; hold.engine.set(dClosed(true), 'peek'); const p = hold.engine.rim(-1, .3); hold.engine.ripple(p); }],
     [700, () => {}],
     [900, () => { const s = .55; hold.engine.lean(Math.tanh(220 / 320), .1, 'cursor'); hold.engine.glow(hold.engine.rim(1, .04), s); }],
@@ -1174,23 +1223,22 @@
   moveCursor(hold.cursor, 16, 92, 0);
 
   // A push pops the pointer out through the rim; each release effect in turn.
-  const out = demo('dOut'), tag = out.scene.querySelector('.tag');
+  const out = demo('dOut');
   out.engine.set(dClosed(true));
-  const effects = ['Ripple', 'Ring of light', 'Liquid glass'];
   let effect = 0;
   out.cursor.style.opacity = 0;
   if (!reduced) loop([
-    [700, () => { tag.textContent = effects[effect]; out.engine.lean(.5, .1, 'cursor'); out.engine.glow(out.engine.rim(1, .04), .45); }],
+    [700, () => { out.engine.lean(.5, .1, 'cursor'); out.engine.glow(out.engine.rim(1, .04), .45); }],
     [500, () => { out.engine.lean(.9, .15, 'cursor'); out.engine.glow(out.engine.rim(1, .04), 1); }],
     [120, () => {
       const p = out.engine.rim(1, .04);
       out.engine.glow(p, 0); out.engine.settle();
       if (effect === 0) out.engine.ripple(p); else if (effect === 1) out.engine.ring(p); else out.engine.glass(p, { x: 1, y: .04 });
       out.engine.set(dClosed(false), 'peek');
-      const sx = centre(out.scene) + (p.x - out.engine.size.wl - 92.5 + 4) * z;
-      out.cursor.style.opacity = 1; moveCursor(out.cursor, sx, p.y * z, 0); moveCursor(out.cursor, sx + 70, 60, 700);
+      const k = out.engine.scale(), sx = centre(out.scene) + (p.x - out.engine.size.wl - 92.5 + 4) * k;
+      out.cursor.style.opacity = 1; moveCursor(out.cursor, sx, p.y * k, 0); moveCursor(out.cursor, sx + 70, 60, 700);
     }],
-    [1500, () => { out.cursor.style.opacity = 0; out.engine.set(dClosed(true), 'peek'); effect = (effect + 1) % effects.length; }],
+    [1500, () => { out.cursor.style.opacity = 0; out.engine.set(dClosed(true), 'peek'); effect = (effect + 1) % 3; }],
   ], 600);
 
   // The slider sets how far the push has to go: a short lean at low force, a long one at high.
@@ -1222,7 +1270,7 @@
   const warm = document.createElement('div');
   warm.className = 'isl';
   warm.style.cssText = 'position:fixed;left:0;top:0;opacity:.01;pointer-events:none;width:auto';
-  warm.innerHTML = `<div class="w"><span class="c">${[calendar, agents, music(false), music(true), headphones, weather, timerWing, workspaces, slackWing, clockWing, todosWing, focusWing, dots, volume(.65), volume(.65, true), brightness(.45), rune, bluetooth, wifi, battery, glyph('i-cal'), label('x'), lock(false), lock(true), time, greeting].join('')}</span></div><div class="card" style="width:440px"><span class="c"><div class="exp">${mediaCard}${eventRow}${weatherSection(0)}${herdr}${clipboard}${shelf}${timerSection}${aerospace}${slackRow}${clockRow}${todosSection}${ghosttySection}</div></span></div>`;
+  warm.innerHTML = `<div class="w"><span class="c">${[calendar, agents, music(false), music(true), headphones, weather, timerWing, workspaces, slackWing, clockWing, todosWing, focusWing, dots, volume(.65), volume(.65, true), brightness(.45), rune, bluetooth, wifi, battery, menuBar, tailscale(true), glyph('i-cal'), label('x'), lock(false), lock(true), time, greeting].join('')}</span></div><div class="card" style="width:440px"><span class="c"><div class="exp">${mediaCard}${eventRow}${weatherSection(0)}${herdr}${clipboard}${shelf}${timerSection(0)}${aerospace}${slackRow}${clockRow}${todosSection(0)}${ghosttySection}${systemSection(0)}${trafficSection(0)}${tailscaleSection(0)}</div></span></div>`;
   document.body.appendChild(warm);
   warm.offsetWidth;
   setTimeout(() => warm.remove(), 400);
@@ -1234,7 +1282,7 @@
     const step = () => { heroSteps[k % heroSteps.length][1](); if (++k < total) setTimeout(step, ms); };
     step();
   }
-  window.sylt = { stop: () => loops.clear(), cycle, heroSteps, showcases, island: hero, wings: wings.engine, lock: lockDemo.engine, hold: hold.engine, out: out.engine, force: force.engine, pad: pad.engine, views: { closed: heroClosed, volume, brightness, music, lock, time, greeting, appTile, noteRow, expanded, mediaCard, eventRow, weatherSection, herdr, clipboard, shelf, rune, bluetooth, agents, calendar, headphones, weather, track } };
+  window.sylt = { stop: () => loops.clear(), cycle, heroSteps, showcases, island: hero, hold: hold.engine, out: out.engine, force: force.engine, pad: pad.engine, views: { closed: heroClosed, volume, brightness, music, lock, time, greeting, appTile, noteRow, expanded, mediaCard, eventRow, weatherSection, herdr, clipboard, shelf, rune, bluetooth, agents, calendar, headphones, weather, track } };
 
   // The Layout pane: a tile crosses to the other wing, then one is hidden; the island re-flows each time.
   const arrange = demo('dArrange'), tile = { wxR: arrange.scene.querySelector('.tile.wx:not(.gone)'), wxL: arrange.scene.querySelector('.tile.wx.gone'), hp: arrange.scene.querySelector('.tile.hp') };
@@ -1261,8 +1309,12 @@
 
   // The pages board: a section is dragged to the other page and the open island shows the new page.
   const pages = demo('dPages'), pageTile = { wx1: pages.scene.querySelector('.tile.wx:not(.gone)'), wx2: pages.scene.querySelector('.tile.wx.gone'), tm1: pages.scene.querySelector('.tile.tm.gone'), tm2: pages.scene.querySelector('.tile.tm:not(.gone)') };
-  const page = second => expanded(eventRow.replace('--i:1', '--i:0') + (second ? timerSection : weatherSection(0)).replace('--i:0', '--i:1'), [34, second ? 30 : 32]);
+  const page = second => expanded(eventRow.replace('--i:1', '--i:0') + (second ? timerSection(1) : weatherSection(1)), [], 0, tall([34, 54]));
+  // The board sits under the open island's real bottom, whatever scale the island is drawn at.
+  const board = pages.scene.querySelector('.pane'), placeBoard = () => { board.style.top = px(Math.ceil(pages.engine.size.h * pages.engine.zoom()) + 10); };
   pages.engine.set(page(false));
+  placeBoard();
+  new ResizeObserver(placeBoard).observe(pages.scene);
   if (!reduced) loop([
     [1600, () => { pageTile.tm2.classList.add('press'); }],
     [350, () => { pageTile.tm2.classList.add('gone'); pageTile.tm1.classList.remove('gone'); pageTile.wx1.classList.add('gone'); pageTile.wx2.classList.remove('gone'); pages.engine.set(page(true), 'value'); }],
@@ -1270,16 +1322,67 @@
     [2000, () => {}],
   ], 1400);
 
-  // ---- Theme: follows the system, with a manual toggle remembered per browser.
+  // ---- The demo strip scrolls freely, with momentum, and endlessly. Its cards sit in a lane far wider than they
+  // need, each in the slots that repeat its place in the order; as the strip moves, a card leaving one end takes
+  // the next slot at the other. Only that card's position changes, never the scroll, so a glide is never cut
+  // short, and each demo exists once. At rest the nearest card eases to the middle.
+  const strip = document.querySelector('.strip'), cards = [...strip.children], lane = document.createElement('i'), n = cards.length;
+  const SLOTS = n * 200;
+  lane.className = 'lane'; strip.appendChild(lane);
+  let step = 1, busy = false, quiet = 0, laid = 0, glideStrip = () => {};
+  const slotAt = left => Math.round((left + strip.clientWidth / 2 - cards[0].offsetWidth / 2) / step);
+  const leftOf = slot => slot * step + cards[0].offsetWidth / 2 - strip.clientWidth / 2;
+  function lay() {
+    laid = 0;
+    const c = slotAt(strip.scrollLeft);
+    for (let slot = c - (n >> 1); slot <= c + (n >> 1); slot++) cards[(slot % n + n) % n].style.left = px(slot * step);
+  }
+  // Every card as tall as the tallest, and the lane as wide as all its slots; the middle card stays where it is.
+  function size() {
+    const keep = step > 1 ? slotAt(strip.scrollLeft) : SLOTS / 2 + Math.min(1, Math.max(0, Math.floor((strip.clientWidth / (cards[0].offsetWidth + 14) - 1) / 2)));
+    step = cards[0].offsetWidth + 14;
+    cards.forEach(c => { c.style.height = ''; });
+    const h = Math.max(...cards.map(c => c.offsetHeight));
+    cards.forEach(c => { c.style.height = px(h); });
+    strip.style.height = px(h + 16); lane.style.width = px(SLOTS * step);
+    strip.scrollLeft = leftOf(keep);
+    lay();
+  }
+  // Ease the nearest card to the middle, first moving back toward the lane's middle by whole rounds, which looks the same.
+  function settle() {
+    if (busy) return;
+    let c = slotAt(strip.scrollLeft);
+    const rounds = Math.round((SLOTS / 2 - c) / n);
+    if (Math.abs(rounds) > SLOTS / n / 4) { strip.scrollLeft += rounds * n * step; c += rounds * n; lay(); }
+    if (Math.abs(leftOf(c) - strip.scrollLeft) > .5) strip.scrollTo({ left: leftOf(c), behavior: reduced ? 'auto' : 'smooth' });
+  }
+  strip.addEventListener('scroll', () => {
+    laid ||= requestAnimationFrame(lay);
+    clearTimeout(quiet);
+    if (!('onscrollend' in window)) quiet = setTimeout(settle, 150);
+  }, { passive: true });
+  strip.addEventListener('scrollend', () => { aim = null; clearTimeout(quiet); settle(); });
+  // A mouse wheel's notches are steps, so each one turns a card; a notch that comes mid-turn aims one further.
+  let aim = null;
+  sideways(strip, {
+    wheel: dx => { aim = (aim ?? slotAt(strip.scrollLeft)) + Math.sign(dx); strip.scrollTo({ left: leftOf(aim), behavior: reduced ? 'auto' : 'smooth' }); },
+    drag: {
+      start: () => { busy = true; glideStrip(); strip.scrollTo({ left: strip.scrollLeft }); },
+      move: dx => { strip.scrollLeft -= dx; },
+      end: v => { glideStrip = coast(strip, v, () => { busy = false; settle(); }); },
+    },
+  });
+  size();
+  new ResizeObserver(size).observe(strip);
+
+  // ---- Theme: set in the head from the system or the last choice; the toggle crossfades and is remembered per browser.
   const root = document.documentElement, themeButton = document.getElementById('theme');
-  function applyTheme(mode) { root.dataset.theme = mode; }
-  let stored = null; try { stored = localStorage.getItem('theme'); } catch (e) {}
-  applyTheme(stored || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+  requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('still')));
   let theming = 0;
   themeButton.onclick = () => {
     const next = root.dataset.theme === 'light' ? 'dark' : 'light';
     root.classList.add('theming'); clearTimeout(theming); theming = setTimeout(() => root.classList.remove('theming'), 450);
-    applyTheme(next);
+    root.dataset.theme = next;
     try { localStorage.setItem('theme', next); } catch (e) {}
   };
 })();

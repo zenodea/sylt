@@ -53,7 +53,7 @@ final class SystemNotificationMonitor: ObservableObject {
         let appName = texts.count >= 3 ? texts[0] : ""
         let title = texts.count >= 3 ? texts[1] : texts[0]
         let body = texts.count >= 3 ? texts[2...].joined(separator: " ") : texts[1]
-        let bundle = NSWorkspace.shared.runningApplications.first { $0.localizedName == appName }?.bundleIdentifier
+        let bundle = AppIcons.bundle(named: appName)
         notifications.send(SystemNotification(appName: appName, title: title, body: body, bundleIdentifier: bundle))
     }
 

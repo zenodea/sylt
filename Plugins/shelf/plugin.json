@@ -4,6 +4,7 @@
   "name": "File shelf",
   "description": "Drop files on the island to keep them handy, drag them out later.",
   "symbol": "tray.full.fill",
+  "opens": "com.apple.finder",
   "run": "shelf.py",
   "accepts": ["files"]
 }

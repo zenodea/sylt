@@ -9,6 +9,37 @@ final class IslandLayoutTests: XCTestCase {
         return layout
     }
 
+    func testPagesSpreadAcrossTheScreenWhenThereIsRoom() {
+        var layout = layout
+        layout.expandedPages = [[.media], [.event], [.plugin("a")], [.plugin("b")], [.plugin("c")]]
+        layout.screenWidth = 1512
+        XCTAssertEqual(layout.columns, 1, "off by default")
+        layout.spreadsPages = true
+        XCTAssertEqual(layout.columns, 2)
+        XCTAssertEqual(layout.spreadCount, 3)
+        XCTAssertEqual(layout.frame(for: .expanded, hovering: false).size.width, IslandLayout.expandedWidth * 2)
+        layout.expandedPage = 3
+        XCTAssertEqual(layout.currentSpread, 1)
+        XCTAssertEqual(layout.currentSpreadPages, [[.plugin("a")], [.plugin("b")]])
+        layout.screenWidth = 2560
+        XCTAssertEqual(layout.columns, 3)
+        layout.screenWidth = 1000
+        XCTAssertEqual(layout.columns, 1, "no room to spare on a narrow screen")
+        layout.screenWidth = 2560
+        layout.expandedPages = [[.media]]
+        XCTAssertEqual(layout.columns, 1, "never wider than the pages there are")
+    }
+
+    func testMenuBarItemsTakeTheirWidthOnlyWhenPlaced() {
+        var layout = layout
+        XCTAssertEqual(layout.rightWing, 0)
+        layout.wings.right = [.wifi, .volume, .battery, .bluetooth]
+        XCTAssertEqual(layout.rightWing, WiFiBadge.width + VolumeBadge.width + BatteryBadge.width + WingGap.defaultSpacing * 2 + IslandLayout.wingPadding * 2, "Bluetooth adds nothing while off")
+        layout.bluetoothOn = true
+        layout.hasBattery = false
+        XCTAssertEqual(layout.visibleItems(layout.wings.right), [.wifi, .volume, .bluetooth])
+    }
+
     func testEmptyWingsAddNothing() {
         let layout = layout
         XCTAssertEqual(layout.leftWing, 0)
@@ -50,7 +81,7 @@ final class IslandLayoutTests: XCTestCase {
         let layout = layout
         let closed = layout.frame(for: .closed, hovering: true).size
         XCTAssertEqual(closed.width, layout.closedWidth + IslandLayout.hoverGrowth.width)
-        XCTAssertEqual(closed.height, 32 + IslandLayout.notchOverlap + IslandLayout.hoverGrowth.height)
+        XCTAssertEqual(closed.height, 32 + IslandLayout.hoverGrowth.height)
         let expanded = layout.frame(for: .expanded, hovering: true).size
         XCTAssertEqual(expanded, layout.frame(for: .expanded, hovering: false).size)
     }

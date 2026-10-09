@@ -1,5 +1,7 @@
 import SwiftUI
 
+/// Four bars dancing while something plays. Drawn in a canvas: a frame changes only
+/// pixels, never the layout, so the island isn't laid out again at every tick.
 struct AudioBars: View {
     static let barCount = 4
     static let barWidth: CGFloat = 2.5
@@ -12,17 +14,20 @@ struct AudioBars: View {
     var height: CGFloat = 14
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30, paused: !isPlaying)) { context in
+        TimelineView(.animation(minimumInterval: 1 / 24, paused: !isPlaying)) { context in
             let time = context.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .center, spacing: Self.spacing) {
-                ForEach(0..<Self.barCount, id: \.self) { index in
-                    Capsule()
-                        .fill(colors[index % colors.count])
-                        .frame(width: Self.barWidth, height: barHeight(index: index, time: time))
+            Canvas { graphics, size in
+                for index in 0..<Self.barCount {
+                    let barHeight = self.barHeight(index: index, time: time)
+                    let rect = CGRect(
+                        x: CGFloat(index) * (Self.barWidth + Self.spacing), y: (size.height - barHeight) / 2,
+                        width: Self.barWidth, height: barHeight
+                    )
+                    graphics.fill(Capsule().path(in: rect), with: .color(colors[index % colors.count]))
                 }
             }
-            .frame(width: Self.width, height: height)
         }
+        .frame(width: Self.width, height: height)
     }
 
     private func barHeight(index: Int, time: TimeInterval) -> CGFloat {

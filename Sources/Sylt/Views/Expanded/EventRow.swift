@@ -30,5 +30,10 @@ struct EventRow: View {
         .padding(.horizontal, 10)
         .frame(height: IslandLayout.eventRowHeight)
         .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+        .contentShape(RoundedRectangle(cornerRadius: 10))
+        .onTapGesture {
+            NSWorkspace.shared.open(URL(string: "ical://ekevent/\(event.id)") ?? URL(fileURLWithPath: "/System/Applications/Calendar.app"))
+            Haptics.press()
+        }
     }
 }

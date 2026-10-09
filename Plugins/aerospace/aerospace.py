@@ -82,8 +82,8 @@ def handle(event):
             if key in (event.get("settings") or {}): settings[key] = bool(event["settings"][key])
         state.update({"focused": None, "workspaces": []})
         refresh(False)
-    elif kind == "click":
-        run("workspace", event.get("row", ""))
+    elif kind == "click" and event.get("row"):
+        run("workspace", event["row"])
         refresh(False)
 
 def listen():
@@ -102,7 +102,7 @@ def listen():
 threading.Thread(target=listen, daemon=True).start()
 last_full = 0
 while True:
-    time.sleep(0.25)
+    time.sleep(0.5)
     try:
         if focused_now() != state["focused"] or time.time() - last_full > 2:
             last_full = time.time()

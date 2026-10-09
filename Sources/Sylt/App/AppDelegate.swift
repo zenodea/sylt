@@ -6,7 +6,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let preferences = Preferences()
     private let mediaKeys = MediaKeyInterceptor()
     private lazy var state = IslandState(preferences: preferences)
-    private lazy var settingsWindow = SettingsWindow(preferences: preferences, mediaKeys: mediaKeys, plugins: state.plugins)
+    private let divider = MenuBarDivider()
+    private lazy var settingsWindow = SettingsWindow(preferences: preferences, mediaKeys: mediaKeys, plugins: state.plugins, divider: divider)
     private var panel: NotchPanel?
     private var cancellables = Set<AnyCancellable>()
     private var activity: NSObjectProtocol?
@@ -30,12 +31,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.panel = panel
         state.start()
         bindMediaKeys()
+        bindMenuBar()
         followDisplayChanges()
         keepPlacement()
         if !panel.isMeasured { measureNotchWhenMenuBarReturns() }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        divider.stop()
         mediaKeys.deactivate()
         state.plugins.stop()
     }
@@ -94,6 +97,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { [mediaKeys] intercept in
                 intercept ? mediaKeys.activate() : mediaKeys.deactivate()
             }
+            .store(in: &cancellables)
+    }
+
+    private func bindMenuBar() {
+        preferences.$hidesMenuBarItems
+            .sink { [divider] in $0 ? divider.start() : divider.stop() }
+            .store(in: &cancellables)
+        preferences.$revealsMenuBarItems
+            .sink { [divider] in divider.revealsOnHover = $0 }
             .store(in: &cancellables)
     }
 }

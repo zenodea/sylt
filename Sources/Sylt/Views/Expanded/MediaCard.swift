@@ -47,6 +47,11 @@ struct MediaCard: View {
                         .overlay(alignment: .bottomTrailing) {
                             sourceBadge(for: track).offset(x: 5, y: 5)
                         }
+                        .onTapGesture {
+                            guard let bundle = track.bundleIdentifier else { return }
+                            AppActivation.activate(bundle: bundle)
+                            Haptics.press()
+                        }
                     VStack(alignment: .leading, spacing: 6) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(track.title)
@@ -114,8 +119,13 @@ struct MediaCard: View {
 
     private var output: some View {
         HStack(spacing: 8) {
-            LevelSlider(symbol: volume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill", value: volume.isMuted ? 0 : volume.level) {
-                volume.set($0)
+            if let level = nowPlaying.playerVolume {
+                // The app's own volume, when it has one.
+                LevelSlider(symbol: "slider.horizontal.3", value: Float(level)) { nowPlaying.setPlayerVolume(Double($0)) }
+            } else {
+                LevelSlider(symbol: volume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill", value: volume.isMuted ? 0 : volume.level) {
+                    volume.set($0)
+                }
             }
             Menu {
                 ForEach(volume.outputs) { output in

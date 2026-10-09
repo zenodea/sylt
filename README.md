@@ -1,86 +1,89 @@
-# Sylt
+<p align="center"><img src="docs/assets/icon.png" width="128" alt="Sylt app icon"></p>
 
-A dynamic island for the MacBook notch. It turns the dead space at the top of the screen into a small, quiet display for the things you glance at: what's playing, your coding agents, the next meeting, a timer, volume and brightness, battery, Bluetooth, network, and more. It lives above every window, full-screen apps included, and it stays on the lock screen.
+<h1 align="center">Sylt</h1>
 
-Website: https://zenodea.github.io/sylt/
+<p align="center">A dynamic island for the MacBook notch: live status in two wings, short overlays when something changes, and an expanded view with controls.</p>
 
-## What it does
+<p align="center">
+  <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple" alt="macOS 14 or later">
+  <img src="https://img.shields.io/badge/Swift-5.10-F05138?logo=swift&logoColor=white" alt="Swift 5.10">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-3B82F6" alt="MIT licence"></a>
+  <a href="https://github.com/zenodea/sylt/actions/workflows/ci.yml"><img src="https://github.com/zenodea/sylt/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+</p>
 
-**Closed** the island hugs the notch and shows only live state in two wings:
+<p align="center"><img src="docs/assets/readme/hero.png" width="816" alt="The closed island around the notch: a meeting in 13 minutes and three coding agents in the left wing, the weather, album art and audio bars in the right"></p>
 
-- Left: running agents (working first, idle faded), a countdown to the next meeting, a running timer, AeroSpace workspaces with the current one bright, open reminders.
-- Right: mic and camera dots, the active Focus, headphone charge, the weather, Slack's unread count, the time, album art with live audio bars.
+## What it shows
 
-Each wing is sized to its own content. An empty side adds nothing.
+Closed, the island shows only live state, each wing sized to its content. An empty side adds nothing. It stays above every window, full-screen apps included.
 
-**Overlays** grow out of the notch for a moment and fade back. A one-sided overlay never touches the other wing:
+- **Left:** running agents (working first, idle faded), the next meeting's countdown, a running timer, AeroSpace workspaces, open reminders.
+- **Right:** mic and camera dots, the active Focus, headphone charge, the weather, Slack unreads, the time, album art with live audio bars.
+- **Menu bar items:** Wi-Fi with its strength, Bluetooth, volume and battery, so the island can stand in for the menu bar.
+
+## Overlays
+
+<p align="center"><img src="docs/assets/readme/notification.png" width="816" alt="A notification overlay: the Messages icon in the left wing, the right wing unchanged, and the message on a row underneath"></p>
+
+Changes grow out of the notch for a moment and fade back. A one-sided overlay leaves the other wing alone, and each kind can be switched off.
 
 | Overlay | Shows |
 | --- | --- |
-| Volume, brightness, mute | Icon and level bar on the right only. Mute draws a slash through the speaker. Brightness only for changes made through the keys or the island, never for auto-brightness. |
-| Track change | The wings stay put, the new cover flips in, a title row slides out underneath. |
-| Battery | Percent and a message at 80, 60, 40, 20, 15, 10, 5 and 0 percent, and on charger changes. |
-| Bluetooth | A rune that draws itself in on connect, the device name and a gauge filled to its exact charge. Low-battery warnings at 20 and 10 percent. |
-| Network | Wi-Fi arcs lighting up, a cable clicking in, or a slashed Wi-Fi when you go offline. |
-| Calendar | The next event five minutes before it starts and again at start. |
-| Keyboard | Caps Lock on or off, keyboard layout changes. |
-| Focus | The Focus mode you switched to. |
-| Mic and camera | When either starts or stops being used. |
-| Thermals | When the Mac gets hot enough to throttle, and when it cools. |
-| Notifications | Notification Center banners mirrored as a card. Experimental. |
-| Unlock | A padlock that springs open with a greeting when you unlock. |
-| Plugins | Whatever a plugin asks for: a timer ending, a download landing, an agent finishing. |
+| Volume, brightness, mute | A level bar in the right wing; brightness only for key or island changes, never auto-brightness |
+| Track change | The new cover flips in, the title slides out underneath |
+| Battery | 80, 60, 40, 20, 15, 10, 5 and 0 percent, and charger changes |
+| Bluetooth | Device name and exact charge on connect; warnings at 20 and 10 percent |
+| Network | Wi-Fi joined, cable plugged in, or offline |
+| Calendar | The next event five minutes before it starts, and at the start |
+| Keyboard, Focus | Caps Lock, layout changes, the Focus mode you switched to |
+| Mic and camera | When either starts or stops |
+| Thermals | Throttling from heat, and cooling down |
+| Notifications | Notification Center banners with the app's icon (experimental) |
+| Unlock | A padlock springing open with a greeting |
+| Plugins | A timer ending, a download landing, an agent finishing |
 
-**Expanded** (click or swipe down) shows what's relevant, two sections to a page. Swipe sideways to turn the page; the Layout pane in Settings decides which sections share a page.
+## Expanded
 
-- Media card with artwork, transport, a seek bar, the source app and an output volume slider with the device name.
-- Next event with a Join button for Zoom, Meet, Teams and Webex links.
-- Every plugin's section: timer presets, agents waiting first with how long they've waited, the file shelf, clipboard history, the weather, AeroSpace workspaces with their apps.
+<p align="center"><img src="docs/assets/readme/expanded.png" width="560" alt="The expanded island: a media card with artwork, transport controls, seek bar and output volume, and an Agents section listing three coding agents with their status"></p>
 
-**Locked** the island shows a padlock and the time, and stays visible over the login window.
+Click or swipe down for two sections per page; swipe sideways to turn it. On a wide screen a setting shows two or three pages side by side.
 
-**Layout** is yours to arrange. Settings has a Layout pane with the island drawn at the top and three columns under it: left wing, right wing, hidden. Drag any built-in badge or plugin between them, or onto another tile to set the order, and the island above follows. Anything you don't touch keeps its default place.
+- **Media:** artwork, transport, seek bar, source app, output volume and device.
+- **Next event:** a Join button for Zoom, Meet, Teams and Webex links.
+- **Plugins:** timer presets, agents (waiting first, with how long), file shelf, clipboard history, weather, workspaces with their apps.
 
-**The pointer** is taken in when it enters the island: it disappears, and moving the mouse leans the island instead. A firm push in one direction lets it out through the rim on that side, and it keeps moving in the same motion. Settings has an Effects pane for all of it:
+A section's title opens its app, such as Activity Monitor for system load.
 
-- Hold it until pushed, and how hard the push has to be. Off, the pointer dips in and comes straight back out with the next movement.
-- A glow on the rim where the pointer would come out, growing with the push.
-- What happens when it leaves: a ripple running around the rim from that point, a ring of light, a reflection sweeping across the island as if it were dark glass, or nothing. The ripple's strength is adjustable.
-- A haptic tap on release.
+## Lock screen
 
-The pointer is kept off the top edge of the screen while held, so the menu bar stays put.
+Locked, the island shows a padlock and the time, and stays visible over the login window.
 
-## Install
+## Make it yours
 
-Requires macOS 14 or later on a Mac with a notch. Build from source:
+**Layout pane.** The island drawn above three columns: left wing, right wing, hidden. Drag any badge or plugin between them or onto another tile to reorder; the island follows. A handle between items sets the gap and an optional hairline. The same pane groups expanded sections into pages.
 
-```sh
-git clone https://github.com/zenodea/sylt.git
-cd sylt
-make open
-```
+**Effects pane.** Entering the island takes the pointer in: it disappears and the mouse leans the island. A firm push lets it out through the rim on that side, mid-motion. Settings cover the hold and how hard the push must be, a rim glow where it will exit, the exit effect (an adjustable ripple, a ring of light, a reflection across dark glass, or none) and a haptic tap. While held, the pointer stays off the top edge so the menu bar never drops down.
 
-`make open` builds a release binary, wraps it in `build/Sylt.app` and launches it. Settings are in the island's context menu. Turn on "Open at login" there.
+**Menu bar pane.** When macOS hides the menu bar, which Apple status items show, and an optional divider that hides everything to its left until the pointer is up there or the chevron is clicked. Command-drag the divider to move it.
 
-### Permissions
+## Plugins
 
-Each is asked for the first time its plugin needs it, and each plugin can be switched off in Settings:
+Built-in sources are Swift monitors; everything else is a plugin, a program in any language that prints JSON. Fifteen ship with the app, each can be switched off.
 
-- Accessibility: to take over the volume and brightness keys, to mirror notifications, and to raise an agent's terminal window.
-- Calendar: for the next event.
-- Bluetooth: for device connections and battery.
-- Automation (Spotify, Music): for artwork and transport.
-
-## How it works
-
-- The island is a transparent panel over the notch, drawn with SwiftUI. It is moved into its own WindowServer space pinned at the lock-screen level through the private SkyLight framework, which is what keeps it above full-screen apps and the login window.
-- The panel only takes the mouse while the cursor is over the island, so the rest of the strip stays click-through.
-- Built-in sources are Swift `Monitor`s with a `HUDKind` for their overlay. Everything else is a plugin: a program in any language that prints JSON, rendered by the island with the same badges, overlays and sections. Fifteen ship in the app: weather, downloads, timer, clipboard, file shelf, agents, AeroSpace workspaces, Slack, a clock, todos from Reminders, a Ghostty quick terminal, Tailscale, Mullvad VPN, network traffic and system load.
-- MediaRemote withholds metadata from third-party apps on recent macOS, so now-playing data comes from a small adapter hosted in Apple's own `perl`, with AppleScript for Spotify and Music and a session-store lookup for Firefox.
+| Plugin | Shows | Plugin | Shows |
+| --- | --- | --- | --- |
+| Agents | Coding agents, from Herdr or by process | Downloads | Downloads starting and finishing |
+| AeroSpace | Workspaces; click to switch | File shelf | Files dropped on the island |
+| Ghostty | A quick terminal | Clipboard | Recent copies; click to copy again |
+| Slack | Unread mentions, no token | Tailscale | Status, exit node, peers |
+| Todos | Open reminders; click to tick off | Mullvad VPN | On or off, and the exit location |
+| Clock | The time | Network traffic | Bytes in and out |
+| Timer | Countdowns with a chime | System load | CPU, memory and GPU |
+| Weather | Conditions, from Open-Meteo | | |
 
 ## Writing a plugin
 
-A plugin is a folder with a `plugin.json` and a program. Drop it in `~/Library/Application Support/Sylt/Plugins` and it starts; Settings has a button for the folder. The fifteen shipped plugins in `Plugins/` are the reference.
+A plugin is a folder with a `plugin.json` and a program. Put it in `~/Library/Application Support/Sylt/Plugins` (Settings has a button for it) and it starts. `Plugins/` holds working examples.
 
 ```json
 {
@@ -94,7 +97,7 @@ A plugin is a folder with a `plugin.json` and a program. Drop it in `~/Library/A
 }
 ```
 
-The program prints one JSON object per line. Each line replaces one thing:
+The program prints one JSON object per line, each replacing one thing, and reads events from stdin:
 
 ```sh
 #!/bin/sh
@@ -107,23 +110,41 @@ while read event; do                     # {"event":"click","row":"log"} {"event
 done
 ```
 
-What a plugin can print:
-
 | Line | Effect |
 | --- | --- |
-| `{"wing": {"side": "left" or "right", "items": [...]}}` | Replaces the plugin's badge in that wing. An item mixes `symbol`, `image` (`app:bundle.id`, `icon:/path`, `file:/path`), `text`, `tint`, `dot`, `ring` (0 to 1), `graph` (a list of values from 0 to 1, drawn as a small bar graph) and `status` (`working` or `waiting`). Empty items clear it. |
-| `{"hud": {...}}` | Shows an overlay now: `symbol`/`image`, `tint`, `text` or `level` (0 to 1), `side` (`both`, `left`, `right`), `duration`, `sound`, and a `trailingSymbol` with `trailingTint` that pops in after the text. |
-| `{"section": {...}}` | Replaces the plugin's expanded section: `title`, `symbol`, `rows`, `files` (paths, draggable), `buttons`, `actions`. A row has `id`, `symbol`/`image`, `title`, `detail`, `trailing`, `trailingTint`, `status`, `progress`, `buttons`, `highlighted`, `large`, and `graph` with `tint` for a wider graph on the right. A wing can set `spacing` between its items. |
-| `{"clearSection": true}` | Removes the section. |
-| `{"sound": "Hero"}` | Plays a system sound. |
-| `{"activate": {"process": "herdr", "window": "title"}}` | Brings an app forward, by process name, `pid` or `bundle`, and raises the window whose title contains `window`. |
-| `{"open": "/path or https://..."}` | Opens a file or URL. |
+| `wing` | The badge in `side` (`left`, `right`). Items mix `symbol`, `image` (`app:`, `icon:`, `file:`), `text`, `tint`, `dot`, `ring`, `graph` and `status` (`working`, `waiting`); `spacing` sets the gap. Empty items clear it. |
+| `hud` | An overlay: `symbol` or `image`, `tint`, `text` or `level`, `side` (`both`, `left`, `right`), `duration`, `sound`, `trailingSymbol`, `trailingTint`. |
+| `section` | The expanded section: `title`, `symbol`, `rows`, `files`, `buttons`, `actions`. Rows take `id`, `symbol` or `image`, `title`, `detail`, `trailing`, `trailingTint`, `status`, `progress`, `buttons`, `highlighted`, `large`, `graph`, `tint`. |
+| `clearSection` | Removes the section. |
+| `sound` | Plays a system sound by name. |
+| `activate` | Brings an app forward by `process`, `pid` or `bundle`, raising the window whose title contains `window`. |
+| `open` | Opens a path or URL. |
 
-What the host writes to the plugin's stdin: `start` with `settings` and `dataDir`, `settings` when they change, `click` with a row `id`, `button` with an `id` (and its row), `action` with an `id`, `drop` with `files` when the manifest has `"accepts": ["files"]`, `clipboard` with `text` on every copy when it has `"accepts": ["clipboard"]` (password managers are skipped for you), `remove` with a file path, and `stop`.
+Levels, rings and graph values run from 0 to 1. Tints are `white`, `dim`, `green`, `orange`, `red`, `yellow`, `blue`, `indigo`, `purple`, `pink`, `cyan` or `#hex`.
 
-Manifests can set `"interval": seconds` to be run once per interval instead of staying running, `"accepts": ["files"]` to receive drops, `"side": "left"` for the wing the badge takes until the user moves it, `"enabledByDefault": false`, and `settings` of type `bool`, `text`, `number` or `choice` (with `options`), which Settings turns into a form. Tints are `white`, `dim`, `green`, `orange`, `red`, `yellow`, `blue`, `indigo`, `purple`, `pink`, `cyan` or a `#hex`.
+**Events:** `start` (with `settings`, `dataDir`), `settings`, `click` (row `id`, none for the title), `button`, `action`, `drop` (`files`), `clipboard` (`text`; password managers skipped), `remove` (a file path), `stop`.
 
-Plugins run as you, with your permissions. Scripts without an executable bit run through the interpreter their extension implies: `.py`, `.sh`, `.rb`, `.js`, `.swift`.
+**Manifest options:** `interval` (seconds) runs it once per interval instead of continuously. `accepts` (`files`, `clipboard`) subscribes to drops or copies. `opens` (a bundle id) brings that app forward on a title click, or a row click while a one-shot plugin isn't running. `side` sets the starting wing; `enabledByDefault: false` ships it off. `settings` of type `bool`, `text`, `number` or `choice` (with `options`) become a form.
+
+Plugins run as you. A script without the executable bit runs through the interpreter for its extension: `.py`, `.sh`, `.rb`, `.js`, `.swift`.
+
+## Install
+
+macOS 14 or later, on a Mac with a notch.
+
+```sh
+git clone https://github.com/zenodea/sylt.git
+cd sylt
+make open        # builds build/Sylt.app and launches it
+```
+
+Right-click the island for Settings. Each permission is asked for the first time something needs it:
+
+- **Accessibility** for the volume and brightness keys, mirrored notifications, and raising an agent's terminal.
+- **Calendar** for the next event.
+- **Bluetooth** for device connections and battery.
+- **Automation (Spotify, Music)** for artwork and transport.
+- **Full Disk Access** for video artwork from Firefox.
 
 ## Development
 
@@ -131,8 +152,15 @@ Plugins run as you, with your permissions. Scripts without an executable bit run
 make build   # debug build
 make test    # unit tests
 make open    # release bundle, relaunch
+ISLAND_PLUGINS=Plugins .build/debug/Sylt   # debug build with the repo's plugins
 ```
 
-Sources are grouped by concern under `Sources/Sylt`: `Island` (state, layout, modes, animation), `Monitors` (one folder per domain), `Plugins` (the protocol, process host and registry), `Views` (wings, overlays, expanded sections, badges, plugin renderers), `Settings` and `System`. Shipped plugins live in `Plugins/`, tests in `Tests/SyltTests`. Run a debug build against the repo's plugins with `ISLAND_PLUGINS=Plugins .build/debug/Sylt`.
+`Sources/Sylt` is split into `Island`, `Monitors`, `Plugins`, `Views`, `Settings` and `System`; tests are in `Tests/SyltTests`. CI runs `swift build` and `swift test` on every pull request and push to `main`.
 
-Private APIs can change between macOS releases. The SkyLight calls and the Focus store are the two places most likely to need attention after an update.
+- The island is a transparent SwiftUI panel moved into its own WindowServer space at the lock-screen level through private SkyLight calls, which keeps it above full-screen apps and the login window. It takes the mouse only while the cursor is over it.
+- MediaRemote hides now-playing data from third-party apps, so a small adapter runs inside Apple's `perl`, with AppleScript for Spotify and Music and a session-store lookup for Firefox.
+- Private APIs can change with macOS updates; the SkyLight calls and the Focus store are the likeliest to break.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).

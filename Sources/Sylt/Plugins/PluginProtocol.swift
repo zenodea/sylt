@@ -35,13 +35,15 @@ struct PluginManifest: Decodable, Hashable {
     let enabledByDefault: Bool?
     /// "left" or "right": where the badge goes unless the user moves it.
     let side: String?
+    /// Bundle id of the app a click on the section's title opens.
+    let opens: String?
 
     var acceptsFiles: Bool { accepts?.contains("files") ?? false }
     var wantsClipboard: Bool { accepts?.contains("clipboard") ?? false }
     var isOneShot: Bool { interval != nil }
 
     enum CodingKeys: String, CodingKey {
-        case protocolVersion = "protocol", id, name, description, symbol, run, interval, accepts, settings, enabledByDefault, side
+        case protocolVersion = "protocol", id, name, description, symbol, run, interval, accepts, settings, enabledByDefault, side, opens
     }
 }
 

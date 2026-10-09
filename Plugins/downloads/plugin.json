@@ -4,5 +4,6 @@
   "name": "Downloads",
   "description": "Browser downloads starting and finishing.",
   "symbol": "arrow.down.circle.fill",
+  "opens": "com.apple.finder",
   "run": "downloads.py"
 }

@@ -14,7 +14,7 @@ struct WingsView: View {
                 Spacer().frame(width: layout.notchWidth)
                 wing(.trailing, width: widths.trailing)
             }
-            .frame(height: layout.notchHeight + IslandLayout.notchOverlap)
+            .frame(height: layout.notchHeight + layout.overlap)
             if mode == .hud(.nowPlaying) {
                 TrackRow().transition(IslandAnimation.content)
             }

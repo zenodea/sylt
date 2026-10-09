@@ -10,8 +10,16 @@ struct PluginSectionView: View {
         if let section = plugin.section {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    Image(systemName: section.symbol ?? plugin.manifest.symbol ?? "puzzlepiece.extension.fill")
-                    Text(section.title ?? plugin.manifest.name)
+                    Button {
+                        plugin.headerClicked()
+                        Haptics.press()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: section.symbol ?? plugin.manifest.symbol ?? "puzzlepiece.extension.fill")
+                            Text(section.title ?? plugin.manifest.name)
+                        }
+                    }
+                    .buttonStyle(.plain)
                     Spacer()
                     if let items = section.items { PluginBadge(items: items) }
                     ForEach(section.actions ?? []) { action in
@@ -25,15 +33,15 @@ struct PluginSectionView: View {
                 if let rows = section.rows, !rows.isEmpty {
                     // Rows past the first few scroll inside the space those take.
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: 3) {
+                        VStack(spacing: PluginSection.rowSpacing) {
                             ForEach(rows) { row in
-                                PluginRowView(row: row) { plugin.send(PluginEvent(event: "click", row: row.rowID)); Haptics.press() } button: { id in
+                                PluginRowView(row: row) { plugin.rowClicked(row.rowID); Haptics.press() } button: { id in
                                     plugin.send(PluginEvent(event: "button", row: row.rowID, id: id)); Haptics.press()
                                 }
                             }
                         }
                     }
-                    .frame(height: rows.prefix(PluginSection.maxRows).reduce(0) { $0 + $1.height } - 3 + extraHeight)
+                    .frame(height: section.visibleRowsHeight + extraHeight)
                     .background(GeometryReader { proxy in
                         Color.clear.preference(key: ListFramesKey.self, value: [proxy.frame(in: .named(ListFramesKey.space))])
                     })
@@ -83,6 +91,8 @@ struct PluginSectionView: View {
 }
 
 private struct PluginRowView: View {
+    static let trailingWidth = TextWidth.of("9.9 MB/s", size: 11, monospacedDigits: true)
+
     let row: PluginRow
     let tap: () -> Void
     let button: (String) -> Void
@@ -111,11 +121,13 @@ private struct PluginRowView: View {
                     LevelBar(value: progress).frame(width: 60)
                 }
                 if let trailing = row.trailing {
+                    // Beside a graph the value keeps a fixed width, so a changing number never shifts the graph.
                     Text(trailing)
                         .contentTransition(.numericText())
                         .font(.system(size: 11))
                         .foregroundStyle(Color(tint: row.trailingTint ?? "dim"))
                         .monospacedDigit()
+                        .frame(minWidth: row.graph != nil ? Self.trailingWidth : nil, alignment: .trailing)
                 }
                 if let status = row.status {
                     if status == "working" { WorkingDots() } else { StatusMark(status: status) }

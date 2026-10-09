@@ -5,6 +5,7 @@
   "description": "CPU, memory and GPU use as small graphs.",
   "symbol": "gauge.with.dots.needle.33percent",
   "run": "system.py",
+  "opens": "com.apple.ActivityMonitor",
   "side": "right",
   "enabledByDefault": false,
   "settings": [

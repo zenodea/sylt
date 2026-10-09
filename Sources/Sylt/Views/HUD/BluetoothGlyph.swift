@@ -36,10 +36,14 @@ struct BluetoothGlyph: View {
 }
 
 struct RuneMark: View {
+    var color: Color = .blue
+    var lineWidth: CGFloat = 2
+    var height: CGFloat = 15
+
     var body: some View {
         Rune()
-            .stroke(.blue, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-            .frame(width: 8, height: 15)
+            .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+            .frame(width: height * 8 / 15, height: height)
             .frame(width: 16, height: 16)
     }
 }

@@ -11,6 +11,9 @@ struct ClosedWing: View {
     @EnvironmentObject private var privacy: PrivacyMonitor
     @EnvironmentObject private var focus: FocusMonitor
     @EnvironmentObject private var bluetooth: BluetoothMonitor
+    @EnvironmentObject private var network: NetworkMonitor
+    @EnvironmentObject private var volume: VolumeMonitor
+    @EnvironmentObject private var battery: BatteryMonitor
     @EnvironmentObject private var plugins: PluginRegistry
 
     /// The ZStack keeps the wing a real, framed view even when it has nothing to show.
@@ -51,6 +54,14 @@ struct ClosedWing: View {
                     AudioBars(isPlaying: nowPlaying.isPlaying, colors: track.barColors)
                 }
             }
+        case .wifi:
+            WiFiBadge(link: network.link, signal: network.signal)
+        case .bluetooth:
+            if layout.bluetoothOn { BluetoothBadge(connected: !bluetooth.connected.isEmpty) }
+        case .volume:
+            VolumeBadge(level: volume.level, muted: volume.isMuted)
+        case .battery:
+            if layout.hasBattery { BatteryBadge(snapshot: battery.snapshot) }
         case .plugin(let id):
             if let plugin = plugins.plugin(id) { PluginWing(plugin: plugin) }
         }

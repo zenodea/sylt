@@ -4,6 +4,18 @@ import XCTest
 final class WingLayoutTests: XCTestCase {
     private let plugins = [WingPlugin(id: "agents", side: .left), WingPlugin(id: "weather", side: .right)]
 
+    func testMenuBarItemsStayHiddenUntilPlaced() {
+        let natural = WingLayout().resolve(plugins: [])
+        XCTAssertFalse((natural.left + natural.right).contains { WingItem.menuBar.contains($0) })
+        XCTAssertEqual(WingLayout().monitorsNeeded, [])
+        var layout = WingLayout()
+        layout.move(.battery, to: .right, plugins: [])
+        layout.move(.wifi, to: .left, plugins: [])
+        XCTAssertEqual(layout.resolve(plugins: []).right.last, .battery)
+        XCTAssertEqual(layout.resolve(plugins: []).left.last, .wifi)
+        XCTAssertEqual(layout.monitorsNeeded, [.battery, .network])
+    }
+
     func testUntouchedLayoutIsNatural() {
         let wings = WingLayout().resolve(plugins: plugins)
         XCTAssertEqual(wings.left, [.calendar, .plugin("agents")])

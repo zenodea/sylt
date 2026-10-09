@@ -7,6 +7,8 @@ struct PlayerSnapshot: Sendable {
     var duration: TimeInterval?
     var position: TimeInterval
     var isPlaying: Bool
+    /// The app's own volume, 0 to 1.
+    var volume: Double?
 
     init?(descriptor: NSAppleEventDescriptor) {
         guard descriptor.numberOfItems >= 6,
@@ -19,5 +21,6 @@ struct PlayerSnapshot: Sendable {
         duration = seconds > 0 ? seconds : nil
         position = descriptor.atIndex(5)?.doubleValue ?? 0
         isPlaying = descriptor.atIndex(6)?.stringValue == "playing"
+        volume = descriptor.atIndex(7).map { Double($0.int32Value) / 100 }
     }
 }

@@ -27,14 +27,13 @@ final class FullscreenMonitor: ObservableObject {
         observers = []
     }
 
+    /// The front window says whether it is full screen. Without Accessibility, a window
+    /// filling the screen's width and everything below the notch counts instead.
     private func refresh() {
+        if let answer = frontWindowIsFullscreen() { isFullscreen = answer; return }
         guard let screen = NotchGeometry.preferredScreen() else { return }
-        let bounds = CGRect(
-            x: screen.frame.minX,
-            y: NSScreen.screens[0].frame.maxY - screen.frame.maxY,
-            width: screen.frame.width,
-            height: screen.frame.height
-        )
+        let top = NSScreen.screens[0].frame.maxY - screen.frame.maxY
+        let inset = screen.safeAreaInsets.top
         let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
             as? [[String: Any]] ?? []
         isFullscreen = windows.contains { window in
@@ -42,7 +41,18 @@ final class FullscreenMonitor: ObservableObject {
                   let frame = window["kCGWindowBounds"] as? [String: CGFloat]
             else { return false }
             let rect = CGRect(x: frame["X"] ?? 0, y: frame["Y"] ?? 0, width: frame["Width"] ?? 0, height: frame["Height"] ?? 0)
-            return rect == bounds
+            return rect.minX == screen.frame.minX && rect.width == screen.frame.width
+                && rect.minY <= top + inset && rect.height >= screen.frame.height - inset
         }
+    }
+
+    private func frontWindowIsFullscreen() -> Bool? {
+        guard AXIsProcessTrusted(), let app = NSWorkspace.shared.frontmostApplication else { return nil }
+        let element = AXUIElementCreateApplication(app.processIdentifier)
+        var window: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXFocusedWindowAttribute as CFString, &window) == .success, let window else { return nil }
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(window as! AXUIElement, "AXFullScreen" as CFString, &value) == .success else { return nil }
+        return value as? Bool
     }
 }

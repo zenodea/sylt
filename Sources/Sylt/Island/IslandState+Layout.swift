@@ -9,19 +9,31 @@ extension IslandState {
         layout.screenWidth = geometry.screen.frame.width
     }
 
-    /// Turn the expanded view's page; `delta` is +1 for the next page, -1 for the previous.
+    /// Turn the expanded view by one spread of pages; `delta` is +1 for the next, -1 for the previous.
     func turnPage(_ delta: Int) {
-        let count = layout.expandedPages.count
+        let count = layout.spreadCount
         guard count > 1 else { return }
-        let next = (layout.expandedPage + delta + count) % count
+        let next = (layout.currentSpread + delta + count) % count
         pageDirection = delta
-        withAnimation(IslandAnimation.expand) { layout.expandedPage = next }
+        withAnimation(IslandAnimation.expand) { layout.expandedPage = next * layout.columns }
         Haptics.press()
     }
 
     func bindLayout() {
+        preferences.$notchDepth
+            .sink { [weak self] in self?.layout.notchDepth = CGFloat($0) }
+            .store(in: &cancellables)
         fullscreen.$isFullscreen
             .sink { [weak self] in self?.layout.isFullscreen = $0 }
+            .store(in: &cancellables)
+        preferences.$spreadsPages
+            .sink { [weak self] in self?.layout.spreadsPages = $0 }
+            .store(in: &cancellables)
+        battery.$snapshot
+            .sink { [weak self] in self?.layout.hasBattery = $0.hasBattery }
+            .store(in: &cancellables)
+        bluetooth.$isOn
+            .sink { [weak self] in self?.layout.bluetoothOn = $0 }
             .store(in: &cancellables)
 
         nowPlaying.$track

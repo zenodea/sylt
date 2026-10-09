@@ -1,6 +1,6 @@
 extension ScriptedPlayer {
     enum Command {
-        case playPause, next, previous, seek(Double)
+        case playPause, next, previous, seek(Double), volume(Double)
     }
 
     func script(for command: Command) -> String {
@@ -10,6 +10,7 @@ extension ScriptedPlayer {
         case .next: verb = "next track"
         case .previous: verb = "previous track"
         case .seek(let seconds): verb = "set player position to \(seconds)"
+        case .volume(let level): verb = "set sound volume to \(Int((level * 100).rounded()))"
         }
         return "tell application id \"\(rawValue)\" to \(verb)"
     }

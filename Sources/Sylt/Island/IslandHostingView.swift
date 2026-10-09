@@ -8,15 +8,10 @@ final class IslandHostingView: NSHostingView<IslandView> {
     private var swipe = CGVector.zero
     /// Set once a swipe has been acted on, so one gesture triggers one action.
     private var swipeFired = false
-    /// Over a scrolling list the gesture is the list's first: only a long hard flick
-    /// closes the island or turns the page.
+    /// Over a scrolling list the gesture is the list's first.
     private var overList = false
-    private var upwardTravel: CGFloat = 0
-    private var peakUpward: CGFloat = 0
     private var sidewaysTravel: CGFloat = 0
     private var peakSideways: CGFloat = 0
-    private static let hardTravel: CGFloat = 120
-    private static let hardFlick: CGFloat = 20
     /// Over a list the island doesn't lean until the sideways travel is clearly a swipe.
     private static let intentTravel: CGFloat = 18
 
@@ -31,8 +26,6 @@ final class IslandHostingView: NSHostingView<IslandView> {
         case .began:
             swipe = .zero
             swipeFired = false
-            upwardTravel = 0
-            peakUpward = 0
             sidewaysTravel = 0
             peakSideways = 0
             overList = isOverList(event)
@@ -42,11 +35,13 @@ final class IslandHostingView: NSHostingView<IslandView> {
             let dx = event.scrollingDeltaX * sign
             swipe.dx = Self.clamp(swipe.dx + dx)
             swipe.dy = Self.clamp(swipe.dy + dy)
-            if dy < 0 { upwardTravel -= dy; peakUpward = max(peakUpward, -dy) }
             sidewaysTravel += abs(dx)
             peakSideways = max(peakSideways, abs(dx))
-            if !overList || sidewaysTravel >= Self.intentTravel || upwardTravel >= Self.hardTravel {
+            // Over a list the island never leans with the scroll; only a clear sideways swipe moves it.
+            if !overList {
                 state.swipeMoved(swipe)
+            } else if sidewaysTravel >= Self.intentTravel {
+                state.swipeMoved(CGVector(dx: swipe.dx, dy: 0))
             }
             // Acted on while the fingers are still down: the only time the trackpad can tap back.
             if !swipeFired, let direction = SwipeDirection(vector: swipe), allows(direction) {
@@ -64,10 +59,14 @@ final class IslandHostingView: NSHostingView<IslandView> {
         return state.mode == .expanded && abs(swipe.dx) > abs(swipe.dy)
     }
 
-    /// Over a list, closing needs a long hard flick upward; everything else swipes as usual.
+    /// A scroll over a list is the list's: it never closes the island. Sideways swipes
+    /// still turn the page once they're clearly meant; anything off a list swipes as usual.
     private func allows(_ direction: SwipeDirection) -> Bool {
-        guard direction == .up, overList, state?.mode == .expanded else { return true }
-        return upwardTravel >= Self.hardTravel && peakUpward >= Self.hardFlick
+        guard overList, state?.mode == .expanded else { return true }
+        switch direction {
+        case .up, .down: return false
+        case .left, .right: return sidewaysTravel >= Self.intentTravel
+        }
     }
 
     private func isOverList(_ event: NSEvent) -> Bool {

@@ -82,6 +82,14 @@ struct IslandPreview: View {
                     ForEach([6, 12, 8, 14], id: \.self) { height in Capsule().fill(.pink).frame(width: 3, height: CGFloat(height)) }
                 }
             }
+        case .wifi:
+            Image(systemName: "wifi").font(label).foregroundStyle(.white)
+        case .bluetooth:
+            RuneMark(color: .white, lineWidth: 1.6, height: 12)
+        case .volume:
+            Image(systemName: "speaker.wave.2.fill").font(label).foregroundStyle(.white)
+        case .battery:
+            HStack(spacing: 3) { Text("84%"); Image(systemName: "battery.75percent") }.font(label).foregroundStyle(.white)
         case .plugin(let id):
             pluginSample(id, symbol: symbol(item), font: label)
         }

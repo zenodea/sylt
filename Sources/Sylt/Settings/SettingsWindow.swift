@@ -5,7 +5,7 @@ import SwiftUI
 final class SettingsWindow {
     private let window: NSWindow
 
-    init(preferences: Preferences, mediaKeys: MediaKeyInterceptor, plugins: PluginRegistry) {
+    init(preferences: Preferences, mediaKeys: MediaKeyInterceptor, plugins: PluginRegistry, divider: MenuBarDivider) {
         window = NSWindow(
             contentRect: .zero,
             styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
@@ -17,7 +17,7 @@ final class SettingsWindow {
         window.titleVisibility = .hidden
         window.toolbarStyle = .unified
         window.isReleasedWhenClosed = false
-        let controller = NSHostingController(rootView: SettingsView(preferences: preferences, mediaKeys: mediaKeys, plugins: plugins))
+        let controller = NSHostingController(rootView: SettingsView(preferences: preferences, mediaKeys: mediaKeys, plugins: plugins, divider: divider))
         window.contentViewController = controller
         window.setContentSize(NSSize(width: 920, height: 680))
         window.center()

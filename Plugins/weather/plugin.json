@@ -5,6 +5,7 @@
   "description": "Current conditions where the Mac is, from Open-Meteo.",
   "symbol": "cloud.sun.fill",
   "run": "weather.py",
+  "opens": "com.apple.weather",
   "interval": 1800,
   "settings": [
     { "key": "units", "title": "Units", "type": "choice", "options": ["celsius", "fahrenheit"], "default": "celsius" }

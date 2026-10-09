@@ -5,7 +5,7 @@ struct StatusDot: View {
     var size: CGFloat = 6
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30, paused: !working)) { context in
+        TimelineView(.animation(minimumInterval: 1 / 24, paused: !working)) { context in
             let t = context.date.timeIntervalSinceReferenceDate
             let pulse = working ? (sin(t * 2 * .pi / 1.6) + 1) / 2 : 0
             Circle()

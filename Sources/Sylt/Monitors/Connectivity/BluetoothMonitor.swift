@@ -27,12 +27,14 @@ final class BluetoothMonitor: NSObject, ObservableObject {
     let lowBattery = PassthroughSubject<Device, Never>()
     /// Audio devices first.
     @Published private(set) var connected: [Device] = []
+    @Published private(set) var isOn = false
 
     var headphones: Device? { connected.first { $0.isAudio && $0.battery != nil } }
 
     private var connectNotification: IOBluetoothUserNotification?
     private var disconnectNotifications: [String: IOBluetoothUserNotification] = [:]
     private var refresh: Timer?
+    private var power: Timer?
     private var warned: [String: Int] = [:]
 
     func start() {
@@ -43,6 +45,12 @@ final class BluetoothMonitor: NSObject, ObservableObject {
             Task { @MainActor in await track(device) }
         }
         refresh = .every(5 * 60) { [weak self] in Task { await self?.refreshBatteries() } }
+        readPower()
+        power = .every(20) { [weak self] in self?.readPower() }
+    }
+
+    private func readPower() {
+        isOn = IOBluetoothHostController.default()?.powerState == kBluetoothHCIPowerStateON
     }
 
     func stop() {
@@ -52,7 +60,10 @@ final class BluetoothMonitor: NSObject, ObservableObject {
         disconnectNotifications = [:]
         refresh?.invalidate()
         refresh = nil
+        power?.invalidate()
+        power = nil
         connected = []
+        isOn = false
     }
 
     @objc private func connected(_ notification: IOBluetoothUserNotification, device: IOBluetoothDevice) {

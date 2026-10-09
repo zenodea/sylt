@@ -3,9 +3,12 @@ import Foundation
 /// One thing a closed wing can show.
 enum WingItem: Hashable, Codable {
     case calendar, privacy, focus, headphones, music
+    case wifi, bluetooth, volume, battery
     case plugin(String)
 
-    static let builtIn: [WingItem] = [.calendar, .privacy, .focus, .headphones, .music]
+    static let builtIn: [WingItem] = [.calendar, .privacy, .focus, .headphones, .music] + menuBar
+    /// What the menu bar shows. Hidden until placed, so the island can stand in for it.
+    static let menuBar: [WingItem] = [.wifi, .bluetooth, .volume, .battery]
 
     var id: String {
         switch self {
@@ -14,6 +17,10 @@ enum WingItem: Hashable, Codable {
         case .focus: "focus"
         case .headphones: "headphones"
         case .music: "music"
+        case .wifi: "wifi"
+        case .bluetooth: "bluetooth"
+        case .volume: "volume"
+        case .battery: "battery"
         case .plugin(let id): "plugin:\(id)"
         }
     }
@@ -31,6 +38,10 @@ enum WingItem: Hashable, Codable {
         case .focus: "Focus"
         case .headphones: "Headphones"
         case .music: "Now playing"
+        case .wifi: "Wi-Fi"
+        case .bluetooth: "Bluetooth"
+        case .volume: "Volume"
+        case .battery: "Battery"
         case .plugin(let id): id
         }
     }
@@ -42,7 +53,22 @@ enum WingItem: Hashable, Codable {
         case .focus: "moon.fill"
         case .headphones: "headphones"
         case .music: "music.note"
+        case .wifi: "wifi"
+        case .bluetooth: "dot.radiowaves.right"
+        case .volume: "speaker.wave.2.fill"
+        case .battery: "battery.75percent"
         case .plugin: "puzzlepiece.extension.fill"
+        }
+    }
+
+    /// The monitor a placed menu bar item keeps running, whatever its plugin toggle says.
+    var monitorPlugin: Plugin? {
+        switch self {
+        case .wifi: .network
+        case .bluetooth: .bluetooth
+        case .volume: .volume
+        case .battery: .battery
+        default: nil
         }
     }
 
@@ -138,7 +164,12 @@ struct WingLayout: Codable, Equatable {
         return ResolvedWings(left: items(left, then: natural.left), right: items(right, then: natural.right), gaps: gaps)
     }
 
-    /// Every item the layout can place, in natural order, for the designer.
+    /// The core monitors the placed menu bar items need.
+    var monitorsNeeded: Set<Plugin> {
+        Set((left + right).compactMap(WingItem.init(id:)).compactMap(\.monitorPlugin))
+    }
+
+    /// Every item the layout places on its own, in natural order, for the designer.
     static func natural(plugins: [WingPlugin]) -> ResolvedWings {
         let leftPlugins = plugins.filter { $0.side == .left }.map { WingItem.plugin($0.id) }
         let rightPlugins = plugins.filter { $0.side == .right }.map { WingItem.plugin($0.id) }

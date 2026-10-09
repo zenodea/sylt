@@ -57,7 +57,8 @@ final class IslandState: ObservableObject {
     /// How far the island's edge reaches into a swipe, per unit of pull.
     private static let swipeLeanWidth: CGFloat = 14
     private static let swipeLeanHeight: CGFloat = 10
-    private static let swipeLeanShift: CGFloat = 7
+    /// Less than the side overlap, so a lean never uncovers an edge of the notch.
+    private static let swipeLeanShift: CGFloat = 5
 
     init(preferences: Preferences, pluginStore: PluginStore? = nil) {
         self.preferences = preferences
@@ -72,7 +73,8 @@ final class IslandState: ObservableObject {
         bindLayout()
         bindPlugins()
         preferences.$enabledPlugins
-            .sink { [weak self] in self?.applyPlugins($0) }
+            .combineLatest(preferences.$wingLayout)
+            .sink { [weak self] enabled, wings in self?.applyPlugins(enabled.union(wings.monitorsNeeded)) }
             .store(in: &cancellables)
     }
 

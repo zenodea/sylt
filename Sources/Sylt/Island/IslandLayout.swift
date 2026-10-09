@@ -13,6 +13,8 @@ struct IslandLayout: Equatable {
     var privacyDots = 0
     var showsFocus = false
     var showsHeadphones = false
+    var hasBattery = true
+    var bluetoothOn = false
     /// The locked island keeps the closed wings beside the padlock and the time.
     var lockShowsStatus = false
     /// Which items each closed wing shows, in order, and how wide each plugin's badge is.
@@ -22,8 +24,13 @@ struct IslandLayout: Equatable {
     /// The expanded view's pages, each a few sections, and which one is open.
     var expandedPages: [[ExpandedSection]] = []
     var expandedPage = 0
+    /// Pages sit side by side when the screen has room, from Settings.
+    var spreadsPages = false
 
     static let expandedWidth: CGFloat = 440
+    /// Room to leave either side of a spread, so it never crowds the screen's corners.
+    static let spreadMargin: CGFloat = 120
+    static let maxColumns = 3
     static let expandedBaseHeight: CGFloat = 60
     static let emptyExpandedHeight: CGFloat = 36
     static let mediaCardHeight: CGFloat = 138
@@ -45,7 +52,12 @@ struct IslandLayout: Equatable {
     static let hoverGrowth = CGSize(width: 14, height: 6)
     /// The hardware notch runs a little deeper and wider than the area macOS reports; the
     /// island always covers it with room to spare, so its rounded corners begin on screen.
-    static let notchOverlap: CGFloat = 4
+    /// How far the island reaches below the notch on the desktop, from Settings.
+    var notchDepth: CGFloat = 0
+
+    /// In a full-screen app the menu bar is the only thing at the top, so the island
+    /// matches it exactly whatever the setting.
+    var overlap: CGFloat { isFullscreen ? 0 : notchDepth }
     static let sideOverlap: CGFloat = 6
     /// The canvas leaves room for this many full plugin sections, plus some slack.
     private static let canvasPluginSections = 6
@@ -82,6 +94,10 @@ struct IslandLayout: Equatable {
         case .focus: [showsFocus ? ClosedWing.focusWidth : 0]
         case .headphones: [showsHeadphones ? HeadphonesBadge.width : 0]
         case .music: [showsArtwork ? artworkSize : 0, showsAudioBars ? AudioBars.width : 0]
+        case .wifi: [WiFiBadge.width]
+        case .bluetooth: [bluetoothOn ? BluetoothBadge.width : 0]
+        case .volume: [VolumeBadge.width]
+        case .battery: [hasBattery ? BatteryBadge.width : 0]
         case .plugin(let id): [pluginWidths[id] ?? 0]
         }
     }
@@ -97,15 +113,31 @@ struct IslandLayout: Equatable {
         return sections
     }
 
-    /// The sections on the open page.
-    var currentPageSections: [ExpandedSection] {
-        guard !expandedPages.isEmpty else { return [] }
-        return expandedPages[min(max(expandedPage, 0), expandedPages.count - 1)]
+    /// Pages shown side by side: as many as fit with room to spare, up to three, when spreading is on.
+    var columns: Int {
+        guard spreadsPages else { return 1 }
+        let fit = Int((screenWidth - Self.spreadMargin * 2) / Self.expandedWidth)
+        return max(1, min(Self.maxColumns, fit, expandedPages.count))
     }
 
-    /// Heights of the open page's sections.
-    var expandedSections: [CGFloat] {
-        currentPageSections.map(height(of:))
+    /// How many turns it takes to see every page.
+    var spreadCount: Int {
+        (expandedPages.count + columns - 1) / columns
+    }
+
+    var currentSpread: Int {
+        min(max(expandedPage, 0), max(0, expandedPages.count - 1)) / columns
+    }
+
+    /// The pages open right now, left to right.
+    var currentSpreadPages: [[ExpandedSection]] {
+        let start = currentSpread * columns
+        guard start < expandedPages.count else { return [] }
+        return Array(expandedPages[start ..< min(start + columns, expandedPages.count)])
+    }
+
+    var expandedWidth: CGFloat {
+        Self.expandedWidth * CGFloat(columns)
     }
 
     func height(of section: ExpandedSection) -> CGFloat {
@@ -120,7 +152,7 @@ struct IslandLayout: Equatable {
     var expandedHeight: CGFloat {
         let tallest = expandedPages.map { page in page.map(height(of:)) }.map(Self.stackHeight).max()
         guard let tallest else { return Self.expandedBaseHeight + Self.emptyExpandedHeight }
-        let dots: CGFloat = expandedPages.count > 1 ? Self.pageDotsHeight : 0
+        let dots: CGFloat = spreadCount > 1 ? Self.pageDotsHeight : 0
         return Self.expandedBaseHeight + tallest + dots
     }
 
@@ -173,7 +205,7 @@ struct IslandLayout: Equatable {
                 IslandFrame(size: CGSize(width: notchWidth + Self.cardWings, height: Self.hudHeight), centerOffset: 0)
             }
         case .expanded:
-            IslandFrame(size: CGSize(width: Self.expandedWidth, height: expandedHeight), centerOffset: 0)
+            IslandFrame(size: CGSize(width: expandedWidth, height: expandedHeight), centerOffset: 0)
         }
     }
 
@@ -196,7 +228,7 @@ struct IslandLayout: Equatable {
     /// The notch with a wing either side, at notch height unless a row opens underneath.
     private func wingsFrame(leading: CGFloat, trailing: CGFloat, below extraHeight: CGFloat = 0) -> IslandFrame {
         IslandFrame(
-            size: CGSize(width: notchWidth + Self.sideOverlap * 2 + leading + trailing, height: notchHeight + Self.notchOverlap + extraHeight),
+            size: CGSize(width: notchWidth + Self.sideOverlap * 2 + leading + trailing, height: notchHeight + overlap + extraHeight),
             centerOffset: (trailing - leading) / 2
         )
     }

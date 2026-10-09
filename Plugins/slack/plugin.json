@@ -5,6 +5,7 @@
   "description": "Unread mentions from Slack's badge, with a flash when new ones arrive. Needs no token.",
   "symbol": "number",
   "run": "slack.py",
+  "opens": "com.tinyspeck.slackmacgap",
   "side": "right",
   "settings": [
     { "key": "announce", "title": "Flash when new mentions arrive", "type": "bool", "default": true },

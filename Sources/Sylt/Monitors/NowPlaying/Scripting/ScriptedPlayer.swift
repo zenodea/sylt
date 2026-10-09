@@ -11,7 +11,7 @@ enum ScriptedPlayer: String, CaseIterable {
             tell application id "com.spotify.client"
                 if player state is stopped then return {}
                 set t to current track
-                return {name of t, artist of t, album of t, (duration of t) / 1000, player position, player state as string}
+                return {name of t, artist of t, album of t, (duration of t) / 1000, player position, player state as string, sound volume}
             end tell
             """
         case .music:
@@ -19,7 +19,7 @@ enum ScriptedPlayer: String, CaseIterable {
             tell application id "com.apple.Music"
                 if player state is stopped then return {}
                 set t to current track
-                return {name of t, artist of t, album of t, duration of t, player position, player state as string}
+                return {name of t, artist of t, album of t, duration of t, player position, player state as string, sound volume}
             end tell
             """
         }

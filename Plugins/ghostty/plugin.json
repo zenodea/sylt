@@ -5,6 +5,7 @@
   "description": "A quick terminal from the island: Ghostty's quick terminal if you have a keybind for it, else a new window.",
   "symbol": "terminal",
   "run": "ghostty.py",
+  "opens": "com.mitchellh.ghostty",
   "side": "right",
   "enabledByDefault": false,
   "settings": [

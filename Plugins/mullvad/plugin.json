@@ -5,6 +5,7 @@
   "description": "Whether the VPN is on and where you come out, with a flash when it changes.",
   "symbol": "lock.shield.fill",
   "run": "mullvad.py",
+  "opens": "net.mullvad.vpn",
   "side": "right",
   "enabledByDefault": false,
   "settings": [

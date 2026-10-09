@@ -18,7 +18,7 @@ struct LayoutPane: View {
     private var hidden: [WingItem] {
         let natural = WingLayout.natural(plugins: wingPlugins)
         let shown = Set(resolved.left + resolved.right)
-        return (natural.left + natural.right).filter { !shown.contains($0) }
+        return (natural.left + natural.right + WingItem.menuBar).filter { !shown.contains($0) }
     }
 
     private var wingColumns: [(WingColumn, [WingItem])] {

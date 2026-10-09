@@ -9,6 +9,7 @@ RANK = {"working": 0, "done": 1, "waiting": 2}
 lock = threading.Lock()
 agents = []
 since = {}
+settings = {"shown": 3}
 store = None
 
 def emit(message):
@@ -57,7 +58,7 @@ def publish():
         changed = since.get(a["id"])
         rows.append(dict(glyph(a["agent"]), id=a["id"], title=a["title"], status=a["status"], highlighted=a["focused"],
                          trailing=None if a["status"] == "working" or changed is None else elapsed(now - changed)))
-    emit({"wing": {"side": "left", "items": [dict(glyph(a["agent"]), status=a["status"]) for a in agents[:3]], "spacing": 3}})
+    emit({"wing": {"side": "left", "items": [dict(glyph(a["agent"]), status=a["status"]) for a in agents[:settings["shown"]]], "spacing": 3}})
     if not rows:
         emit({"clearSection": True})
         return
@@ -100,12 +101,18 @@ def refresh():
         agents = found
         publish()
 
+def apply_settings(values):
+    try: settings["shown"] = max(0, int(values.get("shown", 3) or 0))
+    except (TypeError, ValueError): pass
+
 def handle(event):
     kind = event.get("event")
-    if kind == "start":
-        load_since(event.get("dataDir"))
-    elif kind == "click":
-        target = event.get("row", "")
+    if kind in ("start", "settings"):
+        apply_settings(event.get("settings") or {})
+        if kind == "start": load_since(event.get("dataDir"))
+        else: publish()
+    elif kind == "click" and event.get("row"):
+        target = event["row"]
         if target.startswith("pid:"):
             emit({"activate": {"pid": int(target[4:])}})
         elif HERDR:

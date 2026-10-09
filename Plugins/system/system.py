@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """System load: CPU from top, memory from vm_stat, GPU from the accelerator's own counter, as sparklines."""
-import json, os, re, subprocess, sys, threading, time
+import ctypes, ctypes.util, json, os, re, subprocess, sys, threading, time
 
 SAMPLES = 24
 lock = threading.Lock()
@@ -24,9 +24,25 @@ def run(args, timeout=5):
     except (OSError, subprocess.SubprocessError):
         return ""
 
+libc = ctypes.CDLL(ctypes.util.find_library("c"))
+libc.mach_host_self.restype = ctypes.c_uint32
+
+class CPUTicks(ctypes.Structure):
+    _fields_ = [("ticks", ctypes.c_uint32 * 4)]  # user, system, idle, nice
+
+last_ticks = None
+
 def cpu():
-    match = re.findall(r"CPU usage: ([\d.]+)% user, ([\d.]+)% sys", run(["/usr/bin/top", "-l", "2", "-n", "0", "-s", "1"], timeout=8))
-    return (float(match[-1][0]) + float(match[-1][1])) / 100 if match else None
+    """Busy share since the last call, from the kernel's own counters: no process to spawn."""
+    global last_ticks
+    info, count = CPUTicks(), ctypes.c_uint32(4)
+    if libc.host_statistics(libc.mach_host_self(), 3, ctypes.byref(info), ctypes.byref(count)) != 0: return None
+    ticks = list(info.ticks)
+    previous, last_ticks = last_ticks, ticks
+    if previous is None: return None
+    delta = [b - a for a, b in zip(previous, ticks)]
+    total = sum(delta)
+    return (delta[0] + delta[1] + delta[3]) / total if total else None
 
 def memory():
     global memory_text

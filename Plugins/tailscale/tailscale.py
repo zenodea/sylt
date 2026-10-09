@@ -56,7 +56,7 @@ def publish():
         emit({"section": {"rows": [dict(ICON, id="open", title="Tailscale not running")], "buttons": [{"id": "up", "title": "Connect"}]}})
         return
     if state["up"]:
-        items = [dict(ICON, text=state["exit"]) if state["exit"] else dict(ICON)]
+        items = [{"symbol": SYMBOL, "tint": "green", "text": state["exit"] or None}]
     else:
         items = [{"symbol": SYMBOL, "tint": "dim"}] if settings["showWhenOff"] else []
     emit({"wing": {"side": "right", "items": items, "spacing": 5}})

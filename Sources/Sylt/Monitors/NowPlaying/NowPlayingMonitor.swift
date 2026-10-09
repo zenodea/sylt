@@ -7,6 +7,9 @@ final class NowPlayingMonitor: ObservableObject {
     @Published private(set) var track: NowPlayingTrack?
     @Published private(set) var isPlaying = false
     @Published private(set) var position = PlaybackPosition.idle
+    /// The playing app's own volume when it has one (Spotify, Music); nil means the system's.
+    @Published private(set) var playerVolume: Double?
+    private var playerVolumeSetAt: CFTimeInterval = 0
     let trackChanges = PassthroughSubject<Void, Never>()
     let playbackResumed = PassthroughSubject<Void, Never>()
     /// Apps that could be shown right now: whatever macOS reports as playing, plus any
@@ -59,6 +62,15 @@ final class NowPlayingMonitor: ObservableObject {
         }
     }
 
+    /// Set the app's own volume; its next report is ignored if it still carries the old level.
+    func setPlayerVolume(_ level: Double) {
+        guard let player = scripted.player else { return }
+        let clamped = min(max(level, 0), 1)
+        playerVolume = clamped
+        playerVolumeSetAt = CACurrentMediaTime()
+        Task { await AppleScript.string(player.script(for: .volume(clamped))) }
+    }
+
     func seek(to seconds: TimeInterval) {
         position = PlaybackPosition(elapsed: seconds, rate: isPlaying ? 1 : 0, timestamp: .now)
         seekedAt = CACurrentMediaTime()
@@ -85,6 +97,7 @@ final class NowPlayingMonitor: ObservableObject {
         }
         lastPayload = payload
         refreshSources()
+        if scripted.player == nil || payload.bundle != scripted.player?.rawValue, playerVolume != nil, pinnedSource == nil { playerVolume = nil }
         if let pinned = pinnedSource, payload.bundle != pinned.rawValue { return }
         if let player = payload.bundle.flatMap(ScriptedPlayer.init(rawValue:)) {
             scripted.start(player)
@@ -130,6 +143,7 @@ final class NowPlayingMonitor: ObservableObject {
         }
         if snapshot.isPlaying, !isPlaying, track != nil { playbackResumed.send() }
         isPlaying = snapshot.isPlaying
+        if CACurrentMediaTime() - playerVolumeSetAt > 1.5, snapshot.volume != playerVolume { playerVolume = snapshot.volume }
         let reported = PlaybackPosition(elapsed: snapshot.position, rate: snapshot.isPlaying ? 1 : 0, timestamp: .now)
         if !isStale(reported) { position = reported }
 

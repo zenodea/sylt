@@ -8,7 +8,7 @@ struct CursorPull: ViewModifier {
     func body(content: Content) -> some View {
         let pull = enabled ? cursor : .zero
         content
-            .scaleEffect(x: 1 + abs(pull.x) * 0.015, y: 1 + pull.y * 0.06, anchor: .top)
+            .scaleEffect(x: 1 + abs(pull.x) * 0.015, y: 1 + max(0, pull.y) * 0.06, anchor: .top)
             .animation(IslandAnimation.cursor, value: pull)
     }
 }

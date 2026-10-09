@@ -33,7 +33,7 @@ final class ExpandedLayoutTests: XCTestCase {
         let first = layout.expandedHeight
         layout.expandedPage = 1
         XCTAssertEqual(layout.expandedHeight, first)
-        XCTAssertEqual(layout.expandedSections, [50])
+        XCTAssertEqual(layout.currentSpreadPages, [[.plugin("b")]])
         XCTAssertEqual(first, IslandLayout.expandedBaseHeight + 138 + IslandLayout.sectionGap + 40 + IslandLayout.pageDotsHeight)
     }
 

@@ -22,9 +22,9 @@ extension IslandState {
             Haptics.expand()
         case .up where mode == .expanded:
             collapse()
-        case .left where mode == .expanded && layout.expandedPages.count > 1:
+        case .left where mode == .expanded && layout.spreadCount > 1:
             turnPage(1)
-        case .right where mode == .expanded && layout.expandedPages.count > 1:
+        case .right where mode == .expanded && layout.spreadCount > 1:
             turnPage(-1)
         case .left where nowPlaying.track != nil:
             changeTrack(nowPlaying.next, flashing: CGVector(dx: -1, dy: 0))

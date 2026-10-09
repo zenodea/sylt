@@ -5,6 +5,7 @@
   "description": "Bytes in and out as two small graphs, with the current rate.",
   "symbol": "arrow.up.arrow.down",
   "run": "traffic.py",
+  "opens": "com.apple.ActivityMonitor",
   "side": "right",
   "enabledByDefault": false,
   "settings": [

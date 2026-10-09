@@ -13,6 +13,10 @@ final class Preferences: ObservableObject {
     @Published var lockShowsStatus: Bool
     @Published var absorbsPointer: Bool
     @Published var approachGlow: Bool
+    @Published var notchDepth: Double
+    @Published var spreadsPages: Bool
+    @Published var hidesMenuBarItems: Bool
+    @Published var revealsMenuBarItems: Bool
     @Published var holdsPointer: Bool
     @Published var releaseForce: Double
     @Published var releaseEffect: ReleaseEffect
@@ -39,6 +43,10 @@ final class Preferences: ObservableObject {
         static let releaseEffect = "releaseEffect"
         static let absorbsPointer = "absorbsPointer"
         static let approachGlow = "approachGlow"
+        static let notchDepth = "notchDepth"
+        static let spreadsPages = "spreadsPages"
+        static let hidesMenuBarItems = "hidesMenuBarItems"
+        static let revealsMenuBarItems = "revealsMenuBarItems"
         static let holdsPointer = "holdsPointer"
         static let releaseForce = "releaseForce"
         static let rippleStrength = "rippleStrength"
@@ -79,6 +87,10 @@ final class Preferences: ObservableObject {
         releaseEffect = ReleaseEffect(rawValue: defaults.string(forKey: Key.releaseEffect) ?? "") ?? .ripple
         absorbsPointer = defaults.value(Key.absorbsPointer, or: true)
         approachGlow = defaults.value(Key.approachGlow, or: true)
+        notchDepth = defaults.value(Key.notchDepth, or: 0)
+        spreadsPages = defaults.value(Key.spreadsPages, or: false)
+        hidesMenuBarItems = defaults.value(Key.hidesMenuBarItems, or: false)
+        revealsMenuBarItems = defaults.value(Key.revealsMenuBarItems, or: true)
         holdsPointer = defaults.value(Key.holdsPointer, or: true)
         releaseForce = defaults.value(Key.releaseForce, or: 1)
         rippleStrength = defaults.value(Key.rippleStrength, or: 1)
@@ -100,6 +112,10 @@ final class Preferences: ObservableObject {
         persist($releaseEffect, as: Key.releaseEffect, \.rawValue)
         persist($absorbsPointer, as: Key.absorbsPointer)
         persist($approachGlow, as: Key.approachGlow)
+        persist($notchDepth, as: Key.notchDepth)
+        persist($spreadsPages, as: Key.spreadsPages)
+        persist($hidesMenuBarItems, as: Key.hidesMenuBarItems)
+        persist($revealsMenuBarItems, as: Key.revealsMenuBarItems)
         persist($holdsPointer, as: Key.holdsPointer)
         persist($releaseForce, as: Key.releaseForce)
         persist($rippleStrength, as: Key.rippleStrength)

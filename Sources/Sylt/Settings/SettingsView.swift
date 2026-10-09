@@ -4,10 +4,11 @@ struct SettingsView: View {
     @ObservedObject var preferences: Preferences
     @ObservedObject var mediaKeys: MediaKeyInterceptor
     @ObservedObject var plugins: PluginRegistry
+    @ObservedObject var divider: MenuBarDivider
     @State private var pane = Pane.general
 
     enum Pane: String, CaseIterable, Identifiable {
-        case general, builtIn, plugins, layout, huds, effects, about
+        case general, builtIn, plugins, layout, menuBar, huds, effects, about
 
         var id: String { rawValue }
 
@@ -17,6 +18,7 @@ struct SettingsView: View {
             case .builtIn: "Built in"
             case .plugins: "Plugins"
             case .layout: "Layout"
+            case .menuBar: "Menu bar"
             case .huds: "Overlays"
             case .effects: "Effects"
             case .about: "About"
@@ -29,6 +31,7 @@ struct SettingsView: View {
             case .builtIn: "square.grid.2x2.fill"
             case .plugins: "puzzlepiece.extension.fill"
             case .layout: "rectangle.split.2x1.fill"
+            case .menuBar: "menubar.rectangle"
             case .huds: "rectangle.topthird.inset.filled"
             case .effects: "sparkles"
             case .about: "info.circle.fill"
@@ -41,6 +44,7 @@ struct SettingsView: View {
             case .builtIn: .blue
             case .plugins: .purple
             case .layout: .teal
+            case .menuBar: .indigo
             case .huds: .orange
             case .effects: .pink
             case .about: .gray
@@ -89,6 +93,7 @@ struct SettingsView: View {
                 case .general: GeneralPane(preferences: preferences, mediaKeys: mediaKeys)
                 case .builtIn: BuiltInPane(preferences: preferences)
                 case .plugins: PluginsPane(plugins: plugins)
+                case .menuBar: MenuBarPane(preferences: preferences, divider: divider)
                 case .huds: OverlaysPane(preferences: preferences)
                 case .effects: EffectsPane(preferences: preferences)
                 default: AboutPane()

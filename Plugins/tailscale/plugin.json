@@ -5,6 +5,7 @@
   "description": "Whether Tailscale is up, the exit node in use, and the peers online.",
   "symbol": "point.3.filled.connected.trianglepath.dotted",
   "run": "tailscale.py",
+  "opens": "io.tailscale.ipn.macos",
   "side": "right",
   "settings": [
     { "key": "announce", "title": "Flash when it connects or disconnects", "type": "bool", "default": true },

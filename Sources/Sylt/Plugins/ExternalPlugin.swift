@@ -83,6 +83,18 @@ final class ExternalPlugin: ObservableObject, Identifiable {
         process?.send(event)
     }
 
+    /// A click on the section's title opens the app the manifest names, or goes to the
+    /// plugin as a click with no row.
+    func headerClicked() {
+        if let bundle = manifest.opens { AppActivation.activate(bundle: bundle) } else { send(PluginEvent(event: "click")) }
+    }
+
+    /// A row click goes to the plugin; a one-shot plugin isn't there to take it, so the
+    /// app the manifest names opens instead.
+    func rowClicked(_ row: String) {
+        if isRunning { send(PluginEvent(event: "click", row: row)) } else if let bundle = manifest.opens { AppActivation.activate(bundle: bundle) }
+    }
+
     func settingsChanged() {
         send(PluginEvent(event: "settings", settings: store.values(for: manifest)))
         if manifest.isOneShot { runOnce() }
@@ -141,9 +153,11 @@ final class ExternalPlugin: ObservableObject, Identifiable {
         else if let name = activation.process { host = ProcessTree.hostApplication(ofProcessNamed: name) }
         else if let bundle = activation.bundle { host = NSRunningApplication.runningApplications(withBundleIdentifier: bundle).first }
         else { host = nil }
-        guard let host else { return }
-        NSApp.yieldActivation(to: host)
-        host.activate()
+        guard let host else {
+            if let bundle = activation.bundle { AppActivation.activate(bundle: bundle) }
+            return
+        }
+        AppActivation.activate(host)
         if let window = activation.window {
             _ = Timer.after(0.3) { WindowRaiser.raise(in: host, titleContaining: window) }
         }

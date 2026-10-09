@@ -12,11 +12,8 @@ struct IslandView: View {
         let size = frame.size
         let canvas = state.canvasSize
         let shape = IslandShape(frame: frame, notchHeight: state.notchHeight)
-        let notch = IslandFrame(size: CGSize(width: state.notchWidth, height: state.notchHeight + IslandLayout.notchOverlap), centerOffset: 0)
 
         ZStack(alignment: .top) {
-            IslandShape(frame: notch, notchHeight: state.notchHeight)
-                .fill(.black)
             ZStack(alignment: .top) {
                 shape.fill(.black)
                     .shadow(
@@ -32,9 +29,9 @@ struct IslandView: View {
                         .id(state.mode.contentIdentity)
                         .transition(IslandAnimation.content)
                     if state.absorbsCursor, state.preferences.showsRimGlow, state.preferences.holdsPointer {
-                        RimGlow(shape: shape, point: state.exitPoint, strength: state.pullStrength, notchWidth: state.notchWidth).fadeTop()
+                        RimGlow(shape: shape, point: state.exitPoint, strength: state.pullStrength).fadeTop()
                     } else if state.approachStrength > 0 {
-                        RimGlow(shape: shape, point: state.approachPoint, strength: state.approachStrength * 0.7, notchWidth: state.notchWidth).fadeTop()
+                        RimGlow(shape: shape, point: state.approachPoint, strength: state.approachStrength * 0.7).fadeTop()
                     }
                     if let burst = state.burst {
                         switch state.preferences.releaseEffect {
@@ -57,7 +54,9 @@ struct IslandView: View {
             .animation(IslandAnimation.value, value: state.layout)
             .contentShape(shape)
             .modifier(CursorPull(cursor: state.cursor, enabled: state.isHovering && state.mode != .expanded))
-            .scaleEffect(y: isPressed ? 0.95 : 1, anchor: .top)
+            // A press swells the island rather than squashing it: anything smaller than its
+            // resting size would show the base beneath, and the notch under that.
+            .scaleEffect(x: isPressed ? 1.02 : 1, y: isPressed ? 1.05 : 1, anchor: .top)
             .modifier(SwipeStretch(pull: state.cursorPull))
             .gesture(pressGesture, including: state.mode == .expanded ? .subviews : .all)
             .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
@@ -83,6 +82,7 @@ struct IslandView: View {
         .environmentObject(state.privacy)
         .environmentObject(state.focus)
         .environmentObject(state.bluetooth)
+        .environmentObject(state.network)
         .environmentObject(state.plugins)
     }
 

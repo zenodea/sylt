@@ -36,7 +36,7 @@ struct LockedView: View {
                 ClosedWing(side: .trailing, layout: layout).padding(.horizontal, IslandLayout.wingPadding)
             }
         }
-        .frame(height: layout.notchHeight + IslandLayout.notchOverlap)
+        .frame(height: layout.notchHeight + layout.overlap)
         .task {
             guard !unlocked else { return }
             closing = true

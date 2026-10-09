@@ -5,6 +5,7 @@
   "description": "Open reminders from the Reminders app. Click one to tick it off.",
   "symbol": "checklist",
   "run": "todos.py",
+  "opens": "com.apple.reminders",
   "side": "left",
   "settings": [
     { "key": "list", "title": "Only this list (blank for all)", "type": "text", "default": "" },
