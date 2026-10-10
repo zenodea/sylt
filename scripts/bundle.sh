@@ -12,6 +12,7 @@ cp Resources/Info.plist "$APP/Contents/"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 cp -R Plugins "$APP/Contents/Resources/Plugins"
 # A stable identity keeps Accessibility and other grants across rebuilds; see scripts/signing-identity.sh.
-IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | grep -o '"Sylt Dev"' | head -1 | tr -d '"')
+# SIGN_IDENTITY=- forces an ad-hoc signature, as release builds use.
+IDENTITY=${SIGN_IDENTITY:-$(security find-identity -v -p codesigning 2>/dev/null | grep -o '"Sylt Dev"' | head -1 | tr -d '"')}
 codesign --force --deep --sign "${IDENTITY:--}" "$APP"
 echo "Built $APP"

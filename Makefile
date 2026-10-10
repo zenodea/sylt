@@ -1,4 +1,4 @@
-.PHONY: build run bundle open test
+.PHONY: build run bundle open test release
 build:
 	swift build
 test:
@@ -11,3 +11,5 @@ open:
 	pkill -x Sylt || true
 	$(MAKE) bundle
 	open build/Sylt.app
+release:
+	scripts/release.sh

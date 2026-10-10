@@ -132,6 +132,14 @@ Plugins run as you. A script without the executable bit runs through the interpr
 
 macOS 14 or later, on a Mac with a notch.
 
+Download `Sylt-<version>.dmg` from [Releases](https://github.com/zenodea/sylt/releases) and drag Sylt into Applications. The app is not notarised, so macOS blocks the first launch: open it once, then choose **Open Anyway** in System Settings › Privacy & Security. Or clear the quarantine flag:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Sylt.app
+```
+
+To build from source instead:
+
 ```sh
 git clone https://github.com/zenodea/sylt.git
 cd sylt
@@ -152,6 +160,7 @@ Right-click the island for Settings. Each permission is asked for the first time
 make build   # debug build
 make test    # unit tests
 make open    # release bundle, relaunch
+make release # ad-hoc signed build/Sylt-<version>.dmg
 ISLAND_PLUGINS=Plugins .build/debug/Sylt   # debug build with the repo's plugins
 ```
 
