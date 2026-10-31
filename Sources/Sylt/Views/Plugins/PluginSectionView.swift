@@ -3,8 +3,8 @@ import UniformTypeIdentifiers
 
 struct PluginSectionView: View {
     @ObservedObject var plugin: ExternalPlugin
-    /// Height the page has spared for this list beyond its first rows.
     var extraHeight: CGFloat = 0
+    @EnvironmentObject private var preferences: Preferences
 
     var body: some View {
         if let section = plugin.section {
@@ -31,7 +31,6 @@ struct PluginSectionView: View {
                 .foregroundStyle(.white.opacity(0.5))
                 .frame(height: PluginSection.headerHeight - 4)
                 if let rows = section.rows, !rows.isEmpty {
-                    // Rows past the first few scroll inside the space those take.
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: PluginSection.rowSpacing) {
                             ForEach(rows) { row in
@@ -60,6 +59,8 @@ struct PluginSectionView: View {
                 }
             }
             .animation(IslandAnimation.value, value: section)
+            .padding(preferences.showsGlassCards ? IslandLayout.glassCardInset : 0)
+            .glassCard(in: RoundedRectangle(cornerRadius: 14, style: .continuous), preferences: preferences)
         }
     }
 
@@ -115,13 +116,12 @@ private struct PluginRowView: View {
                 }
                 Spacer()
                 if let graph = row.graph {
-                    Sparkline(values: graph, tint: Color(tint: row.tint ?? "white")).frame(width: 72, height: 14)
+                    Sparkline(values: graph, tint: Color(tint: row.tint)).frame(width: 72, height: 14)
                 }
                 if let progress = row.progress {
                     LevelBar(value: progress).frame(width: 60)
                 }
                 if let trailing = row.trailing {
-                    // Beside a graph the value keeps a fixed width, so a changing number never shifts the graph.
                     Text(trailing)
                         .contentTransition(.numericText())
                         .font(.system(size: 11))
@@ -130,7 +130,7 @@ private struct PluginRowView: View {
                         .frame(minWidth: row.graph != nil ? Self.trailingWidth : nil, alignment: .trailing)
                 }
                 if let status = row.status {
-                    if status == "working" { WorkingDots() } else { StatusMark(status: status) }
+                    if status == .working { WorkingDots() } else { StatusMark(status: status) }
                 }
                 ForEach(row.buttons ?? []) { item in
                     Button(item.title) { button(item.id) }.buttonStyle(Pill(tint: .white.opacity(0.12)))
@@ -145,7 +145,6 @@ private struct PluginRowView: View {
     }
 }
 
-/// Frames of scrolling lists in the island canvas's coordinate space.
 struct ListFramesKey: PreferenceKey {
     static let space = "canvas"
     static let defaultValue: [CGRect] = []

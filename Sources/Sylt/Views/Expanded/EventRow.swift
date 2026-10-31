@@ -2,6 +2,7 @@ import SwiftUI
 
 struct EventRow: View {
     let event: CalendarMonitor.Event
+    @EnvironmentObject private var preferences: Preferences
 
     var body: some View {
         HStack(spacing: 10) {
@@ -29,7 +30,8 @@ struct EventRow: View {
         }
         .padding(.horizontal, 10)
         .frame(height: IslandLayout.eventRowHeight)
-        .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+        .background(.white.opacity(preferences.showsGlassCards ? 0 : 0.06), in: RoundedRectangle(cornerRadius: 10))
+        .glassCard(in: RoundedRectangle(cornerRadius: 10), preferences: preferences)
         .contentShape(RoundedRectangle(cornerRadius: 10))
         .onTapGesture {
             NSWorkspace.shared.open(URL(string: "ical://ekevent/\(event.id)") ?? URL(fileURLWithPath: "/System/Applications/Calendar.app"))

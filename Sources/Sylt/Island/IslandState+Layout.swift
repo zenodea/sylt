@@ -1,15 +1,14 @@
 import Combine
 import SwiftUI
 
-/// What the monitors, the plugins and the user's layout choices do to the island's shape.
 extension IslandState {
     func apply(_ geometry: NotchGeometry) {
         layout.notchWidth = geometry.notchWidth
         layout.notchHeight = geometry.notchHeight
+        layout.menuBarOverhang = geometry.menuBarOverhang
         layout.screenWidth = geometry.screen.frame.width
     }
 
-    /// Turn the expanded view by one spread of pages; `delta` is +1 for the next, -1 for the previous.
     func turnPage(_ delta: Int) {
         let count = layout.spreadCount
         guard count > 1 else { return }
@@ -28,6 +27,9 @@ extension IslandState {
             .store(in: &cancellables)
         preferences.$spreadsPages
             .sink { [weak self] in self?.layout.spreadsPages = $0 }
+            .store(in: &cancellables)
+        preferences.$glassCards
+            .sink { [weak self] in self?.layout.glassCards = $0 && GlassCard.isAvailable }
             .store(in: &cancellables)
         battery.$snapshot
             .sink { [weak self] in self?.layout.hasBattery = $0.hasBattery }
@@ -66,7 +68,6 @@ extension IslandState {
             .store(in: &cancellables)
     }
 
-    /// Plugin wings and sections feed the layout; a plugin's HUD goes through the usual gate.
     func bindPlugins() {
         plugins.huds
             .sink { [weak self] plugin, hud in
@@ -108,7 +109,6 @@ extension IslandState {
         refreshExpandedPages()
     }
 
-    /// Pages follow the sections available now and the user's grouping.
     private func refreshExpandedPages() {
         layout.expandedPages = preferences.expandedLayout.resolve(available: layout.availableSections)
         layout.expandedPage = min(layout.expandedPage, max(0, layout.expandedPages.count - 1))

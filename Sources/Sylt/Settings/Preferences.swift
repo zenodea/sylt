@@ -13,6 +13,22 @@ final class Preferences: ObservableObject {
     @Published var lockShowsStatus: Bool
     @Published var absorbsPointer: Bool
     @Published var approachGlow: Bool
+    @Published var frostedEdges: Bool
+    @Published var glassReachWidth: Double
+    @Published var glassReachHeight: Double
+    @Published var openGlassReachWidth: Double
+    @Published var openGlassReachHeight: Double
+    @Published var glassOpacity: Double
+    @Published var openGlassOpacity: Double
+    @Published var glassBlur: Double
+    @Published var openGlassBlur: Double
+    @Published var cornerRadius: Double
+    @Published var openCornerRadius: Double
+    @Published var glassCards: Bool
+    @Published var glassCardOpacity: Double
+    @Published var glassTint: Color
+    @Published var liquidGlass: Bool
+    @Published var liquidCards: Bool
     @Published var notchDepth: Double
     @Published var spreadsPages: Bool
     @Published var hidesMenuBarItems: Bool
@@ -43,6 +59,22 @@ final class Preferences: ObservableObject {
         static let releaseEffect = "releaseEffect"
         static let absorbsPointer = "absorbsPointer"
         static let approachGlow = "approachGlow"
+        static let frostedEdges = "frostedEdges"
+        static let glassReachWidth = "glassReachWidth"
+        static let glassReachHeight = "glassReachHeight"
+        static let openGlassReachWidth = "openGlassReachWidth"
+        static let openGlassReachHeight = "openGlassReachHeight"
+        static let glassOpacity = "glassOpacity"
+        static let openGlassOpacity = "openGlassOpacity"
+        static let glassBlur = "glassBlur"
+        static let openGlassBlur = "openGlassBlur"
+        static let cornerRadius = "cornerRadius"
+        static let openCornerRadius = "openCornerRadius"
+        static let glassCards = "glassCards"
+        static let glassCardOpacity = "glassCardOpacity"
+        static let glassTint = "glassTint"
+        static let liquidGlass = "liquidGlass"
+        static let liquidCards = "liquidCards"
         static let notchDepth = "notchDepth"
         static let spreadsPages = "spreadsPages"
         static let hidesMenuBarItems = "hidesMenuBarItems"
@@ -62,7 +94,6 @@ final class Preferences: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        // Plugins added since the user last ran the app start out at their default.
         let known = Set(defaults.stringArray(forKey: Key.knownPlugins) ?? [])
         let plugins: Set<Plugin>
         if let stored = defaults.stringArray(forKey: Key.plugins) {
@@ -87,6 +118,22 @@ final class Preferences: ObservableObject {
         releaseEffect = ReleaseEffect(rawValue: defaults.string(forKey: Key.releaseEffect) ?? "") ?? .ripple
         absorbsPointer = defaults.value(Key.absorbsPointer, or: true)
         approachGlow = defaults.value(Key.approachGlow, or: true)
+        frostedEdges = defaults.value(Key.frostedEdges, or: true)
+        glassReachWidth = defaults.value(Key.glassReachWidth, or: 0.15)
+        glassReachHeight = defaults.value(Key.glassReachHeight, or: 0.5)
+        openGlassReachWidth = defaults.value(Key.openGlassReachWidth, or: 0.15)
+        openGlassReachHeight = defaults.value(Key.openGlassReachHeight, or: 0.5)
+        glassOpacity = defaults.value(Key.glassOpacity, or: 1)
+        openGlassOpacity = defaults.value(Key.openGlassOpacity, or: 1)
+        glassBlur = defaults.value(Key.glassBlur, or: 0)
+        openGlassBlur = defaults.value(Key.openGlassBlur, or: 0)
+        cornerRadius = defaults.value(Key.cornerRadius, or: 10)
+        openCornerRadius = defaults.value(Key.openCornerRadius, or: 28)
+        glassCards = defaults.value(Key.glassCards, or: false)
+        glassCardOpacity = defaults.value(Key.glassCardOpacity, or: 1)
+        liquidGlass = defaults.value(Key.liquidGlass, or: false)
+        liquidCards = defaults.value(Key.liquidCards, or: true)
+        glassTint = (defaults.array(forKey: Key.glassTint) as? [Double]).map(Color.init(srgb:)) ?? .clear
         notchDepth = defaults.value(Key.notchDepth, or: 0)
         spreadsPages = defaults.value(Key.spreadsPages, or: false)
         hidesMenuBarItems = defaults.value(Key.hidesMenuBarItems, or: false)
@@ -112,6 +159,22 @@ final class Preferences: ObservableObject {
         persist($releaseEffect, as: Key.releaseEffect, \.rawValue)
         persist($absorbsPointer, as: Key.absorbsPointer)
         persist($approachGlow, as: Key.approachGlow)
+        persist($frostedEdges, as: Key.frostedEdges)
+        persist($glassReachWidth, as: Key.glassReachWidth)
+        persist($glassReachHeight, as: Key.glassReachHeight)
+        persist($openGlassReachWidth, as: Key.openGlassReachWidth)
+        persist($openGlassReachHeight, as: Key.openGlassReachHeight)
+        persist($glassOpacity, as: Key.glassOpacity)
+        persist($openGlassOpacity, as: Key.openGlassOpacity)
+        persist($glassBlur, as: Key.glassBlur)
+        persist($openGlassBlur, as: Key.openGlassBlur)
+        persist($cornerRadius, as: Key.cornerRadius)
+        persist($openCornerRadius, as: Key.openCornerRadius)
+        persist($glassCards, as: Key.glassCards)
+        persist($glassCardOpacity, as: Key.glassCardOpacity)
+        persist($glassTint, as: Key.glassTint, \.srgb)
+        persist($liquidGlass, as: Key.liquidGlass)
+        persist($liquidCards, as: Key.liquidCards)
         persist($notchDepth, as: Key.notchDepth)
         persist($spreadsPages, as: Key.spreadsPages)
         persist($hidesMenuBarItems, as: Key.hidesMenuBarItems)
@@ -160,5 +223,17 @@ final class Preferences: ObservableObject {
 private extension UserDefaults {
     func value<Value>(_ key: String, or fallback: Value) -> Value {
         object(forKey: key) as? Value ?? fallback
+    }
+}
+
+private extension Color {
+    var srgb: [Double] {
+        let color = NSColor(self).usingColorSpace(.sRGB) ?? .clear
+        return [color.redComponent, color.greenComponent, color.blueComponent, color.alphaComponent].map(Double.init)
+    }
+
+    init(srgb: [Double]) {
+        let value = srgb + Array(repeating: 1, count: max(0, 4 - srgb.count))
+        self.init(.sRGB, red: value[0], green: value[1], blue: value[2], opacity: value[3])
     }
 }

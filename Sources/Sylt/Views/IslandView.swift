@@ -11,30 +11,58 @@ struct IslandView: View {
         let frame = state.islandFrame
         let size = frame.size
         let canvas = state.canvasSize
-        let shape = IslandShape(frame: frame, notchHeight: state.notchHeight)
+        let preferences = state.preferences
+        let isOpen = state.mode == .expanded
+        let shape = IslandShape(frame: frame, radius: isOpen ? preferences.openCornerRadius : preferences.cornerRadius)
+        let frosted = preferences.frostedEdges
+        let liquid = preferences.liquidGlass && GlassCard.isAvailable
+        let surfaceRipples = frosted && liquid
+        let notch = CGSize(width: state.layout.notchWidth, height: state.notchHeight)
+        let closedSize = state.layout.frame(for: .closed, hovering: state.isHovering).size
+        let openSize = state.layout.frame(for: .expanded, hovering: false).size
+        let glass = GlassStates(
+            closed: .init(reach: CGSize(width: preferences.glassReachWidth, height: preferences.glassReachHeight), opacity: preferences.glassOpacity, blur: preferences.glassBlur),
+            open: .init(reach: CGSize(width: preferences.openGlassReachWidth, height: preferences.openGlassReachHeight), opacity: preferences.openGlassOpacity, blur: preferences.openGlassBlur),
+            heights: closedSize.height...max(openSize.height, closedSize.height),
+            widths: closedSize.width...max(openSize.width, closedSize.width),
+            followsSize: isOpen || state.mode == .closed
+        )
 
         ZStack(alignment: .top) {
             ZStack(alignment: .top) {
+                // Hidden under Liquid Glass: the shadow and the ring the hollowing leaves at the
+                // outline read as a second dark line beyond the lit edge.
                 shape.fill(.black)
                     .shadow(
                         color: .black.opacity(state.layout.isFullscreen ? 0 : 0.4),
                         radius: 5 + (size.height - state.notchHeight) * 0.06,
                         y: 2 + (size.height - state.notchHeight) * 0.03
                     )
+                    .hollowed(by: shape, if: frosted)
+                    .opacity(surfaceRipples ? 0 : 1)
+                IslandSurface(
+                    shape: shape,
+                    notch: notch,
+                    glass: glass,
+                    tint: preferences.glassTint,
+                    frosted: frosted,
+                    liquid: liquid,
+                    ripple: (state.liquid, preferences.rippleStrength, preferences.rippleWidth)
+                )
                 ZStack(alignment: .top) {
-                    shape.fill(.black)
+                    Color.clear
                     content
                         .frame(width: size.width, height: size.height, alignment: .top)
                         .offset(x: frame.centerOffset)
                         .id(state.mode.contentIdentity)
                         .transition(IslandAnimation.content)
-                    if state.absorbsCursor, state.preferences.showsRimGlow, state.preferences.holdsPointer {
+                    if state.absorbsCursor, preferences.showsRimGlow, preferences.holdsPointer {
                         RimGlow(shape: shape, point: state.exitPoint, strength: state.pullStrength).fadeTop()
                     } else if state.approachStrength > 0 {
                         RimGlow(shape: shape, point: state.approachPoint, strength: state.approachStrength * 0.7).fadeTop()
                     }
                     if let burst = state.burst {
-                        switch state.preferences.releaseEffect {
+                        switch preferences.releaseEffect {
                         case .ring: ReleaseBurst(point: burst.point).id(burst.id).fadeTop()
                         case .glass: GlassFlash(shape: shape, point: burst.point, direction: burst.direction).id(burst.id).fadeTop()
                         default: EmptyView()
@@ -44,21 +72,23 @@ struct IslandView: View {
                 .clipShape(shape)
             }
             .background {
-                Liquid(shape: shape, event: state.liquid, strength: state.preferences.rippleStrength, width: state.preferences.rippleWidth)
-                    .frame(width: canvas.width, height: canvas.height)
-                if let sparks = state.sparks, state.preferences.releaseEffect == .sparks {
-                    Sparks(event: sparks).frame(width: canvas.width, height: canvas.height).id(sparks.id)
+                ZStack {
+                    Liquid(shape: shape, event: surfaceRipples ? nil : state.liquid, strength: preferences.rippleStrength, width: preferences.rippleWidth)
+                        .frame(width: canvas.width, height: canvas.height)
+                    if let sparks = state.sparks, preferences.releaseEffect == .sparks {
+                        Sparks(event: sparks).frame(width: canvas.width, height: canvas.height).id(sparks.id)
+                    }
                 }
+                .hollowed(by: shape, if: frosted)
             }
             .frame(width: canvas.width, height: canvas.height, alignment: .top)
             .animation(IslandAnimation.value, value: state.layout)
             .contentShape(shape)
-            .modifier(CursorPull(cursor: state.cursor, enabled: state.isHovering && state.mode != .expanded))
-            // A press swells the island rather than squashing it: anything smaller than its
-            // resting size would show the base beneath, and the notch under that.
+            .modifier(CursorPull(cursor: state.cursor, enabled: state.isHovering && !isOpen))
+            // A press swells rather than squashes: anything smaller would uncover the notch.
             .scaleEffect(x: isPressed ? 1.02 : 1, y: isPressed ? 1.05 : 1, anchor: .top)
             .modifier(SwipeStretch(pull: state.cursorPull))
-            .gesture(pressGesture, including: state.mode == .expanded ? .subviews : .all)
+            .gesture(pressGesture, including: isOpen ? .subviews : .all)
             .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
                 Task { state.dropped(await Self.urls(from: providers)) }
                 return true
@@ -110,7 +140,6 @@ struct IslandView: View {
             }
     }
 
-    /// Closed and wing-based HUDs share one branch so the wings keep their identity between them.
     @ViewBuilder
     private var content: some View {
         switch state.mode {

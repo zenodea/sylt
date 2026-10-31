@@ -3,6 +3,9 @@ import SwiftUI
 struct MediaCard: View {
     @ObservedObject var nowPlaying: NowPlayingMonitor
     @EnvironmentObject private var volume: VolumeMonitor
+    @EnvironmentObject private var preferences: Preferences
+
+    private static let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
 
     var body: some View {
         if let track = nowPlaying.track {
@@ -12,81 +15,79 @@ struct MediaCard: View {
         }
     }
 
-    /// The card with nothing playing: the same shape in grey, the output row still live.
     private var idle: some View {
+        layout(
+            artwork: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.white.opacity(0.08))
+                .frame(width: 60, height: 60)
+                .overlay(Image(systemName: "music.note").font(.system(size: 22, weight: .semibold)).foregroundStyle(.white.opacity(0.3))),
+            title: "Nothing playing",
+            subtitle: "Press play in any app",
+            dimmed: true
+        ) {
+            LevelBar(value: 0).opacity(0.5)
+            controls.opacity(0.3).disabled(true)
+        }
+        .background(.white.opacity(glass ? 0 : 0.05), in: Self.shape)
+        .overlay(Self.shape.strokeBorder(.white.opacity(0.1), lineWidth: 1))
+        .glassCard(in: Self.shape, preferences: preferences)
+    }
+
+    private var glass: Bool { preferences.showsGlassCards }
+
+    private func card(for track: NowPlayingTrack) -> some View {
+        layout(
+            artwork: ArtworkView(image: track.artwork, size: 60)
+                .overlay(alignment: .bottomTrailing) {
+                    sourceBadge(for: track).offset(x: 5, y: 5)
+                }
+                .onTapGesture {
+                    guard let bundle = track.bundleIdentifier else { return }
+                    AppActivation.activate(bundle: bundle)
+                    Haptics.press()
+                },
+            title: track.title,
+            subtitle: track.artist,
+            dimmed: false
+        ) {
+            PlaybackProgress(nowPlaying: nowPlaying, duration: track.duration)
+            controls
+        }
+        .background(
+            LinearGradient(colors: [track.tint.opacity(0.22), track.tint.opacity(0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                .opacity(glass ? 0 : 1),
+            in: Self.shape
+        )
+        .background(.white.opacity(glass ? 0 : 0.04), in: Self.shape)
+        .overlay(Self.shape.strokeBorder(LinearGradient(colors: track.barColors, startPoint: .leading, endPoint: .trailing).opacity(0.75), lineWidth: 1))
+        .glassCard(in: Self.shape, tint: track.tint.opacity(0.35), rim: false, preferences: preferences)
+    }
+
+    private func layout<Artwork: View, Playback: View>(
+        artwork: Artwork, title: String, subtitle: String, dimmed: Bool, @ViewBuilder playback: () -> Playback
+    ) -> some View {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(.white.opacity(0.08))
-                    .frame(width: 60, height: 60)
-                    .overlay(Image(systemName: "music.note").font(.system(size: 22, weight: .semibold)).foregroundStyle(.white.opacity(0.3)))
+                artwork
                 VStack(alignment: .leading, spacing: 6) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Nothing playing")
+                        Text(title)
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.5))
-                        Text("Press play in any app")
+                            .foregroundStyle(.white.opacity(dimmed ? 0.5 : 1))
+                            .lineLimit(1)
+                        Text(subtitle)
                             .font(.system(size: 12))
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(.white.opacity(dimmed ? 0.3 : 0.6))
+                            .lineLimit(1)
                     }
-                    LevelBar(value: 0).frame(height: 6).opacity(0.5)
-                    controls.opacity(0.3).disabled(true)
+                    playback()
                 }
             }
             output
         }
         .padding(10)
-        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.white.opacity(0.1), lineWidth: 1))
     }
 
-    private func card(for track: NowPlayingTrack) -> some View {
-            VStack(spacing: 8) {
-                HStack(spacing: 12) {
-                    ArtworkView(image: track.artwork, size: 60)
-                        .overlay(alignment: .bottomTrailing) {
-                            sourceBadge(for: track).offset(x: 5, y: 5)
-                        }
-                        .onTapGesture {
-                            guard let bundle = track.bundleIdentifier else { return }
-                            AppActivation.activate(bundle: bundle)
-                            Haptics.press()
-                        }
-                    VStack(alignment: .leading, spacing: 6) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(track.title)
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .lineLimit(1)
-                            Text(track.artist)
-                                .font(.system(size: 12))
-                                .foregroundStyle(.white.opacity(0.6))
-                                .lineLimit(1)
-                        }
-                        PlaybackProgress(nowPlaying: nowPlaying, duration: track.duration)
-                        controls
-                    }
-                }
-                output
-            }
-            .padding(10)
-            .background(
-                LinearGradient(
-                    colors: [track.tint.opacity(0.22), track.tint.opacity(0.08)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                ),
-                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-            )
-            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(colors: track.barColors, startPoint: .leading, endPoint: .trailing).opacity(0.75),
-                        lineWidth: 1
-                    )
-            )
-    }
-
-    /// The source app. With more than one player going, it is a menu to pick which to show.
     @ViewBuilder
     private func sourceBadge(for track: NowPlayingTrack) -> some View {
         if nowPlaying.sources.count > 1 {
@@ -120,7 +121,6 @@ struct MediaCard: View {
     private var output: some View {
         HStack(spacing: 8) {
             if let level = nowPlaying.playerVolume {
-                // The app's own volume, when it has one.
                 LevelSlider(symbol: "slider.horizontal.3", value: Float(level)) { nowPlaying.setPlayerVolume(Double($0)) }
             } else {
                 LevelSlider(symbol: volume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill", value: volume.isMuted ? 0 : volume.level) {
@@ -176,7 +176,6 @@ private struct PlaybackProgress: View {
                 Text(timestamp(elapsed))
                 GeometryReader { geo in
                     LevelBar(value: total > 0 ? min(elapsed / total, 1) : 0)
-                        .frame(height: 6)
                         .frame(maxHeight: .infinity)
                         .contentShape(Rectangle())
                         .gesture(

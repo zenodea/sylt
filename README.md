@@ -5,7 +5,7 @@
 <p align="center">A dynamic island for the MacBook notch: live status in two wings, short overlays when something changes, and an expanded view with controls.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple" alt="macOS 14 or later">
+  <img src="https://img.shields.io/badge/macOS-27-000000?logo=apple" alt="macOS 27">
   <img src="https://img.shields.io/badge/Swift-5.10-F05138?logo=swift&logoColor=white" alt="Swift 5.10">
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-3B82F6" alt="MIT licence"></a>
   <a href="https://github.com/zenodea/sylt/actions/workflows/ci.yml"><img src="https://github.com/zenodea/sylt/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
@@ -62,7 +62,9 @@ Locked, the island shows a padlock and the time, and stays visible over the logi
 
 **Layout pane.** The island drawn above three columns: left wing, right wing, hidden. Drag any badge or plugin between them or onto another tile to reorder; the island follows. A handle between items sets the gap and an optional hairline. The same pane groups expanded sections into pages.
 
-**Effects pane.** Entering the island takes the pointer in: it disappears and the mouse leans the island. A firm push lets it out through the rim on that side, mid-motion. Settings cover the hold and how hard the push must be, a rim glow where it will exit, the exit effect (an adjustable ripple, a ring of light, a reflection across dark glass, or none) and a haptic tap. While held, the pointer stays off the top edge so the menu bar never drops down.
+**Appearance pane.** The island's depth below the notch and its corner radius, open and closed; frosted glass at the edges, with a tint and how far the glass reaches in, set apart for the open and closed island (all the way, only the notch stays black); and each open section on its own pane of Liquid Glass with an opacity.
+
+**Interaction pane.** Entering the island takes the pointer in: it disappears and the mouse leans the island. A firm push lets it out through the rim on that side, mid-motion. Settings cover the hold and how hard the push must be, a rim glow where it will exit, the exit effect (an adjustable ripple, a ring of light, a reflection across dark glass, or none) and a haptic tap. While held, the pointer stays off the top edge so the menu bar never drops down.
 
 **Menu bar pane.** When macOS hides the menu bar, which Apple status items show, and an optional divider that hides everything to its left until the pointer is up there or the chevron is clicked. Command-drag the divider to move it.
 
@@ -130,7 +132,7 @@ Plugins run as you. A script without the executable bit runs through the interpr
 
 ## Install
 
-macOS 14 or later, on a Mac with a notch.
+macOS 27 only, on a Mac with a notch.
 
 Download `Sylt-<version>.dmg` from [Releases](https://github.com/zenodea/sylt/releases) and drag Sylt into Applications. The app is not notarised, so macOS blocks the first launch: open it once, then choose **Open Anyway** in System Settings › Privacy & Security. Or clear the quarantine flag:
 

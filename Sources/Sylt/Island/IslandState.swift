@@ -8,26 +8,20 @@ final class IslandState: ObservableObject {
     @Published private(set) var isHovering = false
     @Published var layout = IslandLayout()
 
-    /// The push on the held pointer: the content's lean, the island's lean (-1...1 per
-    /// axis), how close the pointer is to popping out (0...1) and where on the rim it would.
     @Published var cursor: CGPoint = .zero
     @Published var cursorPull: CGVector = .zero
     @Published var pullStrength: CGFloat = 0
     @Published var exitPoint: CGPoint = .zero
-    /// A free pointer coming close: where on the rim, and how close, 0 to 1.
     @Published var approachPoint: CGPoint = .zero
     @Published var approachStrength: CGFloat = 0
-    /// Where the pointer went in, in canvas coordinates; pushes are measured from here.
     var heldOrigin: CGPoint?
 
     @Published var burst: BurstEvent?
     @Published var liquid: LiquidEvent?
     @Published var sparks: SparkEvent?
 
-    /// The swipe under way, -1...1 per axis, and which way the last page turn went.
     @Published var swipePull: CGVector = .zero
     var pageDirection = 1
-    /// Where scrolling lists are on the canvas, so a scroll over one stays the list's.
     var listFrames: [CGRect] = []
 
     let preferences: Preferences
@@ -50,14 +44,13 @@ final class IslandState: ObservableObject {
     var hudTimer: Timer?
     var collapseTimer: Timer?
     var cancellables = Set<AnyCancellable>()
+    private var hoveredItem: WingItem?
 
-    /// How long a HUD the pointer just left stays, and how long the open panel waits before closing.
     private static let hudLinger: TimeInterval = 0.8
     private static let collapseDelay: TimeInterval = 0.3
-    /// How far the island's edge reaches into a swipe, per unit of pull.
     private static let swipeLeanWidth: CGFloat = 14
     private static let swipeLeanHeight: CGFloat = 10
-    /// Less than the side overlap, so a lean never uncovers an edge of the notch.
+    // Less than half the growth, so the edge the island leans away from still moves outward.
     private static let swipeLeanShift: CGFloat = 5
 
     init(preferences: Preferences, pluginStore: PluginStore? = nil) {
@@ -76,15 +69,15 @@ final class IslandState: ObservableObject {
             .combineLatest(preferences.$wingLayout)
             .sink { [weak self] enabled, wings in self?.applyPlugins(enabled.union(wings.monitorsNeeded)) }
             .store(in: &cancellables)
+        preferences.objectWillChange
+            .sink { [weak self] in self?.objectWillChange.send() }
+            .store(in: &cancellables)
     }
 
     var notchHeight: CGFloat { layout.notchHeight }
-    var notchWidth: CGFloat { layout.notchWidth }
     var canvasSize: CGSize { layout.canvasSize }
     var hitFrame: CGRect { layout.hitFrame(for: mode, hovering: isHovering) }
 
-    /// The island's frame, leaning into a swipe: its edge reaches a little that way while
-    /// the content inside stays where it is, so it moves like a body, not like jelly.
     var islandFrame: IslandFrame {
         var frame = layout.frame(for: mode, hovering: isHovering)
         guard mode != .expanded, preferences.leansWithSwipes else { return frame }
@@ -95,10 +88,8 @@ final class IslandState: ObservableObject {
         return frame
     }
 
-    /// The island takes the cursor in everywhere except the expanded panel, which has controls to click.
     var absorbsCursor: Bool { preferences.absorbsPointer && isHovering && mode != .expanded && !lock.isLocked }
 
-    /// Where the island settles when nothing is showing.
     var restingMode: IslandMode { lock.isLocked ? .locked : .closed }
 
     func hoverChanged(_ inside: Bool) {
@@ -118,14 +109,14 @@ final class IslandState: ObservableObject {
         }
     }
 
-    /// Drives hover from the cursor in canvas coordinates (top-left origin).
-    /// The closed wing item last seen under the pointer: opening goes to its page.
-    private var hoveredItem: WingItem?
-
     func cursorMoved(to point: CGPoint) {
         let inside = hitFrame.contains(point)
         hoverChanged(inside)
-        if inside, mode != .expanded { hoveredItem = layout.item(at: point.x) ?? hoveredItem } else if !inside { hoveredItem = nil }
+        if !inside {
+            hoveredItem = nil
+        } else if mode != .expanded {
+            hoveredItem = layout.item(at: point.x) ?? hoveredItem
+        }
     }
 
     func pressed() {
@@ -139,7 +130,6 @@ final class IslandState: ObservableObject {
         Haptics.expand()
     }
 
-    /// Files dragged onto the island land on the shelf; the island opens to show them.
     func dragEntered() {
         guard mode != .expanded, !lock.isLocked else { return }
         expand()
@@ -151,7 +141,6 @@ final class IslandState: ObservableObject {
         Haptics.expand()
     }
 
-    /// Opens the panel; whatever HUD was showing gives way.
     func expand() {
         hudTimer?.invalidate()
         if let item = hoveredItem, let page = layout.page(for: item) { layout.expandedPage = page }
