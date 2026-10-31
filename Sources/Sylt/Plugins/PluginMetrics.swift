@@ -1,10 +1,10 @@
-import CoreGraphics
 import SwiftUI
 
-/// How much room plugin content takes, so wings and sections can be laid out before drawing.
 extension PluginItem {
     static let glyph: CGFloat = 14
     static let gap: CGFloat = 3
+    static let graphWidth: CGFloat = 26
+    static let spacing: CGFloat = 8
 
     var width: CGFloat {
         var parts: [CGFloat] = []
@@ -16,9 +16,7 @@ extension PluginItem {
         return parts.reduce(0, +) + CGFloat(max(0, parts.count - 1)) * Self.gap
     }
 
-    static let graphWidth: CGFloat = 26
-
-    static func width(of items: [PluginItem], spacing: CGFloat = 8) -> CGFloat {
+    static func width(of items: [PluginItem], spacing: CGFloat = PluginItem.spacing) -> CGFloat {
         let widths = items.map(\.width).filter { $0 > 0 }
         return widths.reduce(0, +) + CGFloat(max(0, widths.count - 1)) * spacing
     }
@@ -47,7 +45,6 @@ extension PluginSection {
         return shown.reduce(0) { $0 + $1.height } + CGFloat(max(0, shown.count - 1)) * Self.rowSpacing
     }
 
-    /// How much taller the list would be with every row showing instead of scrolling.
     var hiddenRowsHeight: CGFloat {
         (rows ?? []).dropFirst(Self.maxRows).reduce(0) { $0 + $1.height + Self.rowSpacing }
     }
@@ -58,7 +55,6 @@ extension PluginRow {
 }
 
 extension Color {
-    /// A plugin's colour word or hex, defaulting to white.
     init(tint: String?) {
         switch tint?.lowercased() {
         case "dim": self = .white.opacity(0.6)

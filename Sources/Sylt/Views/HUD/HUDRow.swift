@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// A line of scrolling text under the notch while a two-row HUD shows.
 struct HUDRow: View {
-    let text: String
+    let title: String
+    let detail: String
 
     var body: some View {
-        MarqueeText(text: text)
+        MarqueeText(text: detail.isEmpty ? title : "\(title)  ·  \(detail)")
             .foregroundStyle(.white.opacity(0.85))
             .frame(height: IslandLayout.hudRowHeight)
             .padding(.horizontal, 12)

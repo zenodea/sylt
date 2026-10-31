@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A small coloured dot with its own halo.
 struct GlowDot: View {
     let color: Color
 

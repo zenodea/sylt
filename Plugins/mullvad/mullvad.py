@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Mullvad VPN in the right wing: a shield while connected, with the city, read from the mullvad CLI."""
 import json, os, re, shutil, subprocess, sys, threading, time
 
 SYMBOL = "lock.shield.fill"
 lock = threading.Lock()
 settings = {"announce": True, "showWhenOff": True}
-state = {"connected": None, "place": None, "relay": None, "ip": None}
+UNKNOWN = {"connected": None, "place": None, "relay": None, "ip": None}
+state = dict(UNKNOWN)
 
 def emit(message):
     with lock:
         sys.stdout.write(json.dumps(message) + "\n")
         sys.stdout.flush()
+
+def log(text):
+    emit({"log": text})
 
 def binary():
     for candidate in [shutil.which("mullvad"), "/usr/local/bin/mullvad", "/opt/homebrew/bin/mullvad",
@@ -28,19 +31,17 @@ def run(*args):
         return None
 
 def snapshot():
-    """The CLI prints JSON on newer versions; older ones print a sentence, which is parsed instead."""
     raw = run("status", "-j")
     if raw:
         try:
             status = json.loads(raw)
-            connected = status.get("state") == "connected"
-            details = status.get("details") or {}
-            location = details.get("location") or {}
-            place = ", ".join(x for x in [location.get("city"), location.get("country")] if x) or None
-            return {"connected": connected, "place": place if connected else None,
-                    "relay": location.get("hostname") if connected else None, "ip": location.get("ipv4") if connected else None}
         except ValueError:
-            pass
+            status = None
+        if status is not None:
+            if status.get("state") != "connected": return dict(UNKNOWN, connected=False)
+            location = (status.get("details") or {}).get("location") or {}
+            place = ", ".join(x for x in [location.get("city"), location.get("country")] if x) or None
+            return {"connected": True, "place": place, "relay": location.get("hostname"), "ip": location.get("ipv4")}
     raw = run("status")
     if raw is None: return None
     connected = raw.lstrip().lower().startswith("connected")
@@ -69,14 +70,28 @@ def publish():
     emit({"section": {"rows": rows, "buttons": buttons}})
 
 def refresh(announce):
-    current = snapshot() or {"connected": None, "place": None, "relay": None, "ip": None}
+    current = snapshot() or UNKNOWN
     was = state["connected"]
-    if current == state: return
+    if current == state: return False
     state.update(current)
     publish()
     if announce and settings["announce"] and was is not None and current["connected"] != was:
         text = "VPN on · %s" % current["place"] if current["connected"] and current["place"] else ("VPN on" if current["connected"] else "VPN off")
         emit({"hud": {"symbol": SYMBOL if current["connected"] else "shield.slash", "tint": "green" if current["connected"] else "dim", "text": text, "side": "right", "duration": 2}})
+    return True
+
+def handle(event):
+    kind = event.get("event")
+    if kind in ("start", "settings"):
+        values = event.get("settings") or {}
+        settings.update({key: bool(values[key]) for key in settings if key in values})
+        state.update(UNKNOWN)
+        if not refresh(False): publish()
+    elif kind == "click":
+        emit({"activate": {"bundle": "net.mullvad.vpn"}})
+    elif kind == "button":
+        run(event.get("id", ""))
+        refresh(False)
 
 def listen():
     for line in sys.stdin:
@@ -84,21 +99,12 @@ def listen():
             event = json.loads(line)
         except ValueError:
             continue
-        kind = event.get("event")
-        if kind in ("start", "settings"):
-            for key in settings:
-                if key in (event.get("settings") or {}): settings[key] = bool(event["settings"][key])
-            state.update({"connected": None, "place": None, "relay": None, "ip": None})
-            refresh(False)
-            publish()
-        elif kind == "click":
-            emit({"activate": {"bundle": "net.mullvad.vpn"}})
-        elif kind == "button":
-            run(event.get("id", ""))
-            refresh(False)
-        elif kind == "stop":
-            os._exit(0)
-    os._exit(0)  # the host went away
+        if event.get("event") == "stop": os._exit(0)
+        try:
+            handle(event)
+        except Exception as error:
+            log("%s failed: %s" % (event.get("event"), error))
+    os._exit(0)
 
 threading.Thread(target=listen, daemon=True).start()
 while True:
@@ -106,4 +112,4 @@ while True:
     try:
         refresh(True)
     except Exception as error:
-        emit({"log": "mullvad: %s" % error})
+        log("refresh failed: %s" % error)

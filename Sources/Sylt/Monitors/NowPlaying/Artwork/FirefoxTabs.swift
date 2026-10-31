@@ -25,10 +25,13 @@ enum FirefoxTabs {
             return []
         }
         guard let json = MozLz4.decompress(compressed) else { log("decompress failed, \(compressed.count) bytes"); return [] }
+        return tabs(inSession: json)
+    }
+
+    static func tabs(inSession json: Data) -> [BrowserTab] {
         guard let session = try? JSONSerialization.jsonObject(with: json) as? [String: Any],
               let windows = session["windows"] as? [[String: Any]]
         else { log("no windows in session"); return [] }
-
         return windows.flatMap { window -> [BrowserTab] in
             let tabs = window["tabs"] as? [[String: Any]] ?? []
             return tabs.compactMap { tab in
@@ -46,20 +49,11 @@ enum FirefoxTabs {
         return applicationFolders.compactMap { support?.appendingPathComponent($0) }
     }
 
-    /// Profile directories from each profiles.ini, plus anything under Profiles/.
     private static func profileDirectories() -> [URL] {
         profileRoots().flatMap { root -> [URL] in
             var directories: [URL] = []
             if let ini = try? String(contentsOf: root.appendingPathComponent("profiles.ini"), encoding: .utf8) {
-                var relative = true
-                for line in ini.split(separator: "\n") {
-                    if line.hasPrefix("[") { relative = true }
-                    if line == "IsRelative=0" { relative = false }
-                    if line.hasPrefix("Path=") {
-                        let path = String(line.dropFirst(5))
-                        directories.append(relative ? root.appendingPathComponent(path) : URL(fileURLWithPath: path))
-                    }
-                }
+                directories = profilePaths(inIni: ini, root: root)
             }
             let profiles = root.appendingPathComponent("Profiles")
             do { directories += try FileManager.default.contentsOfDirectory(at: profiles, includingPropertiesForKeys: nil) } catch {
@@ -69,7 +63,20 @@ enum FirefoxTabs {
         }
     }
 
-    /// The profile a running Firefox has locked, found through its open files.
+    static func profilePaths(inIni ini: String, root: URL) -> [URL] {
+        var directories: [URL] = []
+        var relative = true
+        for line in ini.split(whereSeparator: \.isNewline) {
+            if line.hasPrefix("[") { relative = true }
+            if line == "IsRelative=0" { relative = false }
+            if line.hasPrefix("Path=") {
+                let path = String(line.dropFirst("Path=".count))
+                directories.append(relative ? root.appendingPathComponent(path) : URL(fileURLWithPath: path))
+            }
+        }
+        return directories
+    }
+
     private static func lockedProfileDirectories() -> [URL] {
         NSWorkspace.shared.runningApplications
             .filter { $0.bundleIdentifier.map(bundleIdentifiers.contains) == true }
@@ -90,7 +97,6 @@ enum FirefoxTabs {
     }
 
     private static func log(_ text: String) {
-        guard ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil else { return }
-        FileHandle.standardError.write(Data("firefox store: \(text)\n".utf8))
+        DebugLog.write("firefox store: \(text)")
     }
 }

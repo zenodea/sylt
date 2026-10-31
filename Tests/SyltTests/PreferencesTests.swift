@@ -3,22 +3,15 @@ import XCTest
 
 @MainActor
 final class PreferencesTests: XCTestCase {
-    private func defaults() -> UserDefaults {
-        let suite = "SyltTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suite)!
-        defaults.removePersistentDomain(forName: suite)
-        return defaults
-    }
-
     func testFreshInstallUsesDefaults() {
-        let preferences = Preferences(defaults: defaults())
+        let preferences = Preferences(defaults: scratchDefaults())
         XCTAssertEqual(preferences.enabledPlugins, Plugin.defaultEnabled)
         XCTAssertEqual(preferences.enabledHUDs, Set(HUDCategory.allCases))
         XCTAssertTrue(preferences.replacesSystemOverlays)
     }
 
     func testNewDefaultPluginsSwitchOnOnceForExistingInstalls() {
-        let defaults = defaults()
+        let defaults = scratchDefaults()
         defaults.set(["battery"], forKey: "enabledPlugins")
         defaults.set(["battery", "volume"], forKey: "knownPlugins")
         let preferences = Preferences(defaults: defaults)
@@ -33,7 +26,7 @@ final class PreferencesTests: XCTestCase {
     }
 
     func testTogglesPersist() {
-        let defaults = defaults()
+        let defaults = scratchDefaults()
         let preferences = Preferences(defaults: defaults)
         preferences.binding(for: Plugin.volume).wrappedValue = false
         preferences.binding(for: HUDCategory.unlock).wrappedValue = false

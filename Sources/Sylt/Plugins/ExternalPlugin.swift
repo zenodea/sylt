@@ -2,7 +2,6 @@ import AppKit
 import Combine
 import Foundation
 
-/// One plugin folder, running or not, and what it currently shows.
 @MainActor
 final class ExternalPlugin: ObservableObject, Identifiable {
     let manifest: PluginManifest
@@ -11,23 +10,19 @@ final class ExternalPlugin: ObservableObject, Identifiable {
 
     @Published private(set) var left: [PluginItem] = []
     @Published private(set) var right: [PluginItem] = []
-    @Published private(set) var leftSpacing: CGFloat = 8
-    @Published private(set) var rightSpacing: CGFloat = 8
+    @Published private(set) var leftSpacing = PluginItem.spacing
+    @Published private(set) var rightSpacing = PluginItem.spacing
     @Published private(set) var section: PluginSection?
     @Published private(set) var isRunning = false
     let huds = PassthroughSubject<PluginHUD, Never>()
 
     nonisolated var id: String { manifest.id }
 
-    /// Everything the plugin put in a wing, left items first. The user picks the side.
     var wingItems: [PluginItem] { left + right }
     var wingSpacing: CGFloat { left.isEmpty ? rightSpacing : leftSpacing }
 
-    /// The side the plugin would take on its own: what its manifest says, else where it
-    /// last put something, else the right.
     var wingPlugin: WingPlugin {
-        let declared = manifest.side.flatMap(WingSide.init(rawValue:))
-        return WingPlugin(id: id, side: declared ?? (!left.isEmpty && right.isEmpty ? .left : .right))
+        WingPlugin(id: id, side: manifest.side ?? (!left.isEmpty && right.isEmpty ? .left : .right))
     }
 
     private let store: PluginStore
@@ -44,7 +39,7 @@ final class ExternalPlugin: ObservableObject, Identifiable {
         self.store = store
     }
 
-    var dataDirectory: URL {
+    private var dataDirectory: URL {
         let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Sylt/PluginData/\(manifest.id)", isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
@@ -83,16 +78,20 @@ final class ExternalPlugin: ObservableObject, Identifiable {
         process?.send(event)
     }
 
-    /// A click on the section's title opens the app the manifest names, or goes to the
-    /// plugin as a click with no row.
     func headerClicked() {
-        if let bundle = manifest.opens { AppActivation.activate(bundle: bundle) } else { send(PluginEvent(event: "click")) }
+        if let bundle = manifest.opens {
+            AppActivation.activate(bundle: bundle)
+        } else {
+            send(PluginEvent(event: "click"))
+        }
     }
 
-    /// A row click goes to the plugin; a one-shot plugin isn't there to take it, so the
-    /// app the manifest names opens instead.
     func rowClicked(_ row: String) {
-        if isRunning { send(PluginEvent(event: "click", row: row)) } else if let bundle = manifest.opens { AppActivation.activate(bundle: bundle) }
+        if isRunning {
+            send(PluginEvent(event: "click", row: row))
+        } else if let bundle = manifest.opens {
+            AppActivation.activate(bundle: bundle)
+        }
     }
 
     func settingsChanged() {
@@ -119,8 +118,6 @@ final class ExternalPlugin: ObservableObject, Identifiable {
         launch()
     }
 
-    /// A long-running plugin that dies comes back, slower each time. A run that was
-    /// already replaced by a newer one is ignored.
     private func exited(_ process: PluginProcess?) {
         guard let process, process === self.process else { return }
         self.process = nil
@@ -132,14 +129,20 @@ final class ExternalPlugin: ObservableObject, Identifiable {
 
     private func handle(_ message: PluginMessage) {
         if let wing = message.wing {
-            let spacing = CGFloat(wing.spacing ?? 8)
-            if wing.side == "left" { leftSpacing = spacing; left = wing.items ?? [] } else { rightSpacing = spacing; right = wing.items ?? [] }
+            let spacing = wing.spacing.map { CGFloat($0) } ?? PluginItem.spacing
+            if wing.side == .left {
+                leftSpacing = spacing
+                left = wing.items ?? []
+            } else {
+                rightSpacing = spacing
+                right = wing.items ?? []
+            }
         }
         if let section = message.section { self.section = section }
         if message.clearSection == true { section = nil }
         if let hud = message.hud { huds.send(hud) }
         if let log = message.log { FileHandle.standardError.write(Data("\(manifest.id): \(log)\n".utf8)) }
-        if let sound = message.sound { NSSound(named: sound)?.play() }
+        if let sound = message.sound { Sounds.play(sound) }
         if let activation = message.activate { activate(activation) }
         if let target = message.open {
             if let url = URL(string: target), url.scheme != nil, !target.hasPrefix("/") { NSWorkspace.shared.open(url) }
@@ -159,7 +162,7 @@ final class ExternalPlugin: ObservableObject, Identifiable {
         }
         AppActivation.activate(host)
         if let window = activation.window {
-            _ = Timer.after(0.3) { WindowRaiser.raise(in: host, titleContaining: window) }
+            Timer.after(0.3) { WindowRaiser.raise(in: host, titleContaining: window) }
         }
     }
 }

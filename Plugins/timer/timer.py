@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Presets in the expanded view; a draining ring with the time left in the left wing while one runs."""
 import json, os, sys, threading, time
 
 lock = threading.Lock()
+state_lock = threading.Lock()
 state = {"end": None, "duration": 0, "presets": [5, 15, 25, 60]}
 
 def emit(message):
@@ -67,16 +67,21 @@ def listen():
             continue
         if event.get("event") == "stop": os._exit(0)
         try:
-            handle(event)
+            with state_lock: handle(event)
         except Exception as error:
             log("%s failed: %s" % (event.get("event"), error))
     os._exit(0)
 
+def tick():
+    with state_lock:
+        if state["end"] is None: return
+        if time.time() >= state["end"]: finish()
+        else: running()
+
 threading.Thread(target=listen, daemon=True).start()
 while True:
     time.sleep(1)
-    if state["end"] is None: continue
     try:
-        finish() if time.time() >= state["end"] else running()
+        tick()
     except Exception as error:
         log("tick failed: %s" % error)

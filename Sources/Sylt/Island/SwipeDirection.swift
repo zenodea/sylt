@@ -1,6 +1,5 @@
 import CoreGraphics
 
-/// Direction the fingers moved on the trackpad.
 enum SwipeDirection {
     case up, down, left, right
 

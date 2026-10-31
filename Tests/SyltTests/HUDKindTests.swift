@@ -4,14 +4,14 @@ import XCTest
 final class HUDKindTests: XCTestCase {
     private let samples: [HUDKind] = [
         .volume, .brightness, .mute(true), .battery(.level(15)), .battery(.powerSource),
-        .external(ExternalHUD(pluginID: "x", hud: PluginHUD(symbol: "star.fill", text: "A long title that will need truncation somewhere", side: "left"))),
+        .external(ExternalHUD(pluginID: "x", hud: PluginHUD(symbol: "star.fill", text: "A long title that will need truncation somewhere", side: .left))),
         .unlocked, .nowPlaying,
         .notification(SystemNotification(appName: "Messages", title: "Hi", body: "There", bundleIdentifier: nil)),
         .bluetooth(.connected(.init(name: "AirPods", address: "a", battery: 50))),
         .peripheralBattery(.init(name: "Mouse", address: "b", battery: 9)),
         .network(.wifi), .calendar(.init(id: "e", title: "Standup", start: .now, end: .now, joinURL: nil)),
         .capsLock(true), .inputSource("British"), .focus("Work"), .privacy(.init(microphone: true)), .thermal(.serious),
-        .external(ExternalHUD(pluginID: "x", hud: PluginHUD(text: "Right only", side: "right"))),
+        .external(ExternalHUD(pluginID: "x", hud: PluginHUD(text: "Right only", side: .right))),
         .external(ExternalHUD(pluginID: "x", hud: PluginHUD(symbol: "sun.max.fill", level: 0.5))),
     ]
 
@@ -61,10 +61,15 @@ final class HUDKindTests: XCTestCase {
         XCTAssertGreaterThan(with!, without!)
     }
 
-    func testCategoriesCoverSettings() {
-        for kind in samples { XCTAssertTrue(HUDCategory.allCases.contains(kind.category)) }
-        XCTAssertEqual(HUDKind.mute(true).category, .volume)
+    func testRelatedOverlaysShareASetting() {
+        XCTAssertEqual(HUDKind.mute(true).category, HUDKind.volume.category)
         XCTAssertEqual(HUDKind.peripheralBattery(.init(name: "m", address: "m", battery: 5)).category, .bluetooth)
+        XCTAssertEqual(HUDKind.inputSource("US").category, HUDKind.capsLock(true).category)
+    }
+
+    func testMuteAndVolumeMorphInOneWing() {
+        XCTAssertEqual(HUDKind.mute(true).wingIdentity, HUDKind.volume.wingIdentity)
+        XCTAssertNotEqual(HUDKind.brightness.wingIdentity, HUDKind.volume.wingIdentity)
     }
 
     func testContentIdentity() {

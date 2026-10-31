@@ -1,13 +1,10 @@
 import Foundation
 
-/// Whether a finger is on the built-in trackpad, from the private MultitouchSupport
-/// framework. Mouse events can't say when the hand lets go; contact frames can.
 @MainActor
 final class TrackpadTouch {
     static let shared = TrackpadTouch()
 
     private(set) var isTouching = false
-    /// Called on the main thread whenever contact starts or ends.
     var onChange: ((Bool) -> Void)?
 
     private typealias Device = UnsafeMutableRawPointer
@@ -20,13 +17,13 @@ final class TrackpadTouch {
     private var devices: [AnyObject] = []
 
     func start() {
-        guard devices.isEmpty,
-              let handle = dlopen("/System/Library/PrivateFrameworks/MultitouchSupport.framework/MultitouchSupport", RTLD_NOW),
-              let createList = dlsym(handle, "MTDeviceCreateList"),
-              let register = dlsym(handle, "MTRegisterContactFrameCallback"),
-              let startDevice = dlsym(handle, "MTDeviceStart")
+        guard devices.isEmpty else { return }
+        let framework = PrivateFramework(private: "MultitouchSupport")
+        guard let createList = framework.symbol("MTDeviceCreateList", as: CreateList.self),
+              let register = framework.symbol("MTRegisterContactFrameCallback", as: Register.self),
+              let startDevice = framework.symbol("MTDeviceStart", as: Start.self)
         else { return }
-        devices = unsafeBitCast(createList, to: CreateList.self)().takeRetainedValue() as [AnyObject]
+        devices = createList().takeRetainedValue() as [AnyObject]
         let callback: Callback = { _, _, count, _, _ in
             guard count != TrackpadTouch.fingers else { return 0 }
             let wasTouching = TrackpadTouch.fingers > 0
@@ -38,8 +35,8 @@ final class TrackpadTouch {
         }
         for device in devices {
             let reference = Unmanaged.passUnretained(device).toOpaque()
-            unsafeBitCast(register, to: Register.self)(reference, callback)
-            unsafeBitCast(startDevice, to: Start.self)(reference, 0)
+            register(reference, callback)
+            startDevice(reference, 0)
         }
     }
 

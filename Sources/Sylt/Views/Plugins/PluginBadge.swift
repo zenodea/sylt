@@ -15,8 +15,8 @@ struct PluginBadge: View {
                     }
                     if item.symbol != nil || item.image != nil {
                         PluginGlyph(symbol: item.symbol, image: item.image, tint: item.tint)
-                            .saturation(item.status == "waiting" ? 0.2 : 1)
-                            .opacity(item.status == "waiting" ? 0.45 : 1)
+                            .saturation(item.status == .waiting ? 0.2 : 1)
+                            .opacity(item.status == .waiting ? 0.45 : 1)
                             .overlay(alignment: .bottomTrailing) {
                                 if let status = item.status {
                                     StatusMark(status: status, size: 5)
@@ -30,7 +30,7 @@ struct PluginBadge: View {
                         Text(text)
                             .contentTransition(.numericText())
                             .font(.badge)
-                            .foregroundStyle(Color(tint: item.tint ?? "white").opacity(item.tint == nil ? 0.85 : 1))
+                            .foregroundStyle(Color(tint: item.tint).opacity(item.tint == nil ? 0.85 : 1))
                             .monospacedDigit()
                             .lineLimit(1)
                             .fixedSize()
@@ -39,7 +39,7 @@ struct PluginBadge: View {
                         TimerRing(fraction: ring, size: 12)
                     }
                     if let graph = item.graph {
-                        Sparkline(values: graph, tint: Color(tint: item.tint ?? "white"))
+                        Sparkline(values: graph, tint: Color(tint: item.tint))
                             .frame(width: PluginItem.graphWidth, height: 14)
                     }
                 }

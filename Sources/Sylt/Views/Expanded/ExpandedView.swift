@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// The open island: a page of sections, or several side by side when the screen has
-/// room, turned with a sideways swipe.
 struct ExpandedView: View {
     let notchHeight: CGFloat
     let layout: IslandLayout
@@ -32,8 +30,6 @@ struct ExpandedView: View {
         .clipped()
     }
 
-    /// The open pages left to right, a thin line between them. A short last spread
-    /// keeps the island's width with empty room after its pages.
     private var spread: some View {
         HStack(alignment: .top, spacing: 0) {
             let pages = layout.currentSpreadPages
@@ -50,11 +46,9 @@ struct ExpandedView: View {
         .frame(width: layout.expandedWidth)
     }
 
-    /// The page's spare height goes to its lists: each gets what its hidden rows need,
-    /// shared evenly when there isn't enough for all. Anything left stays at the bottom.
     private func page(_ sections: [ExpandedSection]) -> some View {
         VStack(alignment: .leading, spacing: IslandLayout.sectionGap) {
-            let extras = spareHeight(for: sections)
+            let extras = listExtras(for: sections)
             ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
                 view(for: section, extra: extras[section.id] ?? 0).modifier(Staggered(index: index))
             }
@@ -68,27 +62,13 @@ struct ExpandedView: View {
         }
     }
 
-    private func spareHeight(for sections: [ExpandedSection]) -> [String: CGFloat] {
-        var wants: [(id: String, need: CGFloat)] = []
+    private func listExtras(for sections: [ExpandedSection]) -> [String: CGFloat] {
+        var needs: [String: CGFloat] = [:]
         for section in sections {
-            guard case .plugin(let id) = section, let need = plugins.plugin(id)?.section?.hiddenRowsHeight, need > 0 else { continue }
-            wants.append((section.id, need))
+            guard case .plugin(let id) = section, let need = plugins.plugin(id)?.section?.hiddenRowsHeight else { continue }
+            needs[section.id] = need
         }
-        guard !wants.isEmpty else { return [:] }
-        let used = sections.map(layout.height(of:)).reduce(0, +) + CGFloat(max(0, sections.count - 1)) * IslandLayout.sectionGap
-        let dots: CGFloat = layout.spreadCount > 1 ? IslandLayout.pageDotsHeight : 0
-        var spare = max(0, layout.expandedHeight - IslandLayout.expandedBaseHeight - dots - used)
-        var granted: [String: CGFloat] = [:]
-        // Water-filling: the smallest need is met first, the rest share what remains.
-        var open = wants.sorted { $0.need < $1.need }
-        while !open.isEmpty, spare > 0 {
-            let share = spare / CGFloat(open.count)
-            let first = open.removeFirst()
-            let given = min(first.need, share)
-            granted[first.id] = given
-            spare -= given
-        }
-        return granted
+        return IslandLayout.share(layout.spareHeight(on: sections), among: needs)
     }
 
     @ViewBuilder

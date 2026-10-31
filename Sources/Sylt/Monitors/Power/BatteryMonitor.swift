@@ -1,12 +1,11 @@
+import Combine
 import Foundation
 import IOKit.ps
-import Combine
 
 struct BatterySnapshot: Equatable {
     var percent = 0
     var isCharging = false
     var onAC = false
-    var minutesRemaining: Int?
     var hasBattery = true
 }
 
@@ -60,19 +59,16 @@ final class BatteryMonitor: ObservableObject {
         let previous = snapshot
         snapshot = Self.read()
         defer { hasBaseline = true }
-        guard hasBaseline, snapshot.hasBattery else { return }
-
-        if snapshot.onAC != previous.onAC {
-            alerts.send(.powerSource)
-        } else if snapshot.isCharging, snapshot.percent == 100, previous.percent < 100 {
-            alerts.send(.level(100))
-        } else if !snapshot.onAC, let crossed = Self.crossedThreshold(from: previous.percent, to: snapshot.percent) {
-            alerts.send(.level(crossed))
-        }
+        guard hasBaseline, let alert = Self.alert(from: previous, to: snapshot) else { return }
+        alerts.send(alert)
     }
 
-    private static func crossedThreshold(from old: Int, to new: Int) -> Int? {
-        thresholds.first { new <= $0 && old > $0 }
+    static func alert(from previous: BatterySnapshot, to current: BatterySnapshot) -> BatteryAlert? {
+        guard current.hasBattery else { return nil }
+        if current.onAC != previous.onAC { return .powerSource }
+        if current.isCharging, current.percent == 100, previous.percent < 100 { return .level(100) }
+        guard !current.onAC else { return nil }
+        return thresholds.first { current.percent <= $0 && previous.percent > $0 }.map(BatteryAlert.level)
     }
 
     private static func read() -> BatterySnapshot {
@@ -90,11 +86,6 @@ final class BatteryMonitor: ObservableObject {
         snapshot.percent = capacity > 0 ? Int((Double(current) / Double(capacity) * 100).rounded()) : 0
         snapshot.isCharging = description[kIOPSIsChargingKey] as? Bool ?? false
         snapshot.onAC = (description[kIOPSPowerSourceStateKey] as? String) == kIOPSACPowerValue
-
-        let toFull = description[kIOPSTimeToFullChargeKey] as? Int ?? -1
-        let toEmpty = description[kIOPSTimeToEmptyKey] as? Int ?? -1
-        let minutes = snapshot.isCharging ? toFull : toEmpty
-        snapshot.minutesRemaining = minutes > 0 ? minutes : nil
         return snapshot
     }
 }

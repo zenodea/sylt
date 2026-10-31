@@ -1,16 +1,11 @@
 import AppKit
 import Combine
 
-/// Two status items of Sylt's own: a divider and a control beside it. Hiding stretches the
-/// divider as far as macOS allows, pushing every item to its left against the notch; the
-/// control stays and clicks them back. The pair moves with the slider in Settings or by
-/// Command-dragging.
 @MainActor
 final class MenuBarDivider: ObservableObject {
     @Published private(set) var isHiding = false
     @Published private(set) var isActive = false
 
-    /// Items come back while the pointer is in the menu bar and go a moment after it leaves.
     var revealsOnHover = false { didSet { watchPointer() } }
 
     private var control: NSStatusItem?
@@ -22,12 +17,10 @@ final class MenuBarDivider: ObservableObject {
 
     private static let controlName = "divider.control"
     private static let dividerName = "divider.bar"
-    /// Where the pair first lands, measured from the screen's right edge: just left of
-    /// Apple's own items, so third-party items are the ones that hide.
+    // From the screen's right edge: just left of Apple's own items, so third-party ones hide.
     private static let controlPosition: Double = 130
     private static let dividerPosition: Double = 150
     private static let dividerLength: CGFloat = 14
-    /// Status items may not come closer to the notch than this.
     private static let notchClearance: CGFloat = 12
     private static let fitStep: CGFloat = 30
     private static let menuBarHeight: CGFloat = 24
@@ -48,12 +41,11 @@ final class MenuBarDivider: ObservableObject {
         self.divider = divider
         isActive = true
         // The item's place on the bar is known only once it has been laid out.
-        _ = Timer.after(0.3) { [weak self] in self?.hide(true) }
+        Timer.after(0.3) { [weak self] in self?.hide(true) }
         watchPointer()
     }
 
-    /// AppKit reads an item's position from the defaults when it is first made; seeding
-    /// it puts the pair where hiding is useful instead of at the far left.
+    // AppKit reads an item's position from these defaults only when the item is created.
     private static func seedPositions() {
         if UserDefaults.standard.object(forKey: positionKey(controlName)) == nil { write(position: controlPosition) }
     }
@@ -76,16 +68,14 @@ final class MenuBarDivider: ObservableObject {
         divider = nil
         pointer?.invalidate()
         pointer = nil
-        rehide?.invalidate()
-        rehide = nil
+        cancelRehide()
         fit?.invalidate()
         fit = nil
         isHiding = false
         isActive = false
     }
 
-    /// The divider grows toward the notch, pushing the items on its left against it.
-    /// macOS refuses a length it cannot fit, so the request shrinks until one is taken.
+    // macOS refuses a length it cannot fit, so the request shrinks until one is taken.
     func hide(_ hidden: Bool) {
         guard let divider, let control else { return }
         control.button?.image = NSImage(systemSymbolName: hidden ? "chevron.left" : "chevron.right", accessibilityDescription: hidden ? "Show hidden items" : "Hide items")
@@ -105,25 +95,15 @@ final class MenuBarDivider: ObservableObject {
         }
     }
 
-    /// The room between the divider and the notch.
     private var hiddenLength: CGFloat {
         guard let frame = divider?.button?.window?.frame, let screen = NSScreen.screens.first(where: { $0.frame.contains(frame.origin) }) ?? NSScreen.screens.first else { return Self.dividerLength }
-        return frame.maxX - (screen.frame.midX + Self.notchHalfWidth(of: screen)) - Self.notchClearance
+        return frame.maxX - (screen.frame.midX + (screen.notchWidth ?? 0) / 2) - Self.notchClearance
     }
 
-    /// Half the notch, from the gap between the two top areas; a screen without one gives zero.
-    private static func notchHalfWidth(of screen: NSScreen) -> CGFloat {
-        guard let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea else { return 0 }
-        return (right.minX - left.maxX) / 2
-    }
-
-    /// How far from the screen's right edge the pair sits, as AppKit stores it.
     var position: Double {
         UserDefaults.standard.object(forKey: Self.positionKey(Self.controlName)) as? Double ?? Self.controlPosition
     }
 
-    /// Moves the pair: the items are made again at the new place, since AppKit only
-    /// reads the position when an item is created.
     func move(to position: Double) {
         let wasActive = isActive
         stop()
@@ -133,7 +113,7 @@ final class MenuBarDivider: ObservableObject {
 
     @objc private func toggle() {
         revealedByPointer = false
-        rehide?.invalidate()
+        cancelRehide()
         hide(!isHiding)
     }
 
@@ -149,7 +129,7 @@ final class MenuBarDivider: ObservableObject {
         let inMenuBar = NSEvent.mouseLocation.y >= screen.frame.maxY - Self.menuBarHeight && screen.frame.contains(CGPoint(x: NSEvent.mouseLocation.x, y: screen.frame.maxY - 1))
         if inMenuBar, isHiding {
             revealedByPointer = true
-            rehide?.invalidate()
+            cancelRehide()
             hide(false)
         } else if !inMenuBar, revealedByPointer, rehide == nil {
             rehide = .after(Self.rehideDelay) { [weak self] in
@@ -158,8 +138,12 @@ final class MenuBarDivider: ObservableObject {
                 self?.hide(true)
             }
         } else if inMenuBar {
-            rehide?.invalidate()
-            rehide = nil
+            cancelRehide()
         }
+    }
+
+    private func cancelRehide() {
+        rehide?.invalidate()
+        rehide = nil
     }
 }

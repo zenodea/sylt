@@ -33,9 +33,6 @@ struct MenuBarPane: View {
             }
             .disabled(!preferences.hidesMenuBarItems)
             .onAppear { position = divider.position }
-            Text("Everything left of the divider hides. Move it with the slider, or Command-drag the chevron.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
         Section("System items") {
             ForEach(MenuBarSettings.items) { item in

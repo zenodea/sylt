@@ -71,7 +71,7 @@ final class IslandLayoutTests: XCTestCase {
         var layout = layout
         layout.pluginWidths = ["a": 44]
         layout.wings.right.append(.plugin("a"))
-        let hud = ExternalHUD(pluginID: "agents", hud: PluginHUD(symbol: "checkmark.circle.fill", text: "Done", side: "left"))
+        let hud = ExternalHUD(pluginID: "agents", hud: PluginHUD(symbol: "checkmark.circle.fill", text: "Done", side: .left))
         let widths = layout.wingWidths(for: .hud(.external(hud)))
         XCTAssertEqual(widths.trailing, layout.rightWing)
         XCTAssertGreaterThan(widths.leading, 0)
@@ -116,5 +116,44 @@ final class IslandLayoutTests: XCTestCase {
             IslandLayout.expandedBaseHeight + IslandLayout.mediaCardHeight + 34 + IslandLayout.sectionGap
         )
         XCTAssertLessThan(layout.expandedHeight, layout.canvasSize.height)
+    }
+
+    func testPointerFindsTheWingItemUnderIt() {
+        var layout = layout
+        layout.showsCalendar = true
+        layout.pluginWidths = ["a": 40]
+        layout.wings.right = [.plugin("a")]
+        let centre = layout.canvasSize.width / 2
+        let notchLeft = centre - layout.notchWidth / 2 - IslandLayout.sideOverlap
+        let notchRight = centre + layout.notchWidth / 2 + IslandLayout.sideOverlap
+        XCTAssertEqual(layout.item(at: notchLeft - IslandLayout.wingPadding - CalendarBadge.width / 2), .calendar)
+        XCTAssertEqual(layout.item(at: notchRight + IslandLayout.wingPadding + 20), .plugin("a"))
+        XCTAssertNil(layout.item(at: 10))
+        XCTAssertNil(layout.item(at: layout.canvasSize.width - 10))
+    }
+
+    func testWingItemsOpenTheirPage() {
+        var layout = layout
+        layout.expandedPages = [[.media, .event], [.plugin("a")]]
+        XCTAssertEqual(layout.page(for: .music), 0)
+        XCTAssertEqual(layout.page(for: .calendar), 0)
+        XCTAssertEqual(layout.page(for: .plugin("a")), 1)
+        XCTAssertNil(layout.page(for: .wifi), "menu bar items have no page")
+        XCTAssertNil(layout.page(for: .plugin("gone")))
+    }
+
+    func testShorterPagesHaveSpareHeight() {
+        var layout = layout
+        layout.pluginSectionHeights = ["a": 40]
+        layout.expandedPages = [[.media], [.plugin("a")]]
+        XCTAssertEqual(layout.spareHeight(on: [.media]), 0)
+        XCTAssertEqual(layout.spareHeight(on: [.plugin("a")]), IslandLayout.mediaCardHeight - 40)
+    }
+
+    func testSpareHeightMeetsTheSmallestNeedFirst() {
+        XCTAssertEqual(IslandLayout.share(30, among: ["a": 5, "b": 40, "c": 20]), ["a": 5, "b": 12.5, "c": 12.5])
+        XCTAssertEqual(IslandLayout.share(100, among: ["a": 5, "b": 40]), ["a": 5, "b": 40], "nobody gets more than they need")
+        XCTAssertEqual(IslandLayout.share(0, among: ["a": 5]), [:])
+        XCTAssertEqual(IslandLayout.share(10, among: ["a": 0]), [:])
     }
 }

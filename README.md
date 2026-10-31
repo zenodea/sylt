@@ -114,7 +114,7 @@ done
 
 | Line | Effect |
 | --- | --- |
-| `wing` | The badge in `side` (`left`, `right`). Items mix `symbol`, `image` (`app:`, `icon:`, `file:`), `text`, `tint`, `dot`, `ring`, `graph` and `status` (`working`, `waiting`); `spacing` sets the gap. Empty items clear it. |
+| `wing` | The badge in `side` (`left`, `right`). Items mix `symbol`, `image` (`app:`, `icon:`, `file:`), `text`, `tint`, `dot`, `ring`, `graph` and `status` (`working`, `waiting`, `done`; anything else reads as `waiting`); `spacing` sets the gap. Empty items clear it. |
 | `hud` | An overlay: `symbol` or `image`, `tint`, `text` or `level`, `side` (`both`, `left`, `right`), `duration`, `sound`, `trailingSymbol`, `trailingTint`. |
 | `section` | The expanded section: `title`, `symbol`, `rows`, `files`, `buttons`, `actions`. Rows take `id`, `symbol` or `image`, `title`, `detail`, `trailing`, `trailingTint`, `status`, `progress`, `buttons`, `highlighted`, `large`, `graph`, `tint`. |
 | `clearSection` | Removes the section. |

@@ -23,9 +23,7 @@ final class BluetoothMonitor: NSObject, ObservableObject {
     }
 
     let events = PassthroughSubject<Event, Never>()
-    /// A connected device dropping to 20 and then 10 percent.
     let lowBattery = PassthroughSubject<Device, Never>()
-    /// Audio devices first.
     @Published private(set) var connected: [Device] = []
     @Published private(set) var isOn = false
 
@@ -35,7 +33,7 @@ final class BluetoothMonitor: NSObject, ObservableObject {
     private var disconnectNotifications: [String: IOBluetoothUserNotification] = [:]
     private var refresh: Timer?
     private var power: Timer?
-    private var warned: [String: Int] = [:]
+    private var warnings = LowBatteryWarnings()
 
     func start() {
         guard connectNotification == nil else { return }
@@ -75,17 +73,17 @@ final class BluetoothMonitor: NSObject, ObservableObject {
     }
 
     @objc private func disconnected(_ notification: IOBluetoothUserNotification, device: IOBluetoothDevice) {
-        let address = device.addressString ?? ""
+        let address = device.address
         disconnectNotifications.removeValue(forKey: address)?.unregister()
         connected.removeAll { $0.address == address }
-        warned[address] = nil
-        events.send(.disconnected(Device(name: device.name ?? "Bluetooth device", address: address, battery: nil)))
+        warnings.forget(address)
+        events.send(.disconnected(Device(name: device.displayName, address: address)))
     }
 
     @discardableResult
     private func track(_ device: IOBluetoothDevice) async -> Device {
-        let name = device.name ?? "Bluetooth device"
-        let address = device.addressString ?? ""
+        let name = device.displayName
+        let address = device.address
         let isAudio = device.deviceClassMajor == kBluetoothDeviceClassMajorAudio
         let battery = await BluetoothBattery.level(address: address, name: name)
         let tracked = Device(name: name, address: address, battery: battery, isAudio: isAudio)
@@ -107,23 +105,40 @@ final class BluetoothMonitor: NSObject, ObservableObject {
     }
 
     private func warn(_ device: Device) {
-        guard let level = device.battery else { return }
-        let threshold = level <= 10 ? 10 : level <= 20 ? 20 : 100
-        if threshold == 100 { warned[device.address] = nil; return }
-        guard warned[device.address] != threshold, (warned[device.address] ?? 100) > threshold else { return }
-        warned[device.address] = threshold
+        guard let level = device.battery, warnings.shouldWarn(device.address, level: level) else { return }
         lowBattery.send(device)
     }
 
     private func watchDisconnect(of device: IOBluetoothDevice) {
-        let address = device.addressString ?? ""
+        let address = device.address
         guard disconnectNotifications[address] == nil else { return }
         disconnectNotifications[address] = device.register(forDisconnectNotification: self, selector: #selector(disconnected(_:device:)))
     }
 }
 
-/// Battery of a Bluetooth accessory: the IORegistry knows Apple devices
-/// straight away; anything else goes through the system profiler.
+private extension IOBluetoothDevice {
+    var displayName: String { name ?? "Bluetooth device" }
+    var address: String { addressString ?? "" }
+}
+
+struct LowBatteryWarnings {
+    private var warned: [String: Int] = [:]
+
+    mutating func shouldWarn(_ address: String, level: Int) -> Bool {
+        guard let threshold = [10, 20].first(where: { level <= $0 }) else {
+            warned[address] = nil
+            return false
+        }
+        guard (warned[address] ?? 100) > threshold else { return false }
+        warned[address] = threshold
+        return true
+    }
+
+    mutating func forget(_ address: String) {
+        warned[address] = nil
+    }
+}
+
 enum BluetoothBattery {
     static func level(address: String, name: String, delay: Double = 1.5) async -> Int? {
         if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }

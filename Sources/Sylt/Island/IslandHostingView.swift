@@ -1,24 +1,18 @@
 import AppKit
 import SwiftUI
 
-/// Only the island itself accepts mouse events; the rest of the canvas is inert.
 final class IslandHostingView: NSHostingView<IslandView> {
     weak var state: IslandState?
 
     private var swipe = CGVector.zero
-    /// Set once a swipe has been acted on, so one gesture triggers one action.
     private var swipeFired = false
-    /// Over a scrolling list the gesture is the list's first.
     private var overList = false
     private var sidewaysTravel: CGFloat = 0
     private var peakSideways: CGFloat = 0
-    /// Over a list the island doesn't lean until the sideways travel is clearly a swipe.
     private static let intentTravel: CGFloat = 18
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    /// Feeds a scroll event to the swipe recogniser. Returns true when the event is a
-    /// sideways swipe on the open island, which no list underneath should also scroll.
     @discardableResult
     func handleScroll(_ event: NSEvent) -> Bool {
         guard let state, event.momentumPhase.isEmpty else { return false }
@@ -37,7 +31,6 @@ final class IslandHostingView: NSHostingView<IslandView> {
             swipe.dy = Self.clamp(swipe.dy + dy)
             sidewaysTravel += abs(dx)
             peakSideways = max(peakSideways, abs(dx))
-            // Over a list the island never leans with the scroll; only a clear sideways swipe moves it.
             if !overList {
                 state.swipeMoved(swipe)
             } else if sidewaysTravel >= Self.intentTravel {
@@ -59,8 +52,6 @@ final class IslandHostingView: NSHostingView<IslandView> {
         return state.mode == .expanded && abs(swipe.dx) > abs(swipe.dy)
     }
 
-    /// A scroll over a list is the list's: it never closes the island. Sideways swipes
-    /// still turn the page once they're clearly meant; anything off a list swipes as usual.
     private func allows(_ direction: SwipeDirection) -> Bool {
         guard overList, state?.mode == .expanded else { return true }
         switch direction {

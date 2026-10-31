@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// The menu bar's own items, for an island that stands in for it. Each has a fixed width
-/// so the wing never resizes as a reading changes.
 struct WiFiBadge: View {
     static let width: CGFloat = 15
 
@@ -9,22 +7,14 @@ struct WiFiBadge: View {
     let signal: Double
 
     var body: some View {
-        Group {
-            switch link {
-            case .wifi: Image(systemName: "wifi", variableValue: signal)
-            case .ethernet: Image(systemName: "cable.connector.horizontal")
-            case .other: Image(systemName: "network")
-            case .offline: Image(systemName: "wifi.slash")
-            }
-        }
-        .font(.system(size: 12, weight: .semibold))
-        .foregroundStyle(.white.opacity(link == .offline ? 0.45 : 0.85))
-        .frame(width: Self.width)
-        .animation(IslandAnimation.value, value: link)
+        Image(systemName: link.symbol, variableValue: link == .wifi ? signal : nil)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.white.opacity(link == .offline ? 0.45 : 0.85))
+            .frame(width: Self.width)
+            .animation(IslandAnimation.value, value: link)
     }
 }
 
-/// The rune drawn to the Wi-Fi symbol's weight and colour, so the two read as a pair.
 struct BluetoothBadge: View {
     static let width: CGFloat = 12
 

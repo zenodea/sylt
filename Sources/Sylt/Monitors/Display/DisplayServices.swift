@@ -11,19 +11,11 @@ enum DisplayServices {
     private typealias CanFn = @convention(c) (CGDirectDisplayID) -> Bool
     private typealias RegisterFn = @convention(c) (CGDirectDisplayID, CGDirectDisplayID, ChangeCallback) -> Int32
 
-    private static let handle = dlopen(
-        "/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_NOW)
-
-    private static func symbol<T>(_ name: String, as type: T.Type) -> T? {
-        guard let handle, let sym = dlsym(handle, name) else { return nil }
-        return unsafeBitCast(sym, to: type)
-    }
-
-    private static let getFn = symbol("DisplayServicesGetBrightness", as: GetFn.self)
-    private static let setFn = symbol("DisplayServicesSetBrightness", as: SetFn.self)
-    private static let canFn = symbol("DisplayServicesCanChangeBrightness", as: CanFn.self)
-    private static let registerFn = symbol(
-        "DisplayServicesRegisterForBrightnessChangeNotifications", as: RegisterFn.self)
+    private static let framework = PrivateFramework(private: "DisplayServices")
+    private static let getFn = framework.symbol("DisplayServicesGetBrightness", as: GetFn.self)
+    private static let setFn = framework.symbol("DisplayServicesSetBrightness", as: SetFn.self)
+    private static let canFn = framework.symbol("DisplayServicesCanChangeBrightness", as: CanFn.self)
+    private static let registerFn = framework.symbol("DisplayServicesRegisterForBrightnessChangeNotifications", as: RegisterFn.self)
 
     static var isAvailable: Bool { getFn != nil && setFn != nil }
 
@@ -37,12 +29,10 @@ enum DisplayServices {
         return value
     }
 
-    @discardableResult
-    static func setBrightness(_ value: Float, of display: CGDirectDisplayID) -> Bool {
-        setFn?(display, value) == 0
+    static func setBrightness(_ value: Float, of display: CGDirectDisplayID) {
+        _ = setFn?(display, value)
     }
 
-    @discardableResult
     static func observeBrightness(of display: CGDirectDisplayID, _ callback: ChangeCallback) -> Bool {
         registerFn?(display, display, callback) == 0
     }

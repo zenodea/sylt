@@ -1,10 +1,8 @@
 import CoreGraphics
 
 extension CGVector {
-    /// This travel as a push on the island: the upward part is dropped, the screen ends there.
     var push: CGVector { CGVector(dx: dx, dy: max(0, dy)) }
 
-    /// Whether this travel pushes the island anywhere at all.
     var pushes: Bool { push.length > 0.001 }
 
     var length: CGFloat { hypot(dx, dy) }
@@ -12,5 +10,11 @@ extension CGVector {
     var unit: CGVector {
         let length = length
         return length > 0 ? CGVector(dx: dx / length, dy: dy / length) : .zero
+    }
+}
+
+extension CGRect {
+    func clamp(_ point: CGPoint) -> CGPoint {
+        CGPoint(x: min(max(point.x, minX), maxX), y: min(max(point.y, minY), maxY))
     }
 }

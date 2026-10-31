@@ -1,13 +1,9 @@
 import Combine
 import Foundation
 
-/// Finds plugin folders, bundled and user-installed, and keeps them running
-/// while enabled. The user folder is watched, so dropping a plugin in is enough.
 @MainActor
 final class PluginRegistry: ObservableObject {
     @Published private(set) var plugins: [ExternalPlugin] = []
-
-    func plugin(_ id: String) -> ExternalPlugin? { plugins.first { $0.id == id } }
     let huds = PassthroughSubject<(ExternalPlugin, PluginHUD), Never>()
 
     let store: PluginStore
@@ -31,6 +27,8 @@ final class PluginRegistry: ObservableObject {
             .store(in: &cancellables)
     }
 
+    func plugin(_ id: String) -> ExternalPlugin? { plugins.first { $0.id == id } }
+
     func start() {
         try? FileManager.default.createDirectory(at: Self.userFolder, withIntermediateDirectories: true)
         reload()
@@ -46,9 +44,8 @@ final class PluginRegistry: ObservableObject {
         descriptor = -1
     }
 
-    /// Rescans both folders; plugins that vanished stop, new ones start.
     func reload() {
-        let found = (Self.scan(Self.bundledFolder, bundled: true) + Self.scan(Self.userFolder, bundled: false))
+        let found = Self.scan(Self.bundledFolder, bundled: true) + Self.scan(Self.userFolder, bundled: false)
         var next: [ExternalPlugin] = []
         var seen: Set<String> = []
         for (manifest, folder, bundled) in found where !seen.contains(manifest.id) {
@@ -66,7 +63,7 @@ final class PluginRegistry: ObservableObject {
         plugins = next
         for plugin in plugins {
             pluginCancellables[plugin.id] = plugin.huds.sink { [weak self, weak plugin] hud in
-                guard let self, let plugin, store.showsHUDs(plugin.manifest) else { return }
+                guard let self, let plugin, showsHUDs(plugin) else { return }
                 huds.send((plugin, hud))
             }
             applyEnabled(plugin)
@@ -74,13 +71,7 @@ final class PluginRegistry: ObservableObject {
         watchClipboardIfWanted()
     }
 
-    func setShowsHUDs(_ on: Bool, _ plugin: ExternalPlugin) {
-        store.setShowsHUDs(on, plugin.manifest)
-    }
-
-    private func watchClipboardIfWanted() {
-        plugins.contains { $0.manifest.wantsClipboard && store.isEnabled($0.manifest) } ? clipboard.start() : clipboard.stop()
-    }
+    func isEnabled(_ plugin: ExternalPlugin) -> Bool { store.isEnabled(plugin.manifest) }
 
     func setEnabled(_ on: Bool, _ plugin: ExternalPlugin) {
         store.setEnabled(on, plugin.manifest)
@@ -88,7 +79,11 @@ final class PluginRegistry: ObservableObject {
         watchClipboardIfWanted()
     }
 
-    func isEnabled(_ plugin: ExternalPlugin) -> Bool { store.isEnabled(plugin.manifest) }
+    func showsHUDs(_ plugin: ExternalPlugin) -> Bool { store.showsHUDs(plugin.manifest) }
+
+    func setShowsHUDs(_ on: Bool, _ plugin: ExternalPlugin) {
+        store.setShowsHUDs(on, plugin.manifest)
+    }
 
     func dropped(_ urls: [URL]) {
         for plugin in plugins where plugin.manifest.acceptsFiles && plugin.isRunning {
@@ -100,12 +95,16 @@ final class PluginRegistry: ObservableObject {
         store.isEnabled(plugin.manifest) ? plugin.start() : plugin.stop()
     }
 
+    private func watchClipboardIfWanted() {
+        plugins.contains { $0.manifest.wantsClipboard && store.isEnabled($0.manifest) } ? clipboard.start() : clipboard.stop()
+    }
+
     private static var bundledFolder: URL? {
         if let override = ProcessInfo.processInfo.environment["ISLAND_PLUGINS"] { return URL(fileURLWithPath: override) }
         return Bundle.main.resourceURL?.appendingPathComponent("Plugins")
     }
 
-    private static func scan(_ root: URL?, bundled: Bool) -> [(PluginManifest, URL, Bool)] {
+    static func scan(_ root: URL?, bundled: Bool) -> [(PluginManifest, URL, Bool)] {
         guard let root, let folders = try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else { return [] }
         return folders.compactMap { folder -> (PluginManifest, URL, Bool)? in
             guard let data = try? Data(contentsOf: folder.appendingPathComponent("plugin.json")) else { return nil }

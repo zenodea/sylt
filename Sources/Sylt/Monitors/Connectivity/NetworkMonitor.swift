@@ -11,7 +11,6 @@ final class NetworkMonitor: ObservableObject {
 
     let changes = PassthroughSubject<Link, Never>()
     @Published private(set) var link: Link = .offline
-    /// Wi-Fi strength as a share of full bars, from the interface's signal reading.
     @Published private(set) var signal: Double = 0
 
     private var monitor: NWPathMonitor?
@@ -52,17 +51,20 @@ final class NetworkMonitor: ObservableObject {
         }
     }
 
-    /// Paths flap while a connection comes up; report once it has held for a moment.
     private func observed(_ link: Link) {
-        guard current != nil else { current = link; self.link = link; readSignal(); return }
+        guard current != nil else { adopt(link); return }
         settle?.invalidate()
         settle = .after(1.2) { [weak self] in
             guard let self, link != current else { return }
-            current = link
-            self.link = link
-            readSignal()
+            adopt(link)
             changes.send(link)
         }
+    }
+
+    private func adopt(_ link: Link) {
+        current = link
+        self.link = link
+        readSignal()
     }
 
     nonisolated private static func link(for path: NWPath) -> Link {
@@ -70,5 +72,25 @@ final class NetworkMonitor: ObservableObject {
         if path.usesInterfaceType(.wiredEthernet) { return .ethernet }
         if path.usesInterfaceType(.wifi) { return .wifi }
         return .other
+    }
+}
+
+extension NetworkMonitor.Link {
+    var title: String {
+        switch self {
+        case .wifi: "Wi-Fi"
+        case .ethernet: "Ethernet"
+        case .other: "Online"
+        case .offline: "Offline"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .wifi: "wifi"
+        case .ethernet: "cable.connector.horizontal"
+        case .other: "network"
+        case .offline: "wifi.slash"
+        }
     }
 }

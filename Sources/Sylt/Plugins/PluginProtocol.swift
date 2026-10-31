@@ -1,15 +1,34 @@
 import Foundation
 
-/// Version 1 of the plugin protocol: JSON objects, one per line, both ways.
-///
-/// A plugin prints messages to stdout: `wing`, `hud`, `section`, `sound`,
-/// `activate`, `open`, `log`. The host writes events to its stdin: `start`,
-/// `settings`, `click`, `button`, `action`, `drop`, `remove`, `stop`.
 enum PluginProtocol {
     static let version = 1
 }
 
-/// A folder's `plugin.json`.
+/// Unknown words decode as the fallback, so one never fails the whole message.
+protocol PluginKeyword: RawRepresentable, Decodable where RawValue == String {
+    static var fallback: Self { get }
+}
+
+extension PluginKeyword {
+    init(from decoder: Decoder) throws {
+        self = Self(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .fallback
+    }
+}
+
+extension WingSide: PluginKeyword {
+    static let fallback = WingSide.right
+}
+
+enum HUDSide: String, PluginKeyword {
+    case both, left, right
+    static let fallback = HUDSide.both
+}
+
+enum PluginStatus: String, PluginKeyword {
+    case working, waiting, done
+    static let fallback = PluginStatus.waiting
+}
+
 struct PluginManifest: Decodable, Hashable {
     struct Setting: Decodable, Hashable, Identifiable {
         enum Kind: String, Decodable { case bool, text, number, choice }
@@ -28,14 +47,11 @@ struct PluginManifest: Decodable, Hashable {
     let description: String?
     let symbol: String?
     let run: String
-    /// Seconds between one-shot runs. Absent means the plugin stays running.
     let interval: Double?
     let accepts: [String]?
     let settings: [Setting]?
     let enabledByDefault: Bool?
-    /// "left" or "right": where the badge goes unless the user moves it.
-    let side: String?
-    /// Bundle id of the app a click on the section's title opens.
+    let side: WingSide?
     let opens: String?
 
     var acceptsFiles: Bool { accepts?.contains("files") ?? false }
@@ -47,7 +63,6 @@ struct PluginManifest: Decodable, Hashable {
     }
 }
 
-/// Something a plugin puts in a wing: a glyph, an image, text, a dot or a ring, in any mix.
 struct PluginItem: Decodable, Hashable {
     var symbol: String?
     var image: String?
@@ -55,14 +70,10 @@ struct PluginItem: Decodable, Hashable {
     var tint: String?
     var dot: String?
     var ring: Double?
-    var status: String?
-    /// A small graph of values from 0 to 1, oldest first.
+    var status: PluginStatus?
     var graph: [Double]?
-
-    var isWorking: Bool { status == "working" }
 }
 
-/// A row of a plugin's expanded section.
 struct PluginRow: Decodable, Hashable, Identifiable {
     struct Button: Decodable, Hashable, Identifiable { let id: String; let title: String }
 
@@ -73,25 +84,22 @@ struct PluginRow: Decodable, Hashable, Identifiable {
     var detail: String?
     var trailing: String?
     var trailingTint: String?
-    var status: String?
+    var status: PluginStatus?
     var progress: Double?
     var buttons: [Button]?
     var highlighted: Bool?
     var graph: [Double]?
     var tint: String?
-    /// A bigger title, for a headline number like a temperature.
     var large: Bool?
 
     var rowID: String { id ?? "\(title ?? "")\(detail ?? "")" }
 }
 
-/// A plugin's section in the expanded island.
 struct PluginSection: Decodable, Hashable {
     struct Action: Decodable, Hashable, Identifiable { let id: String; let title: String }
 
     var title: String?
     var symbol: String?
-    /// Small items at the right of the header, like tallies.
     var items: [PluginItem]?
     var rows: [PluginRow]?
     var files: [String]?
@@ -99,17 +107,15 @@ struct PluginSection: Decodable, Hashable {
     var actions: [Action]?
 }
 
-/// A HUD a plugin asks to show now.
 struct PluginHUD: Decodable, Hashable {
     var symbol: String?
     var image: String?
     var tint: String?
     var text: String?
     var level: Double?
-    var side: String?
+    var side: HUDSide?
     var duration: Double?
     var sound: String?
-    /// A symbol after the text that bounces in, like a tick.
     var trailingSymbol: String?
     var trailingTint: String?
 }
@@ -118,16 +124,13 @@ struct PluginActivation: Decodable, Hashable {
     var process: String?
     var pid: Int32?
     var bundle: String?
-    /// Raise the window whose title contains this, once the app is in front.
     var window: String?
 }
 
-/// One line of plugin output.
 struct PluginMessage: Decodable {
     struct Wing: Decodable {
-        let side: String
+        let side: WingSide
         let items: [PluginItem]?
-        /// Space between items; 8 unless the plugin wants its icons tighter.
         let spacing: Double?
     }
 
@@ -141,7 +144,6 @@ struct PluginMessage: Decodable {
     var log: String?
 }
 
-/// One line of host input, written to the plugin.
 struct PluginEvent: Encodable {
     let event: String
     var settings: [String: JSONValue]? = nil
@@ -153,7 +155,6 @@ struct PluginEvent: Encodable {
     var text: String? = nil
 }
 
-/// A JSON scalar, array or object, for settings values.
 enum JSONValue: Codable, Hashable {
     case string(String), number(Double), bool(Bool), null
     indirect case array([JSONValue]), object([String: JSONValue])

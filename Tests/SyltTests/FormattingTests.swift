@@ -35,4 +35,12 @@ final class FormattingTests: XCTestCase {
         XCTAssertLessThan(TextWidth.of("a", size: 11), TextWidth.of("abc", size: 11))
         XCTAssertEqual(TextWidth.widest(["a", "abc", "ab"], size: 11), TextWidth.of("abc", size: 11))
     }
+
+    func testPrivateFrameworksResolveTheirSymbols() {
+        typealias SendFn = @convention(c) (Int32, UnsafeRawPointer?) -> Bool
+        let mediaRemote = PrivateFramework(private: "MediaRemote")
+        XCTAssertNotNil(mediaRemote.symbol("MRMediaRemoteSendCommand", as: SendFn.self))
+        XCTAssertNil(mediaRemote.symbol("NoSuchFunction", as: SendFn.self))
+        XCTAssertNil(PrivateFramework(private: "NoSuchFramework").symbol("MRMediaRemoteSendCommand", as: SendFn.self))
+    }
 }

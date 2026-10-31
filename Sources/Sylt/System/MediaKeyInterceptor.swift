@@ -1,8 +1,6 @@
 import AppKit
 import Combine
 
-/// Swallows the hardware volume and brightness keys so macOS never shows its
-/// own overlay, and reports them so the island can apply the change itself.
 @MainActor
 final class MediaKeyInterceptor: ObservableObject {
     enum Key: Int32 {
@@ -22,18 +20,15 @@ final class MediaKeyInterceptor: ObservableObject {
     private static let systemDefinedEvent = CGEventType(rawValue: 14)!
     private static let auxiliaryControlSubtype: Int16 = 8
     private static let retryInterval: TimeInterval = 2
-    private static let debug = ProcessInfo.processInfo.environment["ISLAND_DEBUG"] != nil
 
-    /// The tap is installed and keys are being swallowed.
     var isIntercepting: Bool { tap != nil }
     private var isActive: Bool { tap != nil || retryTimer != nil }
 
-    /// Asks macOS again, for the Settings pane, without prompting.
     func refreshAuthorization() {
         let trusted = AXIsProcessTrusted()
         if trusted != isAuthorized { isAuthorized = trusted }
         if trusted, retryTimer != nil { authorized() }
-        // `isIntercepting` isn't published; the pane re-reads it on this.
+        // `isIntercepting` isn't published; the Settings pane re-reads it on this.
         objectWillChange.send()
     }
 
@@ -51,11 +46,6 @@ final class MediaKeyInterceptor: ObservableObject {
         if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
         tap = nil
         source = nil
-    }
-
-    static func openAccessibilitySettings() {
-        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
-        NSWorkspace.shared.open(url)
     }
 
     private func scheduleRetry() {
@@ -76,8 +66,7 @@ final class MediaKeyInterceptor: ObservableObject {
         retryTimer = nil
     }
 
-    /// The HID tap sees keys before anything else does, so Control Center never
-    /// gets the chance to draw its overlay; the session tap is the fallback.
+    // Only the HID tap sees keys before Control Center draws its own overlay.
     private func installTap() {
         let info = Unmanaged.passUnretained(self).toOpaque()
         let callback: CGEventTapCallBack = { _, type, event, info in
@@ -122,7 +111,6 @@ final class MediaKeyInterceptor: ObservableObject {
     }
 
     private static func log(_ message: String) {
-        guard debug else { return }
-        FileHandle.standardError.write(Data("media keys: \(message)\n".utf8))
+        DebugLog.write("media keys: \(message)")
     }
 }

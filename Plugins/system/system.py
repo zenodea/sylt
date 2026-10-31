@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""System load: CPU from top, memory from vm_stat, GPU from the accelerator's own counter, as sparklines."""
 import ctypes, ctypes.util, json, os, re, subprocess, sys, threading, time
 
 SAMPLES = 24
-lock = threading.Lock()
-settings = {"wing": "cpu", "percent": True}
-series = {"cpu": [0.0] * SAMPLES, "memory": [0.0] * SAMPLES, "gpu": [0.0] * SAMPLES}
-memory_text = ""
+METRICS = ("cpu", "memory", "gpu")
+TITLE = {"cpu": "CPU", "memory": "Memory", "gpu": "GPU"}
 TINT = {"cpu": "cyan", "memory": "purple", "gpu": "green"}
 SYMBOL = {"cpu": "cpu", "memory": "memorychip", "gpu": "gamecontroller"}
+lock = threading.Lock()
+settings = {"wing": "cpu", "percent": True}
+series = {name: [0.0] * SAMPLES for name in METRICS}
+memory_text = ""
 
 def emit(message):
     with lock:
@@ -16,67 +17,75 @@ def emit(message):
         sys.stdout.flush()
 
 def log(text):
-    emit({"log": "system: %s" % text})
+    emit({"log": text})
 
-def run(args, timeout=5):
+def run(args):
     try:
-        return subprocess.run(args, capture_output=True, text=True, timeout=timeout).stdout
+        return subprocess.run(args, capture_output=True, text=True, timeout=5).stdout
     except (OSError, subprocess.SubprocessError):
         return ""
 
 libc = ctypes.CDLL(ctypes.util.find_library("c"))
 libc.mach_host_self.restype = ctypes.c_uint32
 
+HOST_CPU_LOAD_INFO = 3
+TOTAL_MEMORY = int(run(["/usr/sbin/sysctl", "-n", "hw.memsize"]).strip() or 0)
+
 class CPUTicks(ctypes.Structure):
-    _fields_ = [("ticks", ctypes.c_uint32 * 4)]  # user, system, idle, nice
+    _fields_ = [(name, ctypes.c_uint32) for name in ("user", "system", "idle", "nice")]
 
 last_ticks = None
 
 def cpu():
-    """Busy share since the last call, from the kernel's own counters: no process to spawn."""
     global last_ticks
-    info, count = CPUTicks(), ctypes.c_uint32(4)
-    if libc.host_statistics(libc.mach_host_self(), 3, ctypes.byref(info), ctypes.byref(count)) != 0: return None
-    ticks = list(info.ticks)
+    info, count = CPUTicks(), ctypes.c_uint32(len(CPUTicks._fields_))
+    if libc.host_statistics(libc.mach_host_self(), HOST_CPU_LOAD_INFO, ctypes.byref(info), ctypes.byref(count)) != 0: return None
+    ticks = (info.user + info.system + info.nice, info.idle)
     previous, last_ticks = last_ticks, ticks
     if previous is None: return None
-    delta = [b - a for a, b in zip(previous, ticks)]
-    total = sum(delta)
-    return (delta[0] + delta[1] + delta[3]) / total if total else None
+    busy, idle = ticks[0] - previous[0], ticks[1] - previous[1]
+    return busy / (busy + idle) if busy + idle else None
 
 def memory():
     global memory_text
+    if not TOTAL_MEMORY: return None
     out = run(["/usr/bin/vm_stat"])
-    page = int(re.search(r"page size of (\d+)", out).group(1)) if "page size" in out else 16384
-    pages = {k.strip(): int(v.strip(" .")) for k, v in (l.split(":", 1) for l in out.splitlines() if ":" in l and l.split(":", 1)[1].strip(" .").isdigit())}
-    total = int(run(["/usr/sbin/sysctl", "-n", "hw.memsize"]).strip() or 0)
-    if not total: return None
+    match = re.search(r"page size of (\d+)", out)
+    page = int(match.group(1)) if match else 16384
+    pages = {}
+    for line in out.splitlines():
+        key, _, value = line.partition(":")
+        value = value.strip(" .")
+        if value.isdigit(): pages[key.strip()] = int(value)
     used = (pages.get("Pages active", 0) + pages.get("Pages wired down", 0) + pages.get("Pages occupied by compressor", 0)) * page
-    memory_text = "%.1f of %.0f GB" % (used / 1e9, total / 1e9)
-    return used / total
+    memory_text = "%.1f of %.0f GB" % (used / 1e9, TOTAL_MEMORY / 1e9)
+    return used / TOTAL_MEMORY
 
 def gpu():
     match = re.search(r'"Device Utilization %"=(\d+)', run(["/usr/sbin/ioreg", "-r", "-d", "1", "-c", "IOAccelerator"]))
     return int(match.group(1)) / 100 if match else None
 
 def sample():
-    for name, read in (("cpu", cpu), ("memory", memory), ("gpu", gpu)):
+    for name, read in zip(METRICS, (cpu, memory, gpu)):
         value = read()
         if value is not None:
             series[name] = series[name][1:] + [max(0.0, min(1.0, value))]
 
+def graph(name):
+    return [round(v, 3) for v in series[name]]
+
+def percent(name):
+    return "%d%%" % round(series[name][-1] * 100)
+
 def publish():
-    chosen = [k for k in ("cpu", "memory", "gpu") if settings["wing"] in (k, "all")]
     items = []
-    for name in chosen:
-        items.append({"graph": [round(v, 3) for v in series[name]], "tint": TINT[name]})
-        if settings["percent"]: items.append({"text": "%d%%" % round(series[name][-1] * 100)})
+    for name in METRICS:
+        if settings["wing"] not in (name, "all"): continue
+        items.append({"graph": graph(name), "tint": TINT[name]})
+        if settings["percent"]: items.append({"text": percent(name)})
     emit({"wing": {"side": "right", "items": items, "spacing": 4}})
-    rows = []
-    for name in ("cpu", "memory", "gpu"):
-        detail = memory_text if name == "memory" else None
-        rows.append({"id": name, "symbol": SYMBOL[name], "title": name.upper() if name != "memory" else "Memory", "detail": detail,
-                     "trailing": "%d%%" % round(series[name][-1] * 100), "graph": [round(v, 3) for v in series[name]], "tint": TINT[name]})
+    rows = [{"id": name, "symbol": SYMBOL[name], "title": TITLE[name], "detail": memory_text if name == "memory" else None,
+             "trailing": percent(name), "graph": graph(name), "tint": TINT[name]} for name in METRICS]
     emit({"section": {"rows": rows}})
 
 def handle(event):
@@ -88,18 +97,19 @@ def handle(event):
         publish()
     elif kind == "click":
         emit({"activate": {"bundle": "com.apple.ActivityMonitor"}})
-    elif kind == "stop":
-        os._exit(0)
 
 def listen():
     for line in sys.stdin:
         try:
-            handle(json.loads(line))
+            event = json.loads(line)
         except ValueError:
             continue
+        if event.get("event") == "stop": os._exit(0)
+        try:
+            handle(event)
         except Exception as error:
-            log(error)
-    os._exit(0)  # the host went away
+            log("%s failed: %s" % (event.get("event"), error))
+    os._exit(0)
 
 threading.Thread(target=listen, daemon=True).start()
 while True:
@@ -107,5 +117,5 @@ while True:
         sample()
         publish()
     except Exception as error:
-        log(error)
+        log("sample failed: %s" % error)
     time.sleep(2)

@@ -1,6 +1,5 @@
 import Foundation
 
-/// One block of the expanded view.
 enum ExpandedSection: Hashable, Codable {
     case media, event
     case plugin(String)
@@ -9,7 +8,7 @@ enum ExpandedSection: Hashable, Codable {
         switch self {
         case .media: "media"
         case .event: "event"
-        case .plugin(let id): "plugin:\(id)"
+        case .plugin(let id): StoredID.plugin(id)
         }
     }
 
@@ -18,8 +17,8 @@ enum ExpandedSection: Hashable, Codable {
         case "media": self = .media
         case "event": self = .event
         default:
-            guard id.hasPrefix("plugin:") else { return nil }
-            self = .plugin(String(id.dropFirst(7)))
+            guard let plugin = StoredID.pluginID(in: id) else { return nil }
+            self = .plugin(plugin)
         }
     }
 
@@ -40,8 +39,6 @@ enum ExpandedSection: Hashable, Codable {
     }
 }
 
-/// Which sections share a page of the expanded view. Sections not mentioned are dealt
-/// onto pages after the explicit ones, two to a page, so nothing needs setting up.
 struct ExpandedLayout: Codable, Equatable {
     static let perPage = 2
 
@@ -59,7 +56,6 @@ struct ExpandedLayout: Codable, Equatable {
         return result.filter { !$0.isEmpty }
     }
 
-    /// Move a whole page earlier or later; `delta` is -1 or +1.
     mutating func movePage(_ index: Int, by delta: Int, all: [ExpandedSection]) {
         var result = resolve(available: all)
         let target = index + delta
@@ -68,8 +64,6 @@ struct ExpandedLayout: Codable, Equatable {
         pages = result.map { $0.map(\.id) }
     }
 
-    /// Put a section on a page, before `target` when given. A page index past the end
-    /// starts a new page. Every page is first made explicit so nothing else moves.
     mutating func move(_ section: ExpandedSection, toPage index: Int, before target: ExpandedSection? = nil, all: [ExpandedSection]) {
         var result = resolve(available: all)
         for page in result.indices { result[page].removeAll { $0 == section } }

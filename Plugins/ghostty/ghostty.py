@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Buttons for Ghostty: its quick terminal through the keybind in your config, or a new window."""
 import json, os, re, subprocess, sys
-
-settings = {"badge": False}
 
 KEY_CODES = {"grave_accent": 50, "space": 49, "enter": 36, "return": 36, "escape": 53, "tab": 48,
              "f1": 122, "f2": 120, "f3": 99, "f4": 118, "f5": 96, "f6": 97, "f7": 98, "f8": 100, "f9": 101,
@@ -10,6 +7,9 @@ KEY_CODES = {"grave_accent": 50, "space": 49, "enter": 36, "return": 36, "escape
              "left_bracket": 33, "right_bracket": 30, "backslash": 42, "comma": 43, "period": 47, "slash": 44}
 MODIFIERS = {"cmd": "command", "super": "command", "command": "command", "ctrl": "control", "control": "control",
              "alt": "option", "opt": "option", "option": "option", "shift": "shift"}
+CONFIGS = [os.path.expanduser("~/.config/ghostty/config"),
+           os.path.expanduser("~/Library/Application Support/com.mitchellh.ghostty/config")]
+settings = {"badge": False}
 
 def emit(message):
     sys.stdout.write(json.dumps(message) + "\n")
@@ -18,13 +18,8 @@ def emit(message):
 def log(text):
     emit({"log": text})
 
-def config_paths():
-    return [os.path.expanduser("~/.config/ghostty/config"),
-            os.path.expanduser("~/Library/Application Support/com.mitchellh.ghostty/config")]
-
 def quick_keybind():
-    """The global keybind for toggle_quick_terminal, as (modifiers, key), if there is one."""
-    for path in config_paths():
+    for path in CONFIGS:
         try:
             with open(path, encoding="utf-8") as handle: lines = handle.read().splitlines()
         except OSError:
@@ -39,8 +34,9 @@ def quick_keybind():
 def press(modifiers, key):
     using = ", ".join("%s down" % MODIFIERS[m.lower()] for m in modifiers if m.lower() in MODIFIERS)
     using = " using {%s}" % using if using else ""
-    if key.lower() in KEY_CODES:
-        action = "key code %d%s" % (KEY_CODES[key.lower()], using)
+    code = KEY_CODES.get(key.lower())
+    if code is not None:
+        action = "key code %d%s" % (code, using)
     else:
         action = 'keystroke "%s"%s' % (key.replace('"', ''), using)
     done = subprocess.run(["/usr/bin/osascript", "-e", 'tell application "System Events" to %s' % action], capture_output=True, text=True, timeout=5)

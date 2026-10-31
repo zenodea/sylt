@@ -1,25 +1,25 @@
 import SwiftUI
 
-/// The island outline, hugging the top of its rect and centred on the notch plus an offset.
 struct IslandShape: Shape {
     var frame: IslandFrame
-    var notchHeight: CGFloat
+    var radius: CGFloat
 
-    var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, CGFloat> {
-        get { AnimatablePair(AnimatablePair(frame.size.width, frame.size.height), frame.centerOffset) }
-        set { frame = IslandFrame(size: CGSize(width: newValue.first.first, height: newValue.first.second), centerOffset: newValue.second) }
+    var animatableData: AnimatablePair<AnimatablePair<AnimatablePair<CGFloat, CGFloat>, CGFloat>, CGFloat> {
+        get { AnimatablePair(AnimatablePair(AnimatablePair(frame.size.width, frame.size.height), frame.centerOffset), radius) }
+        set {
+            frame = IslandFrame(size: CGSize(width: newValue.first.first.first, height: newValue.first.first.second), centerOffset: newValue.first.second)
+            radius = newValue.second
+        }
     }
 
     var cornerRadius: CGFloat {
-        min(10 + max(0, frame.size.height - notchHeight) * 0.35, 28, frame.size.height / 2)
+        max(0, min(radius, frame.size.height / 2, frame.size.width / 2))
     }
 
     func origin(in rect: CGRect) -> CGPoint {
         CGPoint(x: rect.midX - frame.size.width / 2 + frame.centerOffset, y: rect.minY)
     }
 
-    /// The visible outline sampled every `step` points from the top of the left side round to the
-    /// top of the right, with outward normals; an index difference is a distance along the rim.
     func outline(in rect: CGRect, step: CGFloat) -> [(point: CGPoint, normal: CGVector)] {
         let size = frame.size
         let origin = origin(in: rect)

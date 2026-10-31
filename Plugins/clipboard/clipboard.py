@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Recent text copies as rows; clicking one puts it back on the pasteboard.
-The host watches the pasteboard and skips password managers; this only keeps the list."""
 import json, subprocess, sys, threading
 
+lock = threading.Lock()
 items = []
 capacity = 8
 copied = {"index": None}
 
 def emit(message):
-    sys.stdout.write(json.dumps(message) + "\n")
-    sys.stdout.flush()
+    with lock:
+        sys.stdout.write(json.dumps(message) + "\n")
+        sys.stdout.flush()
 
 def log(text):
     emit({"log": text})

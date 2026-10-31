@@ -21,26 +21,19 @@ enum HUDKind: Hashable {
     case external(ExternalHUD)
 
     enum Style: Hashable {
-        /// Content lives in the wings, island stays at notch height. A nil
-        /// side is left to its closed content.
         case compact(leading: Double?, trailing: Double?)
-        /// The closed wings as they are, plus one text row under the notch.
         case twoRow
-        /// A card that drops below the notch.
         case card
 
-        /// Whether the island keeps its wings view, so unclaimed wings never change.
         var keepsWings: Bool {
             if case .card = self { return false }
             return true
         }
     }
 
-    /// Wings fit what they hold, measured; a family with several labels takes
-    /// its widest so the island never resizes between them.
     var style: Style {
         switch self {
-        case .volume, .brightness, .mute: .compact(leading: nil, trailing: Self.wing(Self.glyphWidth + Self.glyphGap + Self.levelWidth))
+        case .volume, .brightness, .mute: Self.trailingGlyph(beside: Self.levelWidth)
         case .battery: .compact(leading: Self.wing(48), trailing: Self.wing(Self.text(Self.batteryMessages)))
         case .unlocked: .compact(leading: LockedView.leadingWing, trailing: LockedView.greetingWing)
         case .nowPlaying, .notification: .twoRow
@@ -49,13 +42,12 @@ enum HUDKind: Hashable {
         case .network: Self.glyph(trailing: Self.text(NetworkMonitor.Link.allCases.map(\.title)))
         case .calendar(let event): Self.glyph(trailing: min(Self.text(event.title), 150) + 6 + Self.text("in 30m"))
         case .focus, .privacy, .thermal: Self.glyph(trailing: Self.text(text ?? ""))
-        case .capsLock: .compact(leading: nil, trailing: Self.wing(Self.glyphWidth + Self.glyphGap + Self.text(Self.capsLockTexts)))
-        case .inputSource(let name): .compact(leading: nil, trailing: Self.wing(Self.glyphWidth + Self.glyphGap + min(Self.text(name), 140)))
+        case .capsLock: Self.trailingGlyph(beside: Self.text(Self.capsLockTexts))
+        case .inputSource(let name): Self.trailingGlyph(beside: min(Self.text(name), 140))
         case .external(let hud): hud.style
         }
     }
 
-    /// The words a text overlay shows: what sizes its wing is what gets drawn.
     var text: String? {
         switch self {
         case .focus(let mode): mode ?? "Focus off"
@@ -68,7 +60,6 @@ enum HUDKind: Hashable {
 
     private static let capsLockTexts = ["Caps Lock on", "Caps Lock off"]
 
-    /// Mute and volume are one wing that morphs; everything else replaces its wing.
     var wingIdentity: HUDKind {
         if case .mute = self { return .volume }
         return self
@@ -76,13 +67,11 @@ enum HUDKind: Hashable {
 
     static let batteryMessages = ["Charging", "On battery", "Fully charged", "Critically low", "Low battery", "Battery"]
 
-    /// A symbol in a wing, the gap after it, a level bar, and the wing a leading symbol alone takes.
     static let glyphWidth: CGFloat = 16
     static let glyphGap: CGFloat = 8
     static let levelWidth: CGFloat = 72
     static let glyphWing = wing(18)
 
-    /// A wing just wide enough for this content, with the usual room either side of it.
     static func wing(_ content: CGFloat) -> Double {
         content + IslandLayout.notchGap + IslandLayout.wingEdge
     }
@@ -91,7 +80,11 @@ enum HUDKind: Hashable {
         .compact(leading: glyphWing, trailing: wing(trailing))
     }
 
-    private static func text(_ text: String) -> CGFloat { TextWidth.of(text, size: 11) }
+    private static func trailingGlyph(beside content: CGFloat) -> Style {
+        .compact(leading: nil, trailing: wing(glyphWidth + glyphGap + content))
+    }
+
+    fileprivate static func text(_ text: String) -> CGFloat { TextWidth.of(text, size: 11) }
     private static func text(_ texts: [String]) -> CGFloat { TextWidth.widest(texts, size: 11) }
 
     private static func device(_ device: BluetoothMonitor.Device) -> CGFloat {
@@ -100,13 +93,12 @@ enum HUDKind: Hashable {
 
     var category: HUDCategory {
         switch self {
-        case .volume: .volume
+        case .volume, .mute: .volume
         case .brightness: .brightness
         case .battery: .battery
         case .nowPlaying: .nowPlaying
         case .unlocked: .unlock
         case .notification: .notifications
-        case .mute: .volume
         case .bluetooth, .peripheralBattery: .bluetooth
         case .network: .network
         case .calendar: .calendar
@@ -120,12 +112,11 @@ enum HUDKind: Hashable {
 
     var duration: Double {
         switch self {
-        case .volume, .brightness: 1
+        case .volume, .brightness, .mute: 1
         case .battery: 1.5
         case .unlocked: 1.4
         case .nowPlaying: 2.2
         case .notification: 3
-        case .mute: 1
         case .bluetooth, .peripheralBattery: 2.4
         case .network: 1.8
         case .calendar: 4
@@ -139,23 +130,26 @@ enum HUDKind: Hashable {
     }
 }
 
-/// A plugin's HUD, with the plugin that asked for it and a unique identity so a repeat shows again.
 struct ExternalHUD: Hashable {
     let pluginID: String
     let hud: PluginHUD
+    // Unique, so a repeat of the same HUD still shows again.
     let id = UUID()
 
     var hasGlyph: Bool { hud.symbol != nil || hud.image != nil }
+    var side: HUDSide { hud.side ?? .both }
 
     var content: CGFloat {
-        (hud.level != nil ? HUDKind.levelWidth : min(TextWidth.of(hud.text ?? "", size: 11), 160)) + (hud.trailingSymbol == nil ? 0 : HUDKind.glyphGap + HUDKind.glyphWidth)
+        let main = hud.level != nil ? HUDKind.levelWidth : min(HUDKind.text(hud.text ?? ""), 160)
+        return main + (hud.trailingSymbol == nil ? 0 : HUDKind.glyphGap + HUDKind.glyphWidth)
     }
 
     var style: HUDKind.Style {
-        switch hud.side {
-        case "right": .compact(leading: nil, trailing: HUDKind.wing((hasGlyph ? HUDKind.glyphWidth + HUDKind.glyphGap : 0) + content))
-        case "left": .compact(leading: HUDKind.wing(content + (hasGlyph ? HUDKind.glyphWidth + HUDKind.glyphGap : 0)), trailing: nil)
-        default: .compact(leading: hasGlyph ? HUDKind.glyphWing : nil, trailing: HUDKind.wing(content))
+        let withGlyph = HUDKind.wing((hasGlyph ? HUDKind.glyphWidth + HUDKind.glyphGap : 0) + content)
+        return switch side {
+        case .right: .compact(leading: nil, trailing: withGlyph)
+        case .left: .compact(leading: withGlyph, trailing: nil)
+        case .both: .compact(leading: hasGlyph ? HUDKind.glyphWing : nil, trailing: HUDKind.wing(content))
         }
     }
 }
@@ -201,17 +195,6 @@ enum HUDCategory: String, CaseIterable, Identifiable, Codable {
         case .privacy: "mic.fill"
         case .thermals: "flame.fill"
         case .plugins: "puzzlepiece.extension.fill"
-        }
-    }
-}
-
-extension NetworkMonitor.Link {
-    var title: String {
-        switch self {
-        case .wifi: "Wi-Fi"
-        case .ethernet: "Ethernet"
-        case .other: "Online"
-        case .offline: "Offline"
         }
     }
 }

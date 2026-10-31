@@ -6,16 +6,6 @@ struct GeneralPane: View {
     @State private var opensAtLogin = LoginItem.isEnabled
 
     var body: some View {
-        Section("Island") {
-            Slider(value: $preferences.notchDepth, in: 0...8, step: 1) {
-                Text("Depth below the notch")
-            } minimumValueLabel: {
-                Image(systemName: "rectangle.topthird.inset.filled").imageScale(.small)
-            } maximumValueLabel: {
-                Image(systemName: "rectangle.topthird.inset.filled").imageScale(.large)
-            }
-            Toggle("Open pages side by side when the screen has room", isOn: $preferences.spreadsPages)
-        }
         Section("Startup") {
             Toggle("Open at login", isOn: Binding(
                 get: { opensAtLogin },
@@ -34,7 +24,7 @@ struct GeneralPane: View {
                         Label("Granted", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
                     } else {
                         Label("Not granted", systemImage: "xmark.circle.fill").foregroundStyle(.orange)
-                        Button("Open System Settings", action: MediaKeyInterceptor.openAccessibilitySettings)
+                        Button("Open System Settings") { SystemSettings.open(.accessibility) }
                     }
                 }
             }

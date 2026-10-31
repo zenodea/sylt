@@ -2,9 +2,6 @@ import AppKit
 import Combine
 import SwiftUI
 
-/// Fixed-size transparent canvas over the notch; the island animates inside it.
-/// The panel only takes the mouse while the cursor is over the island, so the
-/// rest of the canvas stays click-through even inside the SkyLight space.
 final class NotchPanel: NSPanel {
     private let state: IslandState
     private let host: IslandHostingView
@@ -13,7 +10,6 @@ final class NotchPanel: NSPanel {
     private var mouseMonitors: [Any] = []
     private var cancellables = Set<AnyCancellable>()
     private var lastMode = IslandMode.closed
-    /// How far under the notch a free pointer is put when the island opens.
     private static let homeDepth: CGFloat = 16
 
     init(screen: NSScreen, state: IslandState, openSettings: @escaping () -> Void) {
@@ -49,10 +45,10 @@ final class NotchPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
-    /// Only a real change of screen or notch moves anything; the menu bar sliding in and
-    /// out also fires a screen change and must not.
     var isMeasured: Bool { geometry.isMeasured }
 
+    // Only a real change of screen or notch moves anything; the menu bar sliding in and
+    // out also fires a screen change and must not.
     func relayout(on screen: NSScreen) {
         let next = NotchGeometry(screen: screen)
         if next != geometry {
@@ -62,8 +58,6 @@ final class NotchPanel: NSPanel {
         applyFrame()
     }
 
-    /// The panel must sit centred on the notch screen's top edge. Display changes at
-    /// login, wake and space switches can leave it elsewhere; this puts it back.
     func ensurePlacement() {
         guard let screen = NotchGeometry.preferredScreen() else { return }
         if frame != Self.frame(on: screen, size: state.canvasSize) || geometry.screen != screen {
@@ -73,18 +67,14 @@ final class NotchPanel: NSPanel {
         }
     }
 
-    /// Where the pointer is handed back when the island is open: centred just under the
-    /// notch, inside the panel, so it never lands outside and closes it again.
     var expandedHome: CGPoint {
         screenPoint(of: CGPoint(x: state.canvasSize.width / 2, y: state.notchHeight + Self.homeDepth))
     }
 
-    /// The middle of the island, a touch below the notch's centre line.
     var islandCentre: CGPoint {
         screenPoint(of: CGPoint(x: state.canvasSize.width / 2 + state.islandFrame.centerOffset, y: state.notchHeight / 2 + 2))
     }
 
-    /// Hover follows the free pointer; the panel is click-through unless it's over the island.
     func followPointer() {
         let point = canvasPoint(of: NSEvent.mouseLocation)
         state.cursorMoved(to: point)
@@ -92,7 +82,6 @@ final class NotchPanel: NSPanel {
         ignoresMouseEvents = state.lock.isLocked || !state.isHovering
     }
 
-    /// Canvas point (top-left origin) to Cocoa screen coordinates, and back.
     func screenPoint(of point: CGPoint) -> CGPoint {
         CGPoint(x: frame.minX + point.x, y: frame.maxY - point.y)
     }

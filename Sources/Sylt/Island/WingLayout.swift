@@ -1,13 +1,11 @@
 import Foundation
 
-/// One thing a closed wing can show.
 enum WingItem: Hashable, Codable {
     case calendar, privacy, focus, headphones, music
     case wifi, bluetooth, volume, battery
     case plugin(String)
 
     static let builtIn: [WingItem] = [.calendar, .privacy, .focus, .headphones, .music] + menuBar
-    /// What the menu bar shows. Hidden until placed, so the island can stand in for it.
     static let menuBar: [WingItem] = [.wifi, .bluetooth, .volume, .battery]
 
     var id: String {
@@ -21,14 +19,18 @@ enum WingItem: Hashable, Codable {
         case .bluetooth: "bluetooth"
         case .volume: "volume"
         case .battery: "battery"
-        case .plugin(let id): "plugin:\(id)"
+        case .plugin(let id): StoredID.plugin(id)
         }
     }
 
     init?(id: String) {
-        if let item = Self.builtIn.first(where: { $0.id == id }) { self = item }
-        else if id.hasPrefix("plugin:") { self = .plugin(String(id.dropFirst(7))) }
-        else { return nil }
+        if let item = Self.builtIn.first(where: { $0.id == id }) {
+            self = item
+        } else if let plugin = StoredID.pluginID(in: id) {
+            self = .plugin(plugin)
+        } else {
+            return nil
+        }
     }
 
     var title: String {
@@ -61,7 +63,6 @@ enum WingItem: Hashable, Codable {
         }
     }
 
-    /// The monitor a placed menu bar item keeps running, whatever its plugin toggle says.
     var monitorPlugin: Plugin? {
         switch self {
         case .wifi: .network
@@ -71,25 +72,17 @@ enum WingItem: Hashable, Codable {
         default: nil
         }
     }
-
-    /// Where it goes unless the user says otherwise.
-    var naturalSide: WingSide {
-        self == .calendar ? .left : .right
-    }
 }
 
 enum WingSide: String, Codable, CaseIterable {
     case left, right
 }
 
-/// A plugin as the layout sees it: its id and the side it would take on its own.
 struct WingPlugin: Equatable {
     let id: String
     let side: WingSide
 }
 
-/// The space after an item, before whatever shows next to it, and whether a thin line
-/// sits in it. It belongs to the item, so it holds when a neighbour is idle or moved.
 struct WingGap: Codable, Equatable {
     static let defaultSpacing: Double = 8
     static let separatorWidth: CGFloat = 1
@@ -97,29 +90,19 @@ struct WingGap: Codable, Equatable {
     var spacing: Double = defaultSpacing
     var separator = false
 
-    /// The room the gap takes in the wing.
     var width: CGFloat { CGFloat(spacing) + (separator ? Self.separatorWidth : 0) }
 }
 
-/// What the closed wings show, in order, after the user's choices are applied.
 struct ResolvedWings: Equatable {
     var left: [WingItem] = [.calendar]
     var right: [WingItem] = [.privacy, .focus, .headphones, .music]
     var gaps: [String: WingGap] = [:]
 
-    func gap(between first: WingItem, and second: WingItem) -> WingGap {
-        gaps[WingLayout.gapKey(first, second)] ?? WingGap()
-    }
-
-    /// The gap after an item, whatever follows it.
     func gap(after item: WingItem) -> WingGap {
         gaps[item.id] ?? WingGap()
     }
 }
 
-/// The user's wing layout: which items sit left, right or nowhere, in what order,
-/// and how much room sits between neighbours. Anything not mentioned keeps its
-/// natural place, so new plugins need no migration.
 struct WingLayout: Codable, Equatable {
     var left: [String] = []
     var right: [String] = []
@@ -140,15 +123,12 @@ struct WingLayout: Codable, Equatable {
 
     var isCustomised: Bool { !left.isEmpty || !right.isEmpty || !hidden.isEmpty || !gaps.isEmpty }
 
-    /// A gap is keyed by the item in front of it; the item behind doesn't matter.
-    static func gapKey(_ first: WingItem, _ second: WingItem) -> String { first.id }
-
-    func gap(between first: WingItem, and second: WingItem) -> WingGap {
-        gaps[Self.gapKey(first, second)] ?? WingGap()
+    func gap(after item: WingItem) -> WingGap {
+        gaps[item.id] ?? WingGap()
     }
 
-    mutating func setGap(_ gap: WingGap, between first: WingItem, and second: WingItem) {
-        gaps[Self.gapKey(first, second)] = gap == WingGap() ? nil : gap
+    mutating func setGap(_ gap: WingGap, after item: WingItem) {
+        gaps[item.id] = gap == WingGap() ? nil : gap
     }
 
     func resolve(plugins: [WingPlugin]) -> ResolvedWings {
@@ -164,12 +144,10 @@ struct WingLayout: Codable, Equatable {
         return ResolvedWings(left: items(left, then: natural.left), right: items(right, then: natural.right), gaps: gaps)
     }
 
-    /// The core monitors the placed menu bar items need.
     var monitorsNeeded: Set<Plugin> {
         Set((left + right).compactMap(WingItem.init(id:)).compactMap(\.monitorPlugin))
     }
 
-    /// Every item the layout places on its own, in natural order, for the designer.
     static func natural(plugins: [WingPlugin]) -> ResolvedWings {
         let leftPlugins = plugins.filter { $0.side == .left }.map { WingItem.plugin($0.id) }
         let rightPlugins = plugins.filter { $0.side == .right }.map { WingItem.plugin($0.id) }
@@ -179,7 +157,6 @@ struct WingLayout: Codable, Equatable {
         )
     }
 
-    /// Where an item is after resolution, for the designer's three columns.
     func column(of item: WingItem, plugins: [WingPlugin]) -> WingColumn {
         if hidden.contains(item.id) { return .hidden }
         let resolved = resolve(plugins: plugins)
@@ -188,8 +165,6 @@ struct WingLayout: Codable, Equatable {
         return .hidden
     }
 
-    /// Put an item in a column, before `target` when given, otherwise at the end. The
-    /// layout is first made explicit so the move doesn't reshuffle the natural order.
     mutating func move(_ item: WingItem, to column: WingColumn, before target: WingItem? = nil, plugins: [WingPlugin]) {
         let resolved = resolve(plugins: plugins)
         left = resolved.left.map(\.id)

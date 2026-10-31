@@ -1,5 +1,3 @@
-// Renders the app icon: a dark tile with the island pill, a live dot and audio bars.
-// Usage: swift scripts/make-icon.swift  → Resources/AppIcon.icns, docs/assets/icon.png
 import AppKit
 
 func draw(size s: CGFloat) -> NSImage {
@@ -9,8 +7,6 @@ func draw(size s: CGFloat) -> NSImage {
     let inset = s * 0.045
     let tileRect = NSRect(x: inset, y: inset, width: s - inset * 2, height: s - inset * 2)
     let tile = NSBezierPath(roundedRect: tileRect, xRadius: s * 0.22, yRadius: s * 0.22)
-    // Night sky: deep blue falling to near-black, with an aurora of blue and violet
-    // glowing up behind the island and a vignette at the corners.
     NSGradient(colors: [NSColor(red: 0.13, green: 0.19, blue: 0.36, alpha: 1), NSColor(red: 0.04, green: 0.05, blue: 0.10, alpha: 1)])!
         .draw(in: tile, angle: -70)
     ctx.saveGState()
@@ -24,7 +20,6 @@ func draw(size s: CGFloat) -> NSImage {
     ctx.drawRadialGradient(aurora, startCenter: CGPoint(x: s * 0.5, y: s * 0.72), startRadius: 0, endCenter: CGPoint(x: s * 0.5, y: s * 0.72), endRadius: s * 0.62, options: [])
     let vignette = CGGradient(colorsSpace: space, colors: [NSColor.clear.cgColor, NSColor.black.withAlphaComponent(0.45).cgColor] as CFArray, locations: [0.55, 1])!
     ctx.drawRadialGradient(vignette, startCenter: CGPoint(x: s * 0.5, y: s * 0.5), startRadius: 0, endCenter: CGPoint(x: s * 0.5, y: s * 0.5), endRadius: s * 0.78, options: [])
-    // faint stars
     srand48(7)
     for _ in 0..<34 {
         let x = inset + CGFloat(drand48()) * (s - inset * 2), y = inset + CGFloat(drand48()) * (s - inset * 2)
@@ -33,7 +28,6 @@ func draw(size s: CGFloat) -> NSImage {
         NSBezierPath(ovalIn: NSRect(x: x, y: y, width: r, height: r)).fill()
     }
     ctx.restoreGState()
-    // the island: a black pill with a deep shadow and a hairline of light along its rim
     let w = s * 0.74, h = s * 0.26
     let pill = NSRect(x: (s - w) / 2, y: s - inset - h - s * 0.15, width: w, height: h)
     let pillPath = NSBezierPath(roundedRect: pill, xRadius: h * 0.44, yRadius: h * 0.44)
@@ -50,7 +44,6 @@ func draw(size s: CGFloat) -> NSImage {
     NSColor.white.withAlphaComponent(0.09).setStroke()
     pillPath.lineWidth = max(1, s * 0.004)
     pillPath.stroke()
-    // live dot with its halo
     let dot = h * 0.24
     let dotRect = NSRect(x: pill.minX + h * 0.44, y: pill.midY - dot / 2, width: dot, height: dot)
     ctx.saveGState()
@@ -58,17 +51,16 @@ func draw(size s: CGFloat) -> NSImage {
     NSColor(red: 0.36, green: 0.9, blue: 0.56, alpha: 1).setFill()
     NSBezierPath(ovalIn: dotRect).fill()
     ctx.restoreGState()
-    // album art, then the audio bars, as the island shows a track
     let art = h * 0.5
-    let barsStart = pill.maxX - h * 0.44 - (h * 0.11 * 4 + h * 0.09 * 3)
+    let barW = h * 0.11, gap = h * 0.09
+    let barsStart = pill.maxX - h * 0.44 - (barW * 4 + gap * 3)
     let artRect = NSRect(x: barsStart - h * 0.22 - art, y: pill.midY - art / 2, width: art, height: art)
     let artPath = NSBezierPath(roundedRect: artRect, xRadius: art * 0.26, yRadius: art * 0.26)
     NSGradient(colors: [NSColor(red: 0.98, green: 0.55, blue: 0.62, alpha: 1), NSColor(red: 0.98, green: 0.72, blue: 0.4, alpha: 1)])!.draw(in: artPath, angle: -50)
     let colors = [NSColor(red: 0.96, green: 0.68, blue: 1, alpha: 1), NSColor(red: 0.76, green: 0.54, blue: 1, alpha: 1),
                   NSColor(red: 0.52, green: 0.58, blue: 0.99, alpha: 1), NSColor(red: 0.42, green: 0.92, blue: 0.99, alpha: 1)]
     let heights: [CGFloat] = [0.42, 0.72, 0.55, 0.85]
-    let barW = h * 0.11, gap = h * 0.09
-    var x = pill.maxX - h * 0.44 - (barW * 4 + gap * 3)
+    var x = barsStart
     for (i, color) in colors.enumerated() {
         let bh = h * heights[i]
         ctx.saveGState()
@@ -78,7 +70,6 @@ func draw(size s: CGFloat) -> NSImage {
         ctx.restoreGState()
         x += barW + gap
     }
-    // a sheet of glass over the tile: a soft highlight along the top
     ctx.saveGState()
     tile.addClip()
     let sheen = CGGradient(colorsSpace: space, colors: [NSColor.white.withAlphaComponent(0.14).cgColor, NSColor.clear.cgColor] as CFArray, locations: [0, 1])!

@@ -102,14 +102,11 @@ static void refresh(void) {
     });
 }
 
-/// MediaRemote answers the metadata request only once per process when hosted
-/// this way, so a change means replacing the process in place: same pid, same
-/// pipes, fresh answer.
+// Hosted this way MediaRemote answers only once per process, so a change re-execs in place.
+static const CFTimeInterval relaunchInterval = 3;
 static BOOL relaunchPending;
 static CFTimeInterval lastRelaunch;
-
 static CFTimeInterval launchedAt;
-static double relaunchInterval = 3;
 
 static void relaunch(void) {
     trace(@"relaunch");
@@ -134,13 +131,9 @@ static void scheduleRefresh(void) {
     });
 }
 
-/// Only "refresh" is accepted. Playback commands are deliberately not routed
-/// through MediaRemote: hosted this way they never get a reply and deadlock
-/// the framework's notification queue.
+// Playback commands sent from here never get a reply and deadlock MediaRemote's notification queue.
 static void handleCommand(NSString *line) {
-    NSArray<NSString *> *parts = [line componentsSeparatedByString:@" "];
-    if ([parts.firstObject isEqualToString:@"refresh"]) scheduleRefresh();
-    else if ([parts.firstObject isEqualToString:@"interval"] && parts.count > 1) relaunchInterval = MAX(1, parts[1].doubleValue);
+    if ([line isEqualToString:@"refresh"]) scheduleRefresh();
 }
 
 static void readCommands(void) {

@@ -1,11 +1,12 @@
 import Foundation
 
-/// Decodes newline-delimited JSON as it arrives on a pipe, one message per line.
 final class JSONLineReader<Message: Decodable> {
+    private let handle: FileHandle
     private var buffer = Data()
     private let decoder = JSONDecoder()
 
     init(_ handle: FileHandle, onMessage: @escaping (Message) -> Void) {
+        self.handle = handle
         handle.readabilityHandler = { [weak self] handle in
             let chunk = handle.availableData
             // At end of file the handler would otherwise be called again at once, forever.
@@ -19,7 +20,7 @@ final class JSONLineReader<Message: Decodable> {
         }
     }
 
-    static func stop(_ handle: FileHandle) {
+    func stop() {
         handle.readabilityHandler = nil
     }
 }

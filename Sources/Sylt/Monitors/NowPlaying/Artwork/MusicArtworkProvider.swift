@@ -3,7 +3,7 @@ import AppKit
 @MainActor
 final class MusicArtworkProvider: ArtworkProvider {
     func supports(bundleIdentifier: String) -> Bool {
-        bundleIdentifier == "com.apple.Music"
+        bundleIdentifier == ScriptedPlayer.music.rawValue
     }
 
     func artwork(for track: NowPlayingTrack) async -> NSImage? {

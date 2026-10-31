@@ -5,7 +5,7 @@ struct TrackRow: View {
 
     var body: some View {
         if let track = nowPlaying.track {
-            HUDRow(text: track.artist.isEmpty ? track.title : "\(track.title)  ·  \(track.artist)")
+            HUDRow(title: track.title, detail: track.artist)
         }
     }
 }

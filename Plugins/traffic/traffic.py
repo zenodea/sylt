@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Network traffic: bytes in and out per second from netstat, as two sparklines in the right wing."""
 import json, os, subprocess, sys, threading, time
 
 SAMPLES = 24
@@ -13,10 +12,9 @@ def emit(message):
         sys.stdout.flush()
 
 def log(text):
-    emit({"log": "traffic: %s" % text})
+    emit({"log": text})
 
 def counters():
-    """Total bytes in and out per interface, from the kernel's own table."""
     try:
         out = subprocess.run(["/usr/sbin/netstat", "-ib"], capture_output=True, text=True, timeout=5).stdout
     except (OSError, subprocess.SubprocessError):
@@ -58,14 +56,14 @@ def sample():
     return down, up
 
 def publish(down, up):
-    threshold = settings["rateAbove"] * 1000
-    items = [{"graph": normalise(state["down"]), "tint": "cyan"}, {"graph": normalise(state["up"]), "tint": "orange"}]
-    if settings["showRate"] and max(down, up) >= threshold:
+    down_graph, up_graph = normalise(state["down"]), normalise(state["up"])
+    items = [{"graph": down_graph, "tint": "cyan"}, {"graph": up_graph, "tint": "orange"}]
+    if settings["showRate"] and max(down, up) >= settings["rateAbove"] * 1000:
         items.append({"text": rate(max(down, up))})
     emit({"wing": {"side": "right", "items": items, "spacing": 4}})
     emit({"section": {"title": "Network traffic" + (" · " + state["iface"] if state["iface"] else ""), "symbol": "arrow.up.arrow.down", "rows": [
-        {"id": "down", "symbol": "arrow.down", "title": "Down", "trailing": rate(down), "graph": normalise(state["down"]), "tint": "cyan"},
-        {"id": "up", "symbol": "arrow.up", "title": "Up", "trailing": rate(up), "graph": normalise(state["up"]), "tint": "orange"},
+        {"id": "down", "symbol": "arrow.down", "title": "Down", "trailing": rate(down), "graph": down_graph, "tint": "cyan"},
+        {"id": "up", "symbol": "arrow.up", "title": "Up", "trailing": rate(up), "graph": up_graph, "tint": "orange"},
     ]}})
 
 def handle(event):
@@ -77,20 +75,21 @@ def handle(event):
         try: settings["rateAbove"] = float(values.get("rateAbove", 50) or 0)
         except (TypeError, ValueError): pass
         state["last"] = None
-        counters() and sample()
+        sample()
         publish(0.0, 0.0)
-    elif kind == "stop":
-        os._exit(0)
 
 def listen():
     for line in sys.stdin:
         try:
-            handle(json.loads(line))
+            event = json.loads(line)
         except ValueError:
             continue
+        if event.get("event") == "stop": os._exit(0)
+        try:
+            handle(event)
         except Exception as error:
-            log(error)
-    os._exit(0)  # the host went away
+            log("%s failed: %s" % (event.get("event"), error))
+    os._exit(0)
 
 threading.Thread(target=listen, daemon=True).start()
 while True:
@@ -99,4 +98,4 @@ while True:
         rates = sample()
         if rates: publish(*rates)
     except Exception as error:
-        log(error)
+        log("sample failed: %s" % error)

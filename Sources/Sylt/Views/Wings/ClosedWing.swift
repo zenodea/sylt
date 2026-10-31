@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// What a wing shows when no HUD claims it: the items the layout puts there, in order.
 struct ClosedWing: View {
     static let focusWidth: CGFloat = 14
 
@@ -16,7 +15,7 @@ struct ClosedWing: View {
     @EnvironmentObject private var battery: BatteryMonitor
     @EnvironmentObject private var plugins: PluginRegistry
 
-    /// The ZStack keeps the wing a real, framed view even when it has nothing to show.
+    // The ZStack keeps the wing a real, framed view even when it has nothing to show.
     var body: some View {
         ZStack {
             row(side == .leading ? layout.wings.left : layout.wings.right)
@@ -28,7 +27,7 @@ struct ClosedWing: View {
         let visible = layout.visibleItems(items)
         return HStack(spacing: 0) {
             ForEach(Array(visible.enumerated()), id: \.element.id) { index, item in
-                if index > 0 { WingGapView(gap: layout.wings.gap(between: visible[index - 1], and: item)) }
+                if index > 0 { WingGapView(gap: layout.wings.gap(after: visible[index - 1])) }
                 badge(for: item)
             }
         }

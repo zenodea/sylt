@@ -54,10 +54,10 @@ final class WingLayoutTests: XCTestCase {
 
     func testGapsRoundTripAndWidenTheWing() throws {
         var layout = WingLayout()
-        layout.setGap(WingGap(spacing: 16, separator: true), between: .calendar, and: .plugin("agents"))
+        layout.setGap(WingGap(spacing: 16, separator: true), after: .calendar)
         let decoded = try JSONDecoder().decode(WingLayout.self, from: JSONEncoder().encode(layout))
         XCTAssertEqual(decoded, layout)
-        XCTAssertEqual(decoded.resolve(plugins: plugins).gap(between: .calendar, and: .plugin("agents")).width, 17)
+        XCTAssertEqual(decoded.resolve(plugins: plugins).gap(after: .calendar).width, 17)
 
         var island = IslandLayout()
         island.showsCalendar = true
@@ -66,17 +66,40 @@ final class WingLayoutTests: XCTestCase {
         XCTAssertEqual(island.leftWing, CalendarBadge.width + 17 + 40 + IslandLayout.wingPadding * 2)
     }
 
-    func testGapBelongsToTheItemInFrontOfIt() {
+    func testGapStaysWithTheItemInFrontWhenItsNeighbourChanges() {
         var layout = WingLayout()
-        layout.setGap(WingGap(spacing: 10), between: .calendar, and: .plugin("agents"))
-        let wings = layout.resolve(plugins: plugins)
-        XCTAssertEqual(wings.gap(between: .calendar, and: .plugin("timer")).spacing, 10, "the gap after the calendar holds whoever follows")
-        XCTAssertEqual(wings.gap(between: .plugin("agents"), and: .calendar).spacing, 8)
+        layout.setGap(WingGap(spacing: 10), after: .calendar)
+        layout.move(.plugin("weather"), to: .left, before: .plugin("agents"), plugins: plugins)
+        var island = IslandLayout()
+        island.showsCalendar = true
+        island.pluginWidths = ["agents": 40, "weather": 30]
+        island.wings = layout.resolve(plugins: plugins)
+        XCTAssertEqual(island.wings.left, [.calendar, .plugin("weather"), .plugin("agents")])
+        XCTAssertEqual(island.leftWing, CalendarBadge.width + 10 + 30 + WingGap.defaultSpacing + 40 + IslandLayout.wingPadding * 2)
+    }
+
+    func testSettingTheDefaultGapForgetsIt() {
+        var layout = WingLayout()
+        layout.setGap(WingGap(spacing: 12), after: .music)
+        XCTAssertTrue(layout.isCustomised)
+        layout.setGap(WingGap(), after: .music)
+        XCTAssertFalse(layout.isCustomised)
     }
 
     func testOldPairKeyedGapsStillLoad() throws {
         let json = #"{"left":[],"right":[],"hidden":[],"gaps":{"calendar>plugin:agents":{"spacing":12,"separator":true}}}"#
         let layout = try JSONDecoder().decode(WingLayout.self, from: Data(json.utf8))
-        XCTAssertEqual(layout.gap(between: .calendar, and: .music), WingGap(spacing: 12, separator: true))
+        XCTAssertEqual(layout.gap(after: .calendar), WingGap(spacing: 12, separator: true))
+    }
+
+    func testStoredIDsRoundTrip() {
+        for item in WingItem.builtIn + [.plugin("agents"), .plugin("a:b")] {
+            XCTAssertEqual(WingItem(id: item.id), item)
+        }
+        for section in [ExpandedSection.media, .event, .plugin("timer"), .plugin("a:b")] {
+            XCTAssertEqual(ExpandedSection(id: section.id), section)
+        }
+        XCTAssertNil(WingItem(id: "nonsense"))
+        XCTAssertNil(ExpandedSection(id: "music"))
     }
 }

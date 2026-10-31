@@ -21,8 +21,7 @@ struct HUDWing: View {
     private var leading: some View {
         switch kind {
         case .battery: BatteryGlyph(snapshot: battery.snapshot, compact: true)
-        case .bluetooth(let event):
-            BluetoothGlyph(connected: event.isConnected)
+        case .bluetooth(let event): BluetoothGlyph(connected: event.isConnected)
         case .network(let link): NetworkGlyph(link: link)
         case .peripheralBattery: HUDGlyph(symbol: "battery.25percent", tint: .red)
         case .calendar: HUDGlyph(symbol: "calendar", tint: .orange)
@@ -30,10 +29,10 @@ struct HUDWing: View {
         case .privacy(let use): PrivacyDots(use: use)
         case .thermal(let state): HUDGlyph(symbol: state == .nominal ? "snowflake" : "flame.fill", tint: state == .nominal ? .cyan : .orange)
         case .external(let external):
-            switch external.hud.side {
-            case "left": externalContent(external, leadingGlyph: true).padding(.leading, IslandLayout.wingEdge)
-            case "right": EmptyView()
-            default: externalGlyph(external)
+            switch external.side {
+            case .left: externalContent(external, leadingGlyph: true).padding(.leading, IslandLayout.wingEdge)
+            case .right: EmptyView()
+            case .both: externalGlyph(external)
             }
         case .notification(let notification):
             Group {
@@ -91,10 +90,10 @@ struct HUDWing: View {
         case .privacy(let use): HUDLabel(text: kind.text ?? "", dimmed: !use.any)
         case .thermal: HUDLabel(text: kind.text ?? "")
         case .external(let external):
-            switch external.hud.side {
-            case "right": externalContent(external, leadingGlyph: true).padding(.trailing, IslandLayout.wingEdge)
-            case "left": EmptyView()
-            default: externalContent(external, leadingGlyph: false).padding(.trailing, IslandLayout.wingEdge)
+            switch external.side {
+            case .right: externalContent(external, leadingGlyph: true).padding(.trailing, IslandLayout.wingEdge)
+            case .left: EmptyView()
+            case .both: externalContent(external, leadingGlyph: false).padding(.trailing, IslandLayout.wingEdge)
             }
         case .nowPlaying, .notification, .unlocked: EmptyView()
         }
@@ -119,7 +118,6 @@ struct HUDWing: View {
         }
     }
 
-    /// Glyph and label on the right, for HUDs that leave the left wing alone.
     private func rightOnly(_ symbol: String, _ text: String, dimmed: Bool = false) -> some View {
         HStack(spacing: HUDKind.glyphGap) {
             HUDGlyph(symbol: symbol, tint: dimmed ? .white.opacity(0.6) : .white).frame(width: HUDKind.glyphWidth)

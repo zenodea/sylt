@@ -2,7 +2,6 @@ import Combine
 import EventKit
 import Foundation
 
-/// The next timed event in the coming day, with reminders shortly before and at its start.
 @MainActor
 final class CalendarMonitor: ObservableObject {
     struct Event: Hashable {
@@ -14,18 +13,18 @@ final class CalendarMonitor: ObservableObject {
     }
 
     @Published private(set) var next: Event?
-    /// The next event starts within half an hour, so it earns a spot in the wing.
     @Published private(set) var imminent = false
-    @Published private(set) var authorized = false
     let reminders = PassthroughSubject<Event, Never>()
 
-    static let reminderLead: TimeInterval = 5 * 60
+    private static let reminderLead: TimeInterval = 5 * 60
+    private static let imminentLead: TimeInterval = 30 * 60
     private static let links = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
 
     private let store = EKEventStore()
     private var timer: Timer?
     private var observer: NSObjectProtocol?
     private var reminded: Set<String> = []
+    private var authorized = false
 
     func start() {
         guard timer == nil else { return }
@@ -61,10 +60,10 @@ final class CalendarMonitor: ObservableObject {
                 title: event.title ?? "Untitled",
                 start: event.startDate,
                 end: event.endDate,
-                joinURL: Self.joinURL(in: event)
+                joinURL: Self.joinURL(in: [event.url?.absoluteString, event.location, event.notes])
             )
         }
-        imminent = next.map { $0.start.timeIntervalSince(now) < 30 * 60 } ?? false
+        imminent = next.map { $0.start.timeIntervalSince(now) < Self.imminentLead } ?? false
         remind(now: now)
     }
 
@@ -81,17 +80,21 @@ final class CalendarMonitor: ObservableObject {
         }
     }
 
-    /// A video-call link from the event's URL, location or notes.
-    private static func joinURL(in event: EKEvent) -> URL? {
+    static func joinURL(in texts: [String?]) -> URL? {
         let hosts = ["zoom.us", "meet.google.com", "teams.microsoft.com", "webex.com", "whereby.com", "meet.jit.si"]
-        let candidates = [event.url?.absoluteString, event.location, event.notes].compactMap { $0 }
         guard let links else { return nil }
-        for text in candidates {
+        for text in texts.compactMap({ $0 }) {
             let matches = links.matches(in: text, range: NSRange(text.startIndex..., in: text))
-            if let url = matches.compactMap(\.url).first(where: { url in hosts.contains { url.host?.hasSuffix($0) == true } }) {
+            if let url = matches.compactMap(\.url).first(where: { url in hosts.contains { url.host?.isWithin(domain: $0) == true } }) {
                 return url
             }
         }
         return nil
+    }
+}
+
+private extension String {
+    func isWithin(domain: String) -> Bool {
+        self == domain || hasSuffix("." + domain)
     }
 }

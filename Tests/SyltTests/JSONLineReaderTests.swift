@@ -24,11 +24,16 @@ final class JSONLineReaderTests: XCTestCase {
         let reader = JSONLineReader<Message>(pipe.fileHandleForReading) { _ in }
         XCTAssertNotNil(pipe.fileHandleForReading.readabilityHandler)
         pipe.fileHandleForWriting.closeFile()
-        let released = expectation(description: "handler cleared")
-        DispatchQueue.global().asyncAfter(deadline: .now() + 0.2) {
-            if pipe.fileHandleForReading.readabilityHandler == nil { released.fulfill() }
-        }
+        let released = expectation(for: NSPredicate { _, _ in pipe.fileHandleForReading.readabilityHandler == nil }, evaluatedWith: nil)
         wait(for: [released], timeout: 2)
         withExtendedLifetime(reader) {}
+    }
+
+    func testStopDetachesFromThePipe() {
+        let pipe = Pipe()
+        let reader = JSONLineReader<Message>(pipe.fileHandleForReading) { _ in XCTFail("stopped readers deliver nothing") }
+        reader.stop()
+        XCTAssertNil(pipe.fileHandleForReading.readabilityHandler)
+        pipe.fileHandleForWriting.write(Data("{\"n\": 1}\n".utf8))
     }
 }

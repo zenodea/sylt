@@ -34,7 +34,7 @@ final class ExpandedLayoutTests: XCTestCase {
         layout.expandedPage = 1
         XCTAssertEqual(layout.expandedHeight, first)
         XCTAssertEqual(layout.currentSpreadPages, [[.plugin("b")]])
-        XCTAssertEqual(first, IslandLayout.expandedBaseHeight + 138 + IslandLayout.sectionGap + 40 + IslandLayout.pageDotsHeight)
+        XCTAssertEqual(first, IslandLayout.expandedBaseHeight + IslandLayout.mediaCardHeight + IslandLayout.sectionGap + 40 + IslandLayout.pageDotsHeight)
     }
 
     func testWholePagesMove() {

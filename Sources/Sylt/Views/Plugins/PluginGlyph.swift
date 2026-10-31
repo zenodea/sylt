@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// A plugin's glyph: an SF Symbol, an app icon (`app:bundle.id`) or an image file (`file:/path`).
 struct PluginGlyph: View {
     let symbol: String?
     let image: String?
@@ -26,9 +25,13 @@ struct PluginGlyph: View {
 
     @MainActor
     private static func load(_ reference: String) -> NSImage? {
-        if reference.hasPrefix("app:") { return AppIcons.icon(for: String(reference.dropFirst(4))) }
-        if reference.hasPrefix("file:") { return NSImage(contentsOfFile: String(reference.dropFirst(5))) }
-        if reference.hasPrefix("icon:") { return NSWorkspace.shared.icon(forFile: String(reference.dropFirst(5))) }
-        return nil
+        guard let colon = reference.firstIndex(of: ":") else { return nil }
+        let value = String(reference[reference.index(after: colon)...])
+        switch reference[..<colon] {
+        case "app": return AppIcons.icon(for: value)
+        case "file": return NSImage(contentsOfFile: value)
+        case "icon": return NSWorkspace.shared.icon(forFile: value)
+        default: return nil
+        }
     }
 }

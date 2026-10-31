@@ -1,13 +1,11 @@
 import SwiftUI
 
-/// Decide what the island shows: the closed wings and the pages of the expanded view.
-/// Tiles are dragged straight between lists; the others slide apart to make room.
 struct LayoutPane: View {
     @ObservedObject var preferences: Preferences
     @ObservedObject var plugins: PluginRegistry
     @StateObject private var wingBoard = DragBoard()
     @StateObject private var pageBoard = DragBoard()
-    @State private var editingGap: String?
+    @State private var editingGap: WingItem?
 
     private static let wingSpace = "wings"
     private static let pageSpace = "pages"
@@ -67,8 +65,6 @@ struct LayoutPane: View {
         }
     }
 
-    // MARK: Wings
-
     private var wingsBoard: some View {
         HStack(alignment: .top, spacing: 14) {
             ForEach(wingColumns, id: \.0) { column, items in
@@ -91,7 +87,7 @@ struct LayoutPane: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
             BoardColumn(key: key, space: Self.wingSpace, board: wingBoard, items: items, placeholder: column == .hidden ? "Nothing hidden" : "Empty wing") { index, item in
-                if index > 0, column != .hidden { gapHandle(between: items[index - 1], and: item) }
+                if index > 0, column != .hidden { gapHandle(after: items[index - 1]) }
                 DropSlot(open: wingBoard.gap(in: key) == index, key: key, space: Self.wingSpace)
                 tile(item, in: column)
                     .boardTile(item.id, on: wingBoard, space: Self.wingSpace, columns: wingIDs) { drop in
@@ -105,15 +101,12 @@ struct LayoutPane: View {
         }
     }
 
-    /// The space between two tiles: click it to set how far apart the two sit on the
-    /// island, and whether a line divides them.
-    private func gapHandle(between first: WingItem, and second: WingItem) -> some View {
-        let key = WingLayout.gapKey(first, second)
-        let gap = preferences.wingLayout.gap(between: first, and: second)
-        let editing = editingGap == key
+    private func gapHandle(after item: WingItem) -> some View {
+        let gap = preferences.wingLayout.gap(after: item)
+        let editing = editingGap == item
         return VStack(spacing: 4) {
             Button {
-                withAnimation(.easeOut(duration: 0.18)) { editingGap = editing ? nil : key }
+                withAnimation(.easeOut(duration: 0.18)) { editingGap = editing ? nil : item }
             } label: {
                 HStack(spacing: 6) {
                     Rectangle().fill(.quaternary).frame(height: 1)
@@ -130,11 +123,11 @@ struct LayoutPane: View {
                 HStack(spacing: 10) {
                     Slider(value: Binding(
                         get: { gap.spacing },
-                        set: { setGap(WingGap(spacing: $0, separator: gap.separator), between: first, and: second) }
+                        set: { setGap(WingGap(spacing: $0, separator: gap.separator), after: item) }
                     ), in: 2...32, step: 2)
                     Toggle("Line", isOn: Binding(
                         get: { gap.separator },
-                        set: { setGap(WingGap(spacing: gap.spacing, separator: $0), between: first, and: second) }
+                        set: { setGap(WingGap(spacing: gap.spacing, separator: $0), after: item) }
                     ))
                     .toggleStyle(.checkbox)
                     .font(.caption)
@@ -145,13 +138,12 @@ struct LayoutPane: View {
         }
     }
 
-    private func setGap(_ gap: WingGap, between first: WingItem, and second: WingItem) {
+    private func setGap(_ gap: WingGap, after item: WingItem) {
         var layout = preferences.wingLayout
-        layout.setGap(gap, between: first, and: second)
+        layout.setGap(gap, after: item)
         preferences.wingLayout = layout
     }
 
-    /// A tile; `column` nil is the floating copy that follows the pointer.
     private func tile(_ item: WingItem, in column: WingColumn?) -> some View {
         BoardTile(description: describe(item), foreground: .secondary) {
             Group {
@@ -178,8 +170,6 @@ struct LayoutPane: View {
         withTransaction(.unanimated) { preferences.wingLayout = layout }
     }
 
-    // MARK: Pages
-
     private var pagesBoard: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: 12) {
@@ -199,7 +189,6 @@ struct LayoutPane: View {
         }
     }
 
-    /// `index` nil is the empty column after the last page, where a drop starts a new one.
     private func pageColumn(_ index: Int?, sections: [ExpandedSection]) -> some View {
         let key = Self.pageKey(index)
         let isNew = index == nil
@@ -263,8 +252,6 @@ struct LayoutPane: View {
         }
     }
 
-    // MARK: Descriptions
-
     private func describe(_ item: WingItem) -> TileDescription {
         guard case .plugin(let id) = item else { return TileDescription(title: item.title, symbol: item.symbol) }
         return describe(plugin: id, symbol: item.symbol)
@@ -275,7 +262,6 @@ struct LayoutPane: View {
         return describe(plugin: id, symbol: section.symbol)
     }
 
-    /// Plugins are named by their manifests.
     private func describe(plugin id: String, symbol: String) -> TileDescription {
         guard let plugin = plugins.plugin(id) else { return TileDescription(title: id, symbol: symbol) }
         return TileDescription(title: plugin.manifest.name, symbol: plugin.manifest.symbol ?? symbol, isExternal: !plugin.isBundled)

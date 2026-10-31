@@ -1,8 +1,6 @@
-import AppKit
 import Combine
+import Foundation
 
-/// Whether macOS lets the app read Firefox's profile folder. Recent releases protect
-/// other apps' data until the user allows it, and refuse quietly with EPERM.
 @MainActor
 final class FirefoxAccess: ObservableObject {
     static let shared = FirefoxAccess()
@@ -16,11 +14,6 @@ final class FirefoxAccess: ObservableObject {
 
     nonisolated static func reportSuccess() {
         update(denied: false)
-    }
-
-    static func openPrivacySettings() {
-        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!
-        NSWorkspace.shared.open(url)
     }
 
     private nonisolated static func update(denied: Bool) {

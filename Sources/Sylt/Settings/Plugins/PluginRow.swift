@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// An external plugin: its switch, and its options when it is on.
 struct ExternalPluginRow: View {
     @ObservedObject var plugin: ExternalPlugin
     @ObservedObject var registry: PluginRegistry
@@ -50,7 +49,7 @@ struct ExternalPluginRow: View {
     private var options: some View {
         VStack(spacing: 0) {
             OptionRow(title: "Show overlays") {
-                OptionSwitch(isOn: Binding(get: { registry.store.showsHUDs(plugin.manifest) }, set: { registry.setShowsHUDs($0, plugin) }))
+                OptionSwitch(isOn: Binding(get: { registry.showsHUDs(plugin) }, set: { registry.setShowsHUDs($0, plugin) }))
             }
             ForEach(plugin.manifest.settings ?? []) { setting in
                 Divider().padding(.leading, 12)

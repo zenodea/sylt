@@ -1,9 +1,8 @@
 import Foundation
 
-/// Runs a plugin's executable and exchanges JSON lines with it.
 final class PluginProcess {
     private let process = Process()
-    private let input = Pipe()
+    private let input = Pipe.toChild()
     private let output = Pipe()
     private let encoder = JSONEncoder()
     private var reader: JSONLineReader<PluginMessage>?
@@ -28,16 +27,14 @@ final class PluginProcess {
 
     func send(_ event: PluginEvent) {
         guard process.isRunning, let data = try? encoder.encode(event) else { return }
-        // A plugin that closed its stdin is on its way out; the exit handler deals with it.
         try? input.fileHandleForWriting.write(contentsOf: data + Data("\n".utf8))
     }
 
     func terminate() {
-        JSONLineReader<PluginMessage>.stop(output.fileHandleForReading)
+        reader?.stop()
         if process.isRunning { process.terminate() }
     }
 
-    /// Executables run as they are; scripts without the executable bit go through their interpreter.
     private static func launcher(for executable: URL) -> (URL, [String]) {
         if FileManager.default.isExecutableFile(atPath: executable.path) { return (executable, []) }
         let interpreter: String

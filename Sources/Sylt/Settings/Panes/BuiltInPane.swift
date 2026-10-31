@@ -25,7 +25,7 @@ struct BuiltInPane: View {
         if preferences.isEnabled(.nowPlaying), firefoxAccess.isDenied {
             Section {
                 LabeledContent {
-                    Button("Open System Settings", action: FirefoxAccess.openPrivacySettings)
+                    Button("Open System Settings") { SystemSettings.open(.fullDiskAccess) }
                 } label: {
                     Text("Firefox artwork")
                     Text("Needs Full Disk Access")

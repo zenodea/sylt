@@ -1,7 +1,6 @@
 import Combine
 import Foundation
 
-/// The active Focus mode, read from the Do Not Disturb assertion store.
 @MainActor
 final class FocusMonitor: ObservableObject {
     @Published private(set) var mode: String?
@@ -33,12 +32,19 @@ final class FocusMonitor: ObservableObject {
     }
 
     private func activeMode() -> String? {
-        guard let assertions = json(directory.appendingPathComponent("Assertions.json")),
+        Self.activeMode(
+            assertions: json(directory.appendingPathComponent("Assertions.json")),
+            configurations: json(directory.appendingPathComponent("ModeConfigurations.json"))
+        )
+    }
+
+    static func activeMode(assertions: [String: Any]?, configurations: [String: Any]?) -> String? {
+        guard let assertions,
               let records = (assertions["data"] as? [[String: Any]])?.first?["storeAssertionRecords"] as? [[String: Any]],
               let details = records.first?["assertionDetails"] as? [String: Any],
               let identifier = details["assertionDetailsModeIdentifier"] as? String
         else { return nil }
-        guard let configurations = json(directory.appendingPathComponent("ModeConfigurations.json")),
+        guard let configurations,
               let modes = (configurations["data"] as? [[String: Any]])?.first?["modeConfigurations"] as? [String: Any],
               let mode = (modes[identifier] as? [String: Any])?["mode"] as? [String: Any],
               let name = mode["name"] as? String

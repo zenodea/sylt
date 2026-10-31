@@ -1,7 +1,5 @@
 import Foundation
 
-/// The app used to be called Control Island. Its settings and plugin folder are carried
-/// over once, so the rename costs the user nothing.
 enum LegacyMigration {
     private static let oldBundleIdentifier = "dev.zenodea.controlisland"
     private static let oldFolder = "Control Island"
@@ -20,8 +18,7 @@ enum LegacyMigration {
         for (key, value) in old { defaults.set(value, forKey: key) }
     }
 
-    /// Moves the old folder over, file by file, with the old contents winning: anything
-    /// the new app wrote before this ran is minutes old.
+    // Old contents win: anything the new app wrote before this ran is minutes old.
     private static func migrateSupportFolder() {
         let files = FileManager.default
         guard let support = files.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return }
@@ -32,7 +29,7 @@ enum LegacyMigration {
         try? files.removeItem(at: old)
     }
 
-    private static func merge(_ source: URL, into target: URL) {
+    static func merge(_ source: URL, into target: URL) {
         let files = FileManager.default
         var isDirectory: ObjCBool = false
         guard files.fileExists(atPath: target.path, isDirectory: &isDirectory), isDirectory.boolValue else {
