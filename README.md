@@ -160,7 +160,7 @@ Right-click the island for Settings. Each permission is asked for the first time
 make build   # debug build
 make test    # unit tests
 make open    # release bundle, relaunch
-make release # ad-hoc signed build/Sylt-<version>.dmg
+make release # ad-hoc signed build/Sylt-<version>.dmg (Finder lays out its window: allow Automation › Finder for your terminal)
 ISLAND_PLUGINS=Plugins .build/debug/Sylt   # debug build with the repo's plugins
 ```
 
