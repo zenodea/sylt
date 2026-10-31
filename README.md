@@ -68,7 +68,7 @@ Locked, the island shows a padlock and the time, and stays visible over the logi
 
 ## Plugins
 
-Built-in sources are Swift monitors; everything else is a plugin, a program in any language that prints JSON. Fifteen ship with the app, each can be switched off.
+Built-in sources are Swift monitors; everything else is a plugin, a program in any language that prints JSON. Sixteen ship with the app, each can be switched off.
 
 | Plugin | Shows | Plugin | Shows |
 | --- | --- | --- | --- |
@@ -79,7 +79,7 @@ Built-in sources are Swift monitors; everything else is a plugin, a program in a
 | Todos | Open reminders; click to tick off | Mullvad VPN | On or off, and the exit location |
 | Clock | The time | Network traffic | Bytes in and out |
 | Timer | Countdowns with a chime | System load | CPU, memory and GPU |
-| Weather | Conditions, from Open-Meteo | | |
+| Weather | Conditions, from Open-Meteo | Rex | Programs reporting status in Rex panes; click to jump there |
 
 ## Writing a plugin
 

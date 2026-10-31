@@ -1,0 +1,12 @@
+{
+  "protocol": 1,
+  "id": "rex",
+  "name": "Rex",
+  "description": "Coding agents and other programs reporting their status in Rex panes.",
+  "symbol": "terminal.fill",
+  "run": "rex.py",
+  "side": "left",
+  "settings": [
+    { "key": "shown", "title": "Panes in the wing", "type": "number", "default": 3 }
+  ]
+}

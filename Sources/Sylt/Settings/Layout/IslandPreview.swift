@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The closed island as the wing layout would show it, scaled down to fit when it must.
 struct IslandPreview: View {
     let wings: ResolvedWings
     let symbol: (WingItem) -> String
@@ -52,7 +51,7 @@ struct IslandPreview: View {
     private func row(_ items: [WingItem]) -> some View {
         HStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                if index > 0 { WingGapView(gap: wings.gap(between: items[index - 1], and: item)) }
+                if index > 0 { WingGapView(gap: wings.gap(after: items[index - 1])) }
                 sample(item)
             }
         }
@@ -95,11 +94,10 @@ struct IslandPreview: View {
         }
     }
 
-    /// Roughly what each shipped plugin puts in its wing; anything else is its glyph.
     @ViewBuilder
     private func pluginSample(_ id: String, symbol: String, font: Font) -> some View {
         switch id {
-        case "agents":
+        case "agents", "rex":
             HStack(spacing: 5) {
                 ForEach(0..<2, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 4, style: .continuous)
