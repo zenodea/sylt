@@ -25,6 +25,11 @@ struct IslandLayout: Equatable {
     var glassCards = false
     var notchDepth: CGFloat = 0
     var menuBarOverhang: CGFloat = 0
+    /// Without a notch the island is a capsule the user places along any edge or in a corner.
+    var hasNotch = true
+    var placement = IslandPlacement.standard
+    var screenSize = CGSize(width: 1512, height: 982)
+    var screenInsets = ScreenInsets()
 
     static let expandedWidth: CGFloat = 440
     static let spreadMargin: CGFloat = 120
@@ -50,8 +55,31 @@ struct IslandLayout: Equatable {
     static let sideOverlap: CGFloat = 6
     private static let canvasPluginSections = 6
     private static let canvasSlack: CGFloat = 80
+    /// How far a floating island keeps off the screen's edge, the menu bar and the Dock.
+    static let floatingGap: CGFloat = 8
+    /// Above the open island's sections where there is no notch to clear.
+    static let floatingHeader: CGFloat = 8
+    /// The closed island's height, and the gap between its wings, on a screen without a notch.
+    static let notchlessHeight: CGFloat = 30
+    static let notchlessGap: CGFloat = 4
+    /// A card overlay is this much wider than the notch; without one it is this wide in all.
+    private static let notchlessCardBase: CGFloat = 180
 
-    var overlap: CGFloat { isFullscreen ? 0 : max(notchDepth, menuBarOverhang) }
+    var overlap: CGFloat { isFullscreen || !hasNotch ? 0 : max(notchDepth, menuBarOverhang) }
+
+    var anchor: IslandAnchor {
+        hasNotch
+            ? .notch(canvasWidth: canvasSize.width)
+            : .placed(placement, screen: screenSize, insets: screenInsets, gap: Self.floatingGap)
+    }
+
+    /// Where the island of this size sits on the canvas.
+    func rect(of frame: IslandFrame) -> CGRect { anchor.rect(for: frame) }
+
+    /// The space above the open island's sections: the notch, or a margin.
+    var expandedHeader: CGFloat { hasNotch ? notchHeight : Self.floatingHeader }
+
+    private var expandedBase: CGFloat { Self.expandedBaseHeight - (notchHeight - expandedHeader) }
 
     var artworkSize: CGFloat { notchHeight - 12 }
 
@@ -136,12 +164,12 @@ struct IslandLayout: Equatable {
     }
 
     var expandedHeight: CGFloat {
-        guard let tallest = expandedPages.map(stackHeight(of:)).max() else { return Self.expandedBaseHeight + Self.emptyExpandedHeight }
-        return Self.expandedBaseHeight + tallest + dotsHeight
+        guard let tallest = expandedPages.map(stackHeight(of:)).max() else { return expandedBase + Self.emptyExpandedHeight }
+        return expandedBase + tallest + dotsHeight
     }
 
     func spareHeight(on page: [ExpandedSection]) -> CGFloat {
-        max(0, expandedHeight - Self.expandedBaseHeight - dotsHeight - stackHeight(of: page))
+        max(0, expandedHeight - expandedBase - dotsHeight - stackHeight(of: page))
     }
 
     static func share(_ spare: CGFloat, among needs: [String: CGFloat]) -> [String: CGFloat] {
@@ -165,20 +193,27 @@ struct IslandLayout: Equatable {
     }
 
     var canvasSize: CGSize {
+        // Placed anywhere on the screen, the island needs all of it.
+        guard hasNotch else { return screenSize }
         let pluginSection = PluginSection.headerHeight + CGFloat(PluginSection.maxRows) * PluginSection.detailRowHeight + PluginSection.filesHeight + PluginSection.buttonsHeight + Self.sectionGap + Self.glassCardInset * 2
         let tallest = Self.mediaCardHeight + Self.eventRowHeight + CGFloat(Self.canvasPluginSections) * pluginSection
         return CGSize(width: screenWidth, height: Self.expandedBaseHeight + tallest + Self.canvasSlack)
     }
 
     func hitFrame(for mode: IslandMode, hovering: Bool) -> CGRect {
-        let island = frame(for: mode, hovering: hovering)
-        return CGRect(
-            x: (canvasSize.width - island.size.width) / 2 + island.centerOffset - Self.hitMargin,
-            y: 0,
-            width: island.size.width + Self.hitMargin * 2,
-            height: island.size.height + Self.hitMargin
-        )
+        // A margin on every side, cut off where the island meets the edge of the screen.
+        rect(of: frame(for: mode, hovering: hovering))
+            .insetBy(dx: -Self.hitMargin, dy: -Self.hitMargin)
+            .intersection(CGRect(origin: .zero, size: canvasSize))
     }
+
+    /// Where the pointer is put when the island opens: just inside its top, under the notch if there is one.
+    var expandedHome: CGPoint {
+        let open = rect(of: frame(for: .expanded, hovering: false))
+        return CGPoint(x: open.midX, y: open.minY + expandedHeader + Self.homeDepth)
+    }
+
+    private static let homeDepth: CGFloat = 16
 
     func frame(for mode: IslandMode, hovering: Bool) -> IslandFrame {
         var frame = restingFrame(for: mode)
@@ -202,7 +237,7 @@ struct IslandLayout: Equatable {
             case .twoRow:
                 wingsFrame(wingWidths(for: mode), below: Self.hudRowHeight + Self.hudRowPadding)
             case .card:
-                IslandFrame(size: CGSize(width: notchWidth + Self.cardWings, height: Self.hudHeight), centerOffset: 0)
+                IslandFrame(size: CGSize(width: (hasNotch ? notchWidth : Self.notchlessCardBase) + Self.cardWings, height: Self.hudHeight), centerOffset: 0)
             }
         case .expanded:
             IslandFrame(size: CGSize(width: expandedWidth, height: expandedHeight), centerOffset: 0)
@@ -230,12 +265,15 @@ struct IslandLayout: Equatable {
         )
     }
 
-    func item(at x: CGFloat) -> WingItem? {
-        let centre = canvasSize.width / 2
-        let notchLeft = centre - notchWidth / 2 - Self.sideOverlap
-        let notchRight = centre + notchWidth / 2 + Self.sideOverlap
+    func item(at x: CGFloat, hovering: Bool = false) -> WingItem? {
+        // The wings sit centred in the island, which may have grown on hover from wherever it's attached.
+        let island = rect(of: frame(for: .closed, hovering: hovering))
+        let start = island.midX - closedWidth / 2
+        let notchLeft = start + leftWing
+        let notchRight = notchLeft + notchWidth + Self.sideOverlap * 2
+        let centre = (notchLeft + notchRight) / 2
         let side = x < centre ? wings.left : wings.right
-        let origin = x < centre ? notchLeft - leftWing + Self.wingPadding : notchRight + Self.wingPadding
+        let origin = x < centre ? start + Self.wingPadding : notchRight + Self.wingPadding
         let local = x - origin
         return spans(of: side).first { local >= $0.start - Self.partGap && local <= $0.end + Self.partGap }?.item
     }

@@ -75,7 +75,7 @@ final class PointerCapture {
         if ignoreNextDelta { ignoreNextDelta = false; return }
         let travel = CGVector(dx: event.deltaX, dy: event.deltaY)
         guard state.preferences.holdsPointer else {
-            return release(toward: travel.pushes ? travel : CGVector(dx: 1, dy: 0))
+            return release(toward: state.pushes(travel) ? travel : CGVector(dx: 1, dy: 0))
         }
         let now = CACurrentMediaTime()
         let dt = max(0.001, now - lastDrag)
@@ -83,9 +83,9 @@ final class PointerCapture {
         guard now - capturedAt >= Self.settleAfterCapture else { return pull = .zero }
         let decay = pow(Self.decayPerSecond, CGFloat(dt))
         pull = CGVector(dx: pull.dx * decay + travel.dx, dy: pull.dy * decay + travel.dy)
-        let speed = travel.push.length / CGFloat(dt)
+        let speed = state.push(travel).length / CGFloat(dt)
         let force = CGFloat(state.preferences.releaseForce)
-        if pull.push.length >= state.releaseDistance || speed >= Self.flickSpeed * force { return release(toward: pull) }
+        if state.push(pull).length >= state.releaseDistance || speed >= Self.flickSpeed * force { return release(toward: pull) }
         state.cursorPushed(pull)
         keepOffScreenTop()
         rest?.invalidate()
@@ -101,7 +101,7 @@ final class PointerCapture {
         pull = .zero
         rest?.invalidate()
         releasedAt = CACurrentMediaTime()
-        let ejected = direction.pushes
+        let ejected = state.pushes(direction)
         let destination = ejected
             ? panel.screenPoint(of: state.rimPoint(toward: direction, outside: Self.ejectDistance))
             : state.mode == .expanded ? panel.expandedHome : entry
@@ -109,7 +109,7 @@ final class PointerCapture {
         CursorControl.show()
         if ejected {
             state.cursorReleased(toward: direction)
-            if state.preferences.releaseEffect == .blackHole { BlackHoleWarp.fling(toward: direction) }
+            if state.preferences.releaseEffect == .blackHole { BlackHoleWarp.fling(toward: state.push(direction)) }
             panel.ignoresMouseEvents = true
         } else {
             state.cursorSettled()

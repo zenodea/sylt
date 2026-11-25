@@ -58,6 +58,12 @@ A section's title opens its app, such as Activity Monitor for system load.
 
 Locked, the island shows a padlock and the time, and stays visible over the login window.
 
+## Screens without a notch
+
+On an external display, or a Mac without a notch, the island floats as a capsule along any edge of the screen: under the menu bar, above the Dock, or on either side. Drag it into a corner and it snaps flush, square where it meets the screen and rounded on the inside, so the corner becomes the island the way the notch does on a MacBook. It always grows away from where it sits and never off screen.
+
+Command-drag the island to move it; while it moves, outlines show the four corners and the middle of each edge. The Appearance pane has the same eight spots as buttons.
+
 ## Make it yours
 
 **Layout pane.** The island drawn above three columns: left wing, right wing, hidden. Drag any badge or plugin between them or onto another tile to reorder; the island follows. A handle between items sets the gap and an optional hairline. The same pane groups expanded sections into pages.

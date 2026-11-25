@@ -10,7 +10,6 @@ final class NotchPanel: NSPanel {
     private var mouseMonitors: [Any] = []
     private var cancellables = Set<AnyCancellable>()
     private var lastMode = IslandMode.closed
-    private static let homeDepth: CGFloat = 16
 
     init(screen: NSScreen, state: IslandState, openSettings: @escaping () -> Void) {
         self.state = state
@@ -68,11 +67,12 @@ final class NotchPanel: NSPanel {
     }
 
     var expandedHome: CGPoint {
-        screenPoint(of: CGPoint(x: state.canvasSize.width / 2, y: state.notchHeight + Self.homeDepth))
+        screenPoint(of: state.layout.expandedHome)
     }
 
     var islandCentre: CGPoint {
-        screenPoint(of: CGPoint(x: state.canvasSize.width / 2 + state.islandFrame.centerOffset, y: state.notchHeight / 2 + 2))
+        let island = state.layout.rect(of: state.islandFrame)
+        return screenPoint(of: CGPoint(x: island.midX, y: island.midY + (state.layout.hasNotch ? 2 : 0)))
     }
 
     func followPointer() {
@@ -116,14 +116,40 @@ final class NotchPanel: NSPanel {
     }
 
     private func routeMouse(_ event: NSEvent?) {
+        if let event, routeMove(event) { return }
         if pointer.isCaptured {
             guard state.absorbsCursor else { return pointer.release(toward: .zero) }
             if let event, event.type == .mouseMoved || event.type == .leftMouseDragged { pointer.dragged(by: event) }
             return
         }
         followPointer()
-        MenuBarGuard.keepAway(NSEvent.mouseLocation, panel: frame, island: state.hitFrame)
+        // Only an island along the top of the screen has the menu bar to fight with.
+        MenuBarGuard.keepAway(NSEvent.mouseLocation, panel: frame, island: state.layout.anchor.flush.contains(.top) ? state.hitFrame : nil)
         if state.absorbsCursor, pointer.canCapture { pointer.capture() }
+    }
+
+    /// Command-drag moves the island along the screen's edges. The press is taken here, before
+    /// the island's own click handling sees it.
+    private func routeMove(_ event: NSEvent) -> Bool {
+        switch event.type {
+        case .leftMouseDown:
+            guard event.modifierFlags.contains(.command), state.canMove,
+                  state.hitFrame.contains(canvasPoint(of: NSEvent.mouseLocation)) else { return false }
+            if pointer.isCaptured { pointer.release(toward: .zero) }
+            state.beginMove()
+            return true
+        case .leftMouseDragged:
+            guard state.isMoving else { return false }
+            state.move(to: canvasPoint(of: NSEvent.mouseLocation))
+            return true
+        case .leftMouseUp:
+            guard state.isMoving else { return false }
+            state.endMove()
+            followPointer()
+            return true
+        default:
+            return false
+        }
     }
 
     private func applyFrame() {

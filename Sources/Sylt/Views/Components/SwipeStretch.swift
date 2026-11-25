@@ -4,12 +4,14 @@ import SwiftUI
 /// and the top edge never move.
 struct SwipeStretch: ViewModifier {
     let pull: CGVector
+    /// The edge that stays put: the one away from the swipe, on the attached side.
+    let anchor: UnitPoint
 
     func body(content: Content) -> some View {
         content.scaleEffect(
             x: 1 + abs(pull.dx) * 0.025,
-            y: 1 + max(0, pull.dy) * 0.05,
-            anchor: UnitPoint(x: pull.dx > 0 ? 0 : 1, y: 0)
+            y: 1 + abs(pull.dy) * 0.05,
+            anchor: anchor
         )
     }
 }

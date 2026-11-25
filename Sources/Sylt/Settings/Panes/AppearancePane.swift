@@ -4,6 +4,14 @@ struct AppearancePane: View {
     @ObservedObject var preferences: Preferences
 
     var body: some View {
+        Section {
+            PlacementPicker(placement: $preferences.placement)
+                .frame(maxWidth: .infinity)
+        } header: {
+            Text("Position")
+        } footer: {
+            Text("On a screen without a notch. Command-drag the island to put it anywhere along an edge; near a corner it snaps flush.")
+        }
         Section("Shape") {
             SymbolSlider("Depth below the notch", value: $preferences.notchDepth, in: 0...8, step: 1, symbol: "rectangle.topthird.inset.filled")
             SymbolSlider("Corner radius, closed", value: $preferences.cornerRadius, in: 0...40, step: 1, low: "square", high: "circle")

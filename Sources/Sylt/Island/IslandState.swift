@@ -6,6 +6,9 @@ import SwiftUI
 final class IslandState: ObservableObject {
     @Published var mode: IslandMode = .closed
     @Published private(set) var isHovering = false
+    /// The island is being dragged to a new place with Command held.
+    @Published private(set) var isMoving = false
+    private var movedAt: CFTimeInterval = 0
     @Published var layout = IslandLayout()
 
     @Published var cursor: CGPoint = .zero
@@ -46,6 +49,7 @@ final class IslandState: ObservableObject {
     var cancellables = Set<AnyCancellable>()
     private var hoveredItem: WingItem?
 
+    private static let moveSettle: CFTimeInterval = 0.3
     private static let hudLinger: TimeInterval = 0.8
     private static let collapseDelay: TimeInterval = 0.3
     private static let swipeLeanWidth: CGFloat = 14
@@ -88,7 +92,7 @@ final class IslandState: ObservableObject {
         return frame
     }
 
-    var absorbsCursor: Bool { preferences.absorbsPointer && isHovering && mode != .expanded && !lock.isLocked }
+    var absorbsCursor: Bool { preferences.absorbsPointer && isHovering && mode != .expanded && !lock.isLocked && !isMoving }
 
     var restingMode: IslandMode { lock.isLocked ? .locked : .closed }
 
@@ -115,17 +119,18 @@ final class IslandState: ObservableObject {
         if !inside {
             hoveredItem = nil
         } else if mode != .expanded {
-            hoveredItem = layout.item(at: point.x) ?? hoveredItem
+            hoveredItem = layout.item(at: point.x, hovering: isHovering) ?? hoveredItem
         }
     }
 
     func pressed() {
-        guard mode != .expanded else { return }
+        guard mode != .expanded, !isMoving else { return }
         Haptics.press()
     }
 
     func released() {
-        guard mode != .expanded else { return }
+        // The mouse-up that ends a move reaches the island too, and isn't a click.
+        guard mode != .expanded, !isMoving, CACurrentMediaTime() - movedAt > Self.moveSettle else { return }
         expand()
         Haptics.expand()
     }
@@ -150,6 +155,34 @@ final class IslandState: ObservableObject {
     func collapse() {
         transition(to: .closed)
         Haptics.collapse()
+    }
+
+    /// Only a closed island on a screen without a notch can be moved.
+    var canMove: Bool { !layout.hasNotch && !lock.isLocked && mode != .expanded }
+
+    func beginMove() {
+        guard canMove else { return }
+        hudTimer?.invalidate()
+        if case .hud = mode { mode = restingMode }
+        withAnimation(IslandAnimation.peek) { isMoving = true }
+        Haptics.press()
+    }
+
+    /// The island follows the pointer along the nearest edge, snapping into corners and to the middle of an edge.
+    func move(to point: CGPoint) {
+        guard isMoving else { return }
+        let next = IslandPlacement.nearest(to: point, in: layout.screenSize)
+        guard next != layout.placement else { return }
+        if next.isCorner != layout.placement.isCorner || (next.position == 0.5) != (layout.placement.position == 0.5) { Haptics.peek() }
+        withAnimation(IslandAnimation.cursor) { layout.placement = next }
+    }
+
+    func endMove() {
+        guard isMoving else { return }
+        movedAt = CACurrentMediaTime()
+        withAnimation(IslandAnimation.peek) { isMoving = false }
+        preferences.placement = layout.placement
+        Haptics.expand()
     }
 
     func transition(to next: IslandMode) {

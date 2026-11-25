@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct ExpandedView: View {
-    let notchHeight: CGFloat
+    /// Room above the sections: the notch's height, or a margin where there is none.
+    let header: CGFloat
     let layout: IslandLayout
     var pageDirection = 1
     @EnvironmentObject private var nowPlaying: NowPlayingMonitor
@@ -10,7 +11,7 @@ struct ExpandedView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Spacer().frame(height: notchHeight + 6)
+            Spacer().frame(height: header + 6)
             spread
                 .frame(maxHeight: .infinity)
                 .id(layout.currentSpread)

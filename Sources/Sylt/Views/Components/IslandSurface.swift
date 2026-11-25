@@ -54,12 +54,24 @@ struct IslandSurface: View, Animatable {
 
     private func surface(in rect: CGRect, at date: Date, event: LiquidEvent?) -> some View {
         let size = shape.frame.size
-        // Liquid Glass rounds all four corners, so it starts a radius above the screen's edge.
+        let flush = shape.flush
+        // Liquid Glass rounds all four corners, so along the screen's edge it starts a radius beyond it.
         let overhang = liquid ? shape.cornerRadius : 0
         let margin = playsRipple ? Ripple.reach(strength: ripple.strength) + 1 : 0
         let origin = shape.origin(in: rect)
-        let glassOrigin = CGPoint(x: origin.x - margin, y: -overhang)
-        let glassSize = CGSize(width: size.width + margin * 2, height: size.height + overhang + margin)
+        func beyond(_ edge: FlushEdges) -> CGFloat { flush.contains(edge) ? overhang : margin }
+        let glassOrigin = CGPoint(x: origin.x - beyond(.leading), y: origin.y - beyond(.top))
+        let glassSize = CGSize(width: size.width + beyond(.leading) + beyond(.trailing), height: size.height + beyond(.top) + beyond(.bottom))
+        // The island inside the glass view, reaching past the screen's edge where it lies along it.
+        let island = CGRect(
+            x: flush.contains(.leading) ? 0 : margin,
+            y: flush.contains(.top) ? 0 : margin,
+            width: size.width + (flush.contains(.leading) ? overhang : 0) + (flush.contains(.trailing) ? overhang : 0),
+            height: size.height + (flush.contains(.top) ? overhang : 0) + (flush.contains(.bottom) ? overhang : 0)
+        )
+        let hasNotch = notch.height > 0
+        // The black core sits on the island wherever it is; under a notch that is centred on the notch.
+        let core = CGSize(width: origin.x + size.width / 2 - rect.width / 2, height: origin.y)
         let drops = event.map { rippleDrops(in: rect, from: $0, at: date, offset: glassOrigin) } ?? []
         let outline = event
             .map { Ripple.path(in: rect, shape: shape, origin: $0.point, at: date.timeIntervalSince($0.start), strength: ripple.strength, width: ripple.width, rest: 0) }
@@ -68,16 +80,17 @@ struct IslandSurface: View, Animatable {
         return ZStack(alignment: .topLeading) {
             // Liquid Glass has no blur of its own; a frosted blur underneath frosts it.
             if liquid, blur > 0 {
-                FrostedGlass(cornerRadius: shape.cornerRadius, tint: .clear, liquid: false, island: .zero, drops: [])
+                FrostedGlass(cornerRadius: shape.cornerRadius, flush: flush, tint: .clear, liquid: false, island: .zero, drops: [])
                     .frame(width: size.width, height: size.height)
-                    .offset(x: origin.x)
+                    .offset(x: origin.x, y: origin.y)
                     .opacity(opacity * blur)
             }
             FrostedGlass(
                 cornerRadius: shape.cornerRadius,
+                flush: flush,
                 tint: tint,
                 liquid: liquid,
-                island: CGRect(x: margin, y: 0, width: size.width, height: size.height + overhang),
+                island: island,
                 drops: drops
             )
             // The NSView's kind is fixed when it is made, so a change of kind needs a new one.
@@ -90,7 +103,7 @@ struct IslandSurface: View, Animatable {
             }
             // Past the outline, or the glass's bright rim shows through the black's soft edge.
             Color.black
-                .mask(alignment: .top) { IslandFalloff(shape: shape, notch: notch, reach: reach, padding: margin + Self.rimCover) }
+                .mask(alignment: .top) { IslandFalloff(shape: shape, notch: notch, reach: reach, padding: margin + Self.rimCover, offset: core) }
                 .mask {
                     let edge = OutlineShape(path: outline)
                     ZStack {
@@ -99,7 +112,7 @@ struct IslandSurface: View, Animatable {
                     }
                 }
             if liquid {
-                innerGlow(outline: outline, padding: margin + Self.rimCover).opacity(opacity)
+                innerGlow(outline: outline, padding: margin + Self.rimCover, underNotch: hasNotch, canvas: rect.size).opacity(opacity)
             }
         }
         .frame(width: rect.width, height: rect.height, alignment: .topLeading)
@@ -107,24 +120,36 @@ struct IslandSurface: View, Animatable {
 
     private func rippleDrops(in rect: CGRect, from event: LiquidEvent, at date: Date, offset: CGPoint) -> [CGRect] {
         let rim = Ripple.rim(in: rect, shape: shape, origin: event.point, at: date.timeIntervalSince(event.start), strength: ripple.strength, width: ripple.width, step: Self.dropSpacing)
-        return (rim ?? []).filter { $0.swell > Self.dropThreshold }.map { sample in
+        // Nothing splashes off the side along the screen's edge, which has no normal.
+        return (rim ?? []).filter { $0.swell > Self.dropThreshold && $0.normal != .zero }.map { sample in
             let reach = sample.swell - Self.dropSize / 2
             let centre = CGPoint(x: sample.point.x + sample.normal.dx * reach - offset.x, y: sample.point.y + sample.normal.dy * reach - offset.y)
             return CGRect(x: centre.x - Self.dropSize / 2, y: centre.y - Self.dropSize / 2, width: Self.dropSize, height: Self.dropSize)
         }
     }
 
-    private func innerGlow(outline: Path, padding: CGFloat) -> some View {
+    @ViewBuilder
+    private func innerGlow(outline: Path, padding: CGFloat, underNotch: Bool, canvas: CGSize) -> some View {
         let edge = OutlineShape(path: outline)
-        let height = max(shape.frame.size.height, 1)
-        return edge
+        let glow = edge
             .stroke(.white.opacity(Self.glowStrength), lineWidth: Self.glowDepth * 2)
             .blur(radius: Self.glowDepth / 2)
             .clipShape(edge)
+        if underNotch {
+            notchGlow(glow, padding: padding)
+        } else {
+            // Nothing along the screen's edge should glow.
+            glow.fadeEdges(shape.flush, in: canvas)
+        }
+    }
+
+    private func notchGlow(_ glow: some View, padding: CGFloat) -> some View {
+        let height = max(shape.frame.size.height, 1)
+        return glow
             .mask(alignment: .top) {
                 Rectangle()
                     .overlay(alignment: .top) {
-                        IslandFalloff(shape: shape, notch: notch, reach: reach, padding: padding).blendMode(.destinationOut)
+                        IslandFalloff(shape: shape, notch: notch, reach: reach, padding: padding, offset: CGSize(width: shape.frame.centerOffset, height: 0)).blendMode(.destinationOut)
                     }
                     .compositingGroup()
             }
@@ -153,6 +178,7 @@ private struct OutlineShape: Shape {
 
 private struct FrostedGlass: NSViewRepresentable {
     let cornerRadius: CGFloat
+    let flush: FlushEdges
     let tint: Color
     let liquid: Bool
     let island: CGRect
@@ -195,8 +221,11 @@ private struct FrostedGlass: NSViewRepresentable {
                 glass.cornerRadius = index == 0 ? radius : frame.width / 2
                 glass.tintColor = tintColor
             }
-        } else if let blur = view as? NSVisualEffectView, blur.maskImage?.capInsets.bottom != radius {
-            blur.maskImage = Self.mask(radius: radius)
+        } else if let blur = view as? NSVisualEffectView {
+            let key = NSUserInterfaceItemIdentifier("\(radius)/\(flush.rawValue)")
+            guard blur.identifier != key else { return }
+            blur.identifier = key
+            blur.maskImage = Self.mask(radius: radius, flush: flush)
         }
     }
 
@@ -209,12 +238,17 @@ private struct FrostedGlass: NSViewRepresentable {
         return view
     }
 
-    private static func mask(radius: CGFloat) -> NSImage {
+    /// Rounded corners, except those on a side along the screen's edge.
+    private static func mask(radius: CGFloat, flush: FlushEdges) -> NSImage {
         let side = radius * 2 + 1
         let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
             NSColor.black.setFill()
             NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
-            NSRect(x: 0, y: radius, width: side, height: side - radius).fill()
+            // Drawn with y up: the top edge is the high one.
+            if flush.contains(.top) { NSRect(x: 0, y: radius, width: side, height: side - radius).fill() }
+            if flush.contains(.bottom) { NSRect(x: 0, y: 0, width: side, height: side - radius).fill() }
+            if flush.contains(.leading) { NSRect(x: 0, y: 0, width: side - radius, height: side).fill() }
+            if flush.contains(.trailing) { NSRect(x: radius, y: 0, width: side - radius, height: side).fill() }
             return true
         }
         image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
@@ -243,11 +277,14 @@ private struct IslandFalloff: View {
     let notch: CGSize
     let reach: CGSize
     let padding: CGFloat
+    /// From the top centre of the canvas to the top centre of the island.
+    let offset: CGSize
 
     var body: some View {
         ZStack(alignment: .top) {
             edgeFalloff
-            notchFalloff
+            // Without a notch there is no camera to keep black.
+            if notch.height > 0 { notchFalloff }
         }
     }
 
@@ -259,20 +296,34 @@ private struct IslandFalloff: View {
         let stopsAtRow = min(belowNotch / Self.rowStopDepth, 1)
         let up = min(max(reach.height, 0), 1) * (height - notch.height * stopsAtRow)
         let (black, clear) = (across / width, max(0, across - Self.edgeSoft.width) / width)
-        let sideways = Self.ramp(from: black, to: clear).reversed() + Self.ramp(from: 1 - black, to: 1 - clear)
-        let downwards = Self.ramp(from: 1 - up / height, to: 1 - max(0, up - Self.edgeSoft.height) / height)
-        let (sideEdge, bottomEdge) = (across > 0 ? 0.0 : 1.0, up > 0 ? 0.0 : 1.0)
+        // Glass comes in only from the sides that are free: along the screen's edge the island stays black.
+        let flush = shape.flush
+        let solid = [Gradient.Stop(color: .black, location: 0)]
+        let left = flush.contains(.leading) ? solid : Self.ramp(from: black, to: clear).reversed()
+        let right = flush.contains(.trailing) ? [Gradient.Stop(color: .black, location: 1)] : Self.ramp(from: 1 - black, to: 1 - clear)
+        let sideways = left + right
+        // Up from the bottom, or down from the top when the bottom is the screen's edge.
+        let fromTop = flush.contains(.bottom)
+        let downwards = fromTop
+            ? Self.ramp(from: up / height, to: max(0, up - Self.edgeSoft.height) / height).reversed()
+            : Self.ramp(from: 1 - up / height, to: 1 - max(0, up - Self.edgeSoft.height) / height)
+        let open = up > 0 ? 0.0 : 1.0
+        let (leftEdge, rightEdge) = (across > 0 && !flush.contains(.leading) ? 0.0 : 1.0, across > 0 && !flush.contains(.trailing) ? 0.0 : 1.0)
         let paddedWidth = width + padding * 2, paddedHeight = height + padding
-        let paddedSideways = [Gradient.Stop(color: .black.opacity(sideEdge), location: 0)]
+        let paddedSideways = [Gradient.Stop(color: .black.opacity(leftEdge), location: 0)]
             + sideways.map { Gradient.Stop(color: $0.color, location: (padding + $0.location * width) / paddedWidth) }
-            + [Gradient.Stop(color: .black.opacity(sideEdge), location: 1)]
-        let paddedDownwards = downwards.map { Gradient.Stop(color: $0.color, location: $0.location * height / paddedHeight) }
-            + [Gradient.Stop(color: .black.opacity(bottomEdge), location: 1)]
+            + [Gradient.Stop(color: .black.opacity(rightEdge), location: 1)]
+        let paddedDownwards = fromTop
+            ? [Gradient.Stop(color: .black.opacity(open), location: 0)]
+                + downwards.map { Gradient.Stop(color: $0.color, location: $0.location * height / paddedHeight) }
+                + [Gradient.Stop(color: .black, location: 1)]
+            : downwards.map { Gradient.Stop(color: $0.color, location: $0.location * height / paddedHeight) }
+                + [Gradient.Stop(color: .black.opacity(open), location: 1)]
         return Rectangle()
             .fill(LinearGradient(stops: paddedSideways, startPoint: .leading, endPoint: .trailing))
             .mask(LinearGradient(stops: paddedDownwards, startPoint: .top, endPoint: .bottom))
             .frame(width: paddedWidth, height: paddedHeight)
-            .offset(x: shape.frame.centerOffset)
+            .offset(offset)
     }
 
     private var notchFalloff: some View {

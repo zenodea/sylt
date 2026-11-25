@@ -44,6 +44,8 @@ final class Preferences: ObservableObject {
     @Published var hapticsOnRelease: Bool
     @Published var wingLayout: WingLayout
     @Published var expandedLayout: ExpandedLayout
+    /// Where the island sits on a screen without a notch.
+    @Published var placement: IslandPlacement
 
     private let defaults: UserDefaults
     private var cancellables = Set<AnyCancellable>()
@@ -90,6 +92,7 @@ final class Preferences: ObservableObject {
         static let knownPlugins = "knownPlugins"
         static let wingLayout = "wingLayout"
         static let expandedLayout = "expandedLayout"
+        static let placement = "islandPlacement"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -148,6 +151,7 @@ final class Preferences: ObservableObject {
         hapticsOnRelease = defaults.value(Key.haptics, or: true)
         wingLayout = defaults.data(forKey: Key.wingLayout).flatMap { try? JSONDecoder().decode(WingLayout.self, from: $0) } ?? WingLayout()
         expandedLayout = defaults.data(forKey: Key.expandedLayout).flatMap { try? JSONDecoder().decode(ExpandedLayout.self, from: $0) } ?? ExpandedLayout()
+        placement = defaults.data(forKey: Key.placement).flatMap { try? JSONDecoder().decode(IslandPlacement.self, from: $0) } ?? .standard
 
         persist($enabledPlugins, as: Key.plugins) { $0.map(\.rawValue).sorted() }
         persist($replacesSystemOverlays, as: Key.overlays)
@@ -189,6 +193,7 @@ final class Preferences: ObservableObject {
         persist($hapticsOnRelease, as: Key.haptics)
         persist($wingLayout, as: Key.wingLayout) { try? JSONEncoder().encode($0) }
         persist($expandedLayout, as: Key.expandedLayout) { try? JSONEncoder().encode($0) }
+        persist($placement, as: Key.placement) { try? JSONEncoder().encode($0) }
     }
 
     private func persist<Value>(_ values: Published<Value>.Publisher, as key: String, _ stored: @escaping (Value) -> Any? = { $0 }) {

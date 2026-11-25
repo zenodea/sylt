@@ -7,6 +7,9 @@ extension IslandState {
         layout.notchHeight = geometry.notchHeight
         layout.menuBarOverhang = geometry.menuBarOverhang
         layout.screenWidth = geometry.screen.frame.width
+        layout.hasNotch = geometry.hasNotch
+        layout.screenSize = geometry.screen.frame.size
+        layout.screenInsets = geometry.insets
     }
 
     func turnPage(_ delta: Int) {
@@ -19,6 +22,9 @@ extension IslandState {
     }
 
     func bindLayout() {
+        preferences.$placement
+            .sink { [weak self] in self?.layout.placement = $0 }
+            .store(in: &cancellables)
         preferences.$notchDepth
             .sink { [weak self] in self?.layout.notchDepth = CGFloat($0) }
             .store(in: &cancellables)
