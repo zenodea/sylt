@@ -1,9 +1,18 @@
 import CoreGraphics
 
 extension CGVector {
-    var push: CGVector { CGVector(dx: dx, dy: max(0, dy)) }
+    /// The part of a movement that leads away from the screen edges the island lies along:
+    /// pushing into the edge goes nowhere.
+    func push(away flush: FlushEdges) -> CGVector {
+        CGVector(
+            dx: flush.contains(.leading) && dx < 0 || flush.contains(.trailing) && dx > 0 ? 0 : dx,
+            dy: flush.contains(.top) && dy < 0 || flush.contains(.bottom) && dy > 0 ? 0 : dy
+        )
+    }
 
-    var pushes: Bool { push.length > 0.001 }
+    func pushes(away flush: FlushEdges) -> Bool { push(away: flush).isMovement }
+
+    var isMovement: Bool { length > 0.001 }
 
     var length: CGFloat { hypot(dx, dy) }
 

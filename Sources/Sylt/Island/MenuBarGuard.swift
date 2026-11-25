@@ -8,8 +8,10 @@ enum MenuBarGuard {
     private static let sideMargin: CGFloat = 140
     private static let edgeDepth: CGFloat = 3
 
-    /// `location` is in Cocoa screen coordinates, `island` in the panel's canvas coordinates.
-    static func keepAway(_ location: CGPoint, panel: CGRect, island: CGRect) {
+    /// `location` is in Cocoa screen coordinates, `island` in the panel's canvas coordinates;
+    /// without an island along the top there is nothing to guard.
+    static func keepAway(_ location: CGPoint, panel: CGRect, island: CGRect?) {
+        guard let island else { return TopEdgeGuard.shared.guardSpan(nil) }
         let span = (panel.minX + island.minX - sideMargin) ... (panel.minX + island.maxX + sideMargin)
         TopEdgeGuard.shared.guardSpan(span)
         guard location.y >= panel.maxY - 2, span.contains(location.x) else { return }

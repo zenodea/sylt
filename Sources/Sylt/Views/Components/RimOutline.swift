@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The island's visible outline as an open path: down the left side, around the bottom and
-/// up the right. The top edge is the screen's edge and is left out.
+/// The island's visible outline as an open path: down the left side, around the bottom, up
+/// the right and back along the top. Sides along the screen's edge are left out.
 struct RimOutline: Shape {
     var shape: IslandShape
 
@@ -10,10 +10,19 @@ struct RimOutline: Shape {
         set { shape.animatableData = newValue }
     }
 
+    private static let step: CGFloat = 2
+
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        for (index, sample) in shape.outline(in: rect, step: 2).enumerated() {
-            if index == 0 { path.move(to: sample.point) } else { path.addLine(to: sample.point) }
+        var last: CGPoint?
+        for sample in shape.outline(in: rect, step: Self.step) {
+            // A side left out leaves a gap, which the path jumps rather than cuts across.
+            if let last, hypot(sample.point.x - last.x, sample.point.y - last.y) <= Self.step * 2 {
+                path.addLine(to: sample.point)
+            } else {
+                path.move(to: sample.point)
+            }
+            last = sample.point
         }
         return path
     }

@@ -18,9 +18,9 @@ extension IslandState {
     /// The chosen release effect at the rim in this direction: what the pointer leaving
     /// does, also played by a swipe that changes track.
     func flash(toward direction: CGVector) {
-        guard direction.pushes, mode != .expanded else { return }
+        guard pushes(direction), mode != .expanded else { return }
         let point = rimPoint(toward: direction, outside: 0)
-        let unit = direction.push.unit
+        let unit = push(direction).unit
         play(BurstEvent(point: point, direction: unit), in: \.burst, for: Self.burstDuration)
         switch preferences.releaseEffect {
         case .ripple: splash(at: point)

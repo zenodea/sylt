@@ -34,7 +34,7 @@ enum Ripple {
         guard decay > 0.04 else { return nil }
         let height = Self.height * CGFloat(strength)
         let spread = CGFloat(width)
-        let outline = shape.outline(in: rect, step: step)
+        let outline = shape.outline(in: rect, step: step, includingEdges: true)
         guard outline.count > 1 else { return nil }
         var nearest = 0
         var best = CGFloat.greatestFiniteMagnitude

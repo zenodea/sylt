@@ -7,13 +7,17 @@ extension IslandState {
 
     var releaseDistance: CGFloat { Self.baseReleaseDistance * CGFloat(preferences.releaseForce) }
 
+    func push(_ travel: CGVector) -> CGVector { travel.push(away: layout.anchor.flush) }
+
+    func pushes(_ travel: CGVector) -> Bool { travel.pushes(away: layout.anchor.flush) }
+
     func cursorHeld(at point: CGPoint) {
         heldOrigin = point
         pointerArrived(at: point)
     }
 
     func cursorPushed(_ travel: CGVector) {
-        let push = travel.push
+        let push = push(travel)
         withAnimation(IslandAnimation.cursor) {
             cursorPull = CGVector(dx: tanh(push.dx / Self.pullSoftness), dy: tanh(push.dy / Self.pullSoftness))
             cursor = CGPoint(x: cursorPull.dx * Self.contentLean, y: cursorPull.dy * Self.contentLean)
@@ -31,7 +35,7 @@ extension IslandState {
     }
 
     func cursorReleased(toward direction: CGVector) {
-        if direction.pushes {
+        if pushes(direction) {
             flash(toward: direction)
             if preferences.hapticsOnRelease { Haptics.peek() }
         }
@@ -42,11 +46,11 @@ extension IslandState {
     func rimPoint(toward travel: CGVector, outside: CGFloat) -> CGPoint {
         let island = layout.hitFrame(for: mode, hovering: true).insetBy(dx: 1, dy: 1)
         let origin = heldOrigin.map(island.clamp) ?? CGPoint(x: island.midX, y: island.midY)
-        let push = travel.push
-        guard travel.pushes else { return origin }
+        let push = push(travel)
+        guard push.isMovement else { return origin }
         var scale = CGFloat.greatestFiniteMagnitude
         if push.dx != 0 { scale = min(scale, ((push.dx > 0 ? island.maxX : island.minX) - origin.x) / push.dx) }
-        if push.dy > 0 { scale = min(scale, (island.maxY - origin.y) / push.dy) }
+        if push.dy != 0 { scale = min(scale, ((push.dy > 0 ? island.maxY : island.minY) - origin.y) / push.dy) }
         let unit = push.unit
         return CGPoint(x: origin.x + push.dx * scale + unit.dx * outside, y: origin.y + push.dy * scale + unit.dy * outside)
     }

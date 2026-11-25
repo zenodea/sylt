@@ -30,8 +30,8 @@ enum BlackHoleWarp {
     /// After the throw the pointer keeps going along the push and slows down, so it feels
     /// spat out rather than placed.
     static func fling(toward direction: CGVector) {
-        guard direction.pushes else { return }
-        let unit = direction.push.unit
+        guard direction.isMovement else { return }
+        let unit = direction.unit
         var speed = flingSpeed
         Timer.scheduledTimer(withTimeInterval: frameInterval, repeats: true) { timer in
             MainActor.assumeIsolated {

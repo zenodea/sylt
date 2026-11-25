@@ -13,11 +13,21 @@ struct IslandView: View {
         let canvas = state.canvasSize
         let preferences = state.preferences
         let isOpen = state.mode == .expanded
-        let shape = IslandShape(frame: frame, radius: isOpen ? preferences.openCornerRadius : preferences.cornerRadius)
+        let layout = state.layout
+        let anchor = layout.anchor
+        let rect = layout.rect(of: frame)
+        // Without a notch to match, the closed island is a capsule, or rounds generously into its corner.
+        let closedRadius = layout.hasNotch ? preferences.cornerRadius : max(preferences.cornerRadius, Self.notchlessRadius)
+        let shape = IslandShape(frame: frame, origin: rect.origin, flush: anchor.flush, radius: isOpen ? preferences.openCornerRadius : closedRadius)
+        let attachment = anchor.attachment(of: rect)
+        let attached = UnitPoint(x: attachment.x / max(canvas.width, 1), y: attachment.y / max(canvas.height, 1))
+        let swipeAnchor = layout.hasNotch
+            ? UnitPoint(x: state.cursorPull.dx > 0 ? 0 : 1, y: 0)
+            : UnitPoint(x: (state.cursorPull.dx > 0 ? rect.minX : rect.maxX) / max(canvas.width, 1), y: attached.y)
         let frosted = preferences.frostedEdges
         let liquid = preferences.liquidGlass && GlassCard.isAvailable
         let surfaceRipples = frosted && liquid
-        let notch = CGSize(width: state.layout.notchWidth, height: state.notchHeight)
+        let notch = layout.hasNotch ? CGSize(width: layout.notchWidth, height: state.notchHeight) : .zero
         let closedSize = state.layout.frame(for: .closed, hovering: state.isHovering).size
         let openSize = state.layout.frame(for: .expanded, hovering: false).size
         let glass = GlassStates(
@@ -29,12 +39,15 @@ struct IslandView: View {
         )
 
         ZStack(alignment: .top) {
+            if state.isMoving {
+                PlacementTargets(layout: layout).frame(width: canvas.width, height: canvas.height).transition(.opacity)
+            }
             ZStack(alignment: .top) {
                 // Hidden under Liquid Glass: the shadow and the ring the hollowing leaves at the
                 // outline read as a second dark line beyond the lit edge.
                 shape.fill(.black)
                     .shadow(
-                        color: .black.opacity(state.layout.isFullscreen ? 0 : 0.4),
+                        color: .black.opacity(state.layout.isFullscreen ? 0 : state.isMoving ? 0.6 : 0.4),
                         radius: 5 + (size.height - state.notchHeight) * 0.06,
                         y: 2 + (size.height - state.notchHeight) * 0.03
                     )
@@ -53,18 +66,18 @@ struct IslandView: View {
                     Color.clear
                     content
                         .frame(width: size.width, height: size.height, alignment: .top)
-                        .offset(x: frame.centerOffset)
+                        .offset(x: rect.midX - canvas.width / 2, y: rect.minY)
                         .id(state.mode.contentIdentity)
                         .transition(IslandAnimation.content)
                     if state.absorbsCursor, preferences.showsRimGlow, preferences.holdsPointer {
-                        RimGlow(shape: shape, point: state.exitPoint, strength: state.pullStrength).fadeTop()
+                        RimGlow(shape: shape, point: state.exitPoint, strength: state.pullStrength).fadeEdges(anchor.flush, in: canvas)
                     } else if state.approachStrength > 0 {
-                        RimGlow(shape: shape, point: state.approachPoint, strength: state.approachStrength * 0.7).fadeTop()
+                        RimGlow(shape: shape, point: state.approachPoint, strength: state.approachStrength * 0.7).fadeEdges(anchor.flush, in: canvas)
                     }
                     if let burst = state.burst {
                         switch preferences.releaseEffect {
-                        case .ring: ReleaseBurst(point: burst.point).id(burst.id).fadeTop()
-                        case .glass: GlassFlash(shape: shape, point: burst.point, direction: burst.direction).id(burst.id).fadeTop()
+                        case .ring: ReleaseBurst(point: burst.point).id(burst.id).fadeEdges(anchor.flush, in: canvas)
+                        case .glass: GlassFlash(shape: shape, point: burst.point, direction: burst.direction).id(burst.id).fadeEdges(anchor.flush, in: canvas)
                         default: EmptyView()
                         }
                     }
@@ -84,10 +97,12 @@ struct IslandView: View {
             .frame(width: canvas.width, height: canvas.height, alignment: .top)
             .animation(IslandAnimation.value, value: state.layout)
             .contentShape(shape)
-            .modifier(CursorPull(cursor: state.cursor, enabled: state.isHovering && !isOpen))
+            .modifier(CursorPull(cursor: state.cursor, enabled: state.isHovering && !isOpen, anchor: attached))
             // A press swells rather than squashes: anything smaller would uncover the notch.
-            .scaleEffect(x: isPressed ? 1.02 : 1, y: isPressed ? 1.05 : 1, anchor: .top)
-            .modifier(SwipeStretch(pull: state.cursorPull))
+            .scaleEffect(x: isPressed ? 1.02 : 1, y: isPressed ? 1.05 : 1, anchor: attached)
+            // Lifted while it is being moved.
+            .scaleEffect(state.isMoving ? 1.04 : 1, anchor: attached)
+            .modifier(SwipeStretch(pull: state.cursorPull, anchor: swipeAnchor))
             .gesture(pressGesture, including: isOpen ? .subviews : .all)
             .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
                 Task { state.dropped(await Self.urls(from: providers)) }
@@ -116,6 +131,8 @@ struct IslandView: View {
         .environmentObject(state.plugins)
     }
 
+    private static let notchlessRadius: CGFloat = 16
+
     private static func urls(from providers: [NSItemProvider]) async -> [URL] {
         var urls: [URL] = []
         for provider in providers where provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
@@ -129,7 +146,7 @@ struct IslandView: View {
     private var pressGesture: some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { _ in
-                guard !isPressed, state.mode != .expanded else { return }
+                guard !isPressed, state.mode != .expanded, !state.isMoving else { return }
                 withAnimation(IslandAnimation.press) { isPressed = true }
                 state.pressed()
             }
@@ -145,7 +162,7 @@ struct IslandView: View {
         switch state.mode {
         case .locked, .hud(.unlocked): LockedView(layout: state.layout, unlocked: state.mode != .locked)
         case .closed, .hud: WingsView(mode: state.mode, layout: state.layout)
-        case .expanded: ExpandedView(notchHeight: state.notchHeight, layout: state.layout, pageDirection: state.pageDirection)
+        case .expanded: ExpandedView(header: state.layout.expandedHeader, layout: state.layout, pageDirection: state.pageDirection)
         }
     }
 }

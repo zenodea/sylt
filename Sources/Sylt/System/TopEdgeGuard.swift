@@ -12,9 +12,9 @@ final class TopEdgeGuard {
     private static let margin: CGFloat = 3
     private var tap: CFMachPort?
 
-    func guardSpan(_ range: ClosedRange<CGFloat>) {
+    func guardSpan(_ range: ClosedRange<CGFloat>?) {
         Self.span = range
-        if tap == nil { install() }
+        if tap == nil, range != nil { install() }
     }
 
     private func install() {
